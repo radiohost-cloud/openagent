@@ -1,10 +1,11 @@
 // background.js - Chrome Extension Service Worker
-// Direct OpenRouter API calls + File System Access API for vault
+// OpenRouter and Ollama API calls + File System Access API for vault
 
 const STORAGE_KEYS = {
   API_KEY: 'claude_api_key',
   MODEL: 'claude_model',
   PROVIDER: 'claude_provider',
+  OLLAMA_URL: 'claude_ollama_url',
   SYSTEM_PROMPT: 'claude_system_prompt',
   THEME: 'claude_theme',
   PRESET: 'claude_preset',
@@ -96,6 +97,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     'vault.pick': () => pickVaultDirectory(),
     'autovault.load': () => loadAutoVault(),
     'autovault.save': () => saveAutoVault(message.enabled),
+    'models.ollama': () => listOllamaModels(message.url),
   };
 
   const handler = handlers[message.type];
@@ -159,6 +161,7 @@ async function loadSettings() {
     apiKey: result[STORAGE_KEYS.API_KEY] || '',
     model: result[STORAGE_KEYS.MODEL] || '',
     provider: result[STORAGE_KEYS.PROVIDER] || 'openrouter',
+    ollamaUrl: result[STORAGE_KEYS.OLLAMA_URL] || '',
     systemPrompt: result[STORAGE_KEYS.SYSTEM_PROMPT] || '',
     theme: result[STORAGE_KEYS.THEME] || 'dark',
     preset: result[STORAGE_KEYS.PRESET] || 'default',
@@ -174,6 +177,7 @@ async function saveSettings(data) {
     [STORAGE_KEYS.API_KEY]: data.apiKey || '',
     [STORAGE_KEYS.MODEL]: data.model || '',
     [STORAGE_KEYS.PROVIDER]: data.provider || 'openrouter',
+    [STORAGE_KEYS.OLLAMA_URL]: data.ollamaUrl || '',
     [STORAGE_KEYS.SYSTEM_PROMPT]: data.systemPrompt || '',
     [STORAGE_KEYS.THEME]: data.theme || 'dark',
     [STORAGE_KEYS.PRESET]: data.preset || 'default',
@@ -188,39 +192,61 @@ async function saveSettings(data) {
 
 async function handlePromptSend(message, sendResponse) {
   const settings = await loadSettings();
-  if (!settings.apiKey) {
-    sendResponse({ error: 'API key not configured. Please set it in Settings.' });
-    return;
-  }
-
   const { conversationHistory, pageContext, autoVault } = message;
   const msgs = buildMessages(conversationHistory, pageContext, settings.systemPrompt, autoVault);
 
   try {
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${settings.apiKey}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': chrome.runtime.getURL('/'),
-        'X-Title': 'OpenAgent Chrome Extension',
-      },
-      body: JSON.stringify({
-        model: settings.model || 'openai/gpt-4o',
-        messages: msgs,
-      }),
-    });
-
-    if (!response.ok) {
-      const text = await response.text();
-      const errJson = (() => { try { return JSON.parse(text); } catch { return null; } })();
-      sendResponse({ error: `API error (${response.status}): ${errJson?.error?.message || text}` });
-      return;
+    let response;
+    if (settings.provider === 'ollama') {
+      if (!settings.ollamaUrl) {
+        sendResponse({ error: 'Ollama URL not configured. Set it in Settings.' });
+        return;
+      }
+      response = await fetch(`${settings.ollamaUrl}/api/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: settings.model || 'llama3',
+          messages: msgs,
+        }),
+      });
+      if (!response.ok) {
+        const text = await response.text();
+        sendResponse({ error: `Ollama error (${response.status}): ${text}` });
+        return;
+      }
+      const data = await response.json();
+      const content = data.message?.content || '';
+      sendResponse({ content });
+    } else {
+      // OpenRouter
+      if (!settings.apiKey) {
+        sendResponse({ error: 'API key not configured. Please set it in Settings.' });
+        return;
+      }
+      response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${settings.apiKey}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': chrome.runtime.getURL('/'),
+          'X-Title': 'OpenAgent Chrome Extension',
+        },
+        body: JSON.stringify({
+          model: settings.model || 'openai/gpt-4o',
+          messages: msgs,
+        }),
+      });
+      if (!response.ok) {
+        const text = await response.text();
+        const errJson = (() => { try { return JSON.parse(text); } catch { return null; } })();
+        sendResponse({ error: `API error (${response.status}): ${errJson?.error?.message || text}` });
+        return;
+      }
+      const data = await response.json();
+      const content = data.choices?.[0]?.message?.content || '';
+      sendResponse({ content });
     }
-
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content || '';
-    sendResponse({ content });
   } catch (err) {
     sendResponse({ error: `Request failed: ${err.message}` });
   }
@@ -261,56 +287,119 @@ function buildMessages(history, pageContext, systemPrompt, autoVault) {
 
 async function startStream(message, sendResponse) {
   const settings = await loadSettings();
-  if (!settings.apiKey) {
-    sendResponse({ error: 'API key not configured' });
-    return;
-  }
-
   const { conversationHistory, pageContext, autoVault } = message;
   const msgs = buildMessages(conversationHistory, pageContext, settings.systemPrompt, autoVault);
 
   try {
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${settings.apiKey}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': chrome.runtime.getURL('/'),
-        'X-Title': 'OpenAgent Chrome Extension',
-      },
-      body: JSON.stringify({
-        model: settings.model || 'openai/gpt-4o',
-        messages: msgs,
-        stream: true,
-        provider: { preset: settings.provider || 'openrouter' },
-      }),
-    });
-
-    if (!response.ok) {
-      const error = await response.text();
-      sendResponse({ error: `API error (${response.status}): ${error}` });
-      return;
-    }
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let done = false;
-    let fullText = '';
-
-    while (!done) {
-      const { value, done: d } = await reader.read();
-      done = d;
-      if (value) {
-        const chunk = decoder.decode(value, { stream: !done });
-        fullText += chunk;
-        chrome.runtime.sendMessage({ type: 'stream.chunk', content: chunk }).catch(() => {});
+    let response;
+    if (settings.provider === 'ollama') {
+      if (!settings.ollamaUrl) {
+        sendResponse({ error: 'Ollama URL not configured. Set it in Settings.' });
+        return;
       }
-    }
+      response = await fetch(`${settings.ollamaUrl}/api/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: settings.model || 'llama3',
+          messages: msgs,
+          stream: true,
+        }),
+      });
+      if (!response.ok) {
+        const error = await response.text();
+        sendResponse({ error: `Ollama error (${response.status}): ${error}` });
+        return;
+      }
+      // Ollama SSE streaming
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let done = false;
+      let fullText = '';
 
-    chrome.runtime.sendMessage({ type: 'stream.done', content: fullText }).catch(() => {});
-    sendResponse({ content: fullText });
+      while (!done) {
+        const { value, done: d } = await reader.read();
+        done = d;
+        if (value) {
+          const chunk = decoder.decode(value, { stream: !done });
+          chrome.runtime.sendMessage({ type: 'stream.chunk', content: chunk }).catch(() => {});
+          // Parse SSE lines: data: {"message":{"content":"..."}}
+          for (const line of chunk.split('\n')) {
+            if (line.startsWith('data: ')) {
+              try {
+                const json = JSON.parse(line.slice(6));
+                if (json.message?.content) fullText += json.message.content;
+              } catch {}
+            }
+          }
+        }
+      }
+      chrome.runtime.sendMessage({ type: 'stream.done', content: fullText }).catch(() => {});
+      sendResponse({ content: fullText });
+    } else {
+      // OpenRouter streaming
+      if (!settings.apiKey) {
+        sendResponse({ error: 'API key not configured' });
+        return;
+      }
+      response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${settings.apiKey}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': chrome.runtime.getURL('/'),
+          'X-Title': 'OpenAgent Chrome Extension',
+        },
+        body: JSON.stringify({
+          model: settings.model || 'openai/gpt-4o',
+          messages: msgs,
+          stream: true,
+        }),
+      });
+      if (!response.ok) {
+        const error = await response.text();
+        sendResponse({ error: `API error (${response.status}): ${error}` });
+        return;
+      }
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let done = false;
+      let fullText = '';
+
+      while (!done) {
+        const { value, done: d } = await reader.read();
+        done = d;
+        if (value) {
+          const chunk = decoder.decode(value, { stream: !done });
+          fullText += chunk;
+          chrome.runtime.sendMessage({ type: 'stream.chunk', content: chunk }).catch(() => {});
+        }
+      }
+
+      chrome.runtime.sendMessage({ type: 'stream.done', content: fullText }).catch(() => {});
+      sendResponse({ content: fullText });
+    }
   } catch (err) {
     sendResponse({ error: `Connection failed: ${err.message}` });
+  }
+}
+
+// ─── Ollama ───────────────────────────────────────────────────────────────────
+
+async function listOllamaModels(url) {
+  try {
+    const base = url || 'http://localhost:11434';
+    const response = await fetch(`${base}/api/tags`);
+    if (!response.ok) return { error: `Ollama error: ${response.status}` };
+    const data = await response.json();
+    const models = (data.models || []).map((m) => ({
+      id: m.name,
+      name: m.name,
+      provider: 'ollama',
+    }));
+    return { models };
+  } catch (err) {
+    return { error: `Cannot connect to Ollama: ${err.message}` };
   }
 }
 

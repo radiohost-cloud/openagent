@@ -118,6 +118,20 @@
           </div>
 
           <div class="form-group">
+            <label data-i18n="settingsProvider">Provider</label>
+            <select id="providerSelect">
+              <option value="openrouter">OpenRouter</option>
+              <option value="ollama">Ollama (Local)</option>
+            </select>
+          </div>
+
+          <div id="ollamaUrlGroup" class="form-group hidden">
+            <label data-i18n="settingsOllamaUrl">Ollama URL</label>
+            <input type="text" id="ollamaUrlInput" placeholder="http://localhost:11434" />
+            <div class="form-hint" data-i18n="settingsOllamaUrlHint">Leave empty for default (localhost:11434)</div>
+          </div>
+
+          <div class="form-group" id="apiKeyGroup">
             <label data-i18n="settingsApiKey">API Key</label>
             <input type="password" id="apiKeyInput" data-i18n-placeholder="settingsApiKeyPlaceholder" placeholder="sk-or-..." />
             <div class="form-links">

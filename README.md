@@ -1,6 +1,6 @@
 # OpenAgent — Chrome Extension
 
-AI-powered browser assistant. Chat about any webpage, automate browser actions, and save notes directly to Obsidian — all without leaving your current tab.
+AI-powered browser assistant. Chat about any webpage, automate browser actions, and save notes directly to Obsidian — all without leaving your current tab. Works with OpenRouter or a local Ollama instance.
 
 ## Screenshots
 
@@ -22,7 +22,8 @@ AI-powered browser assistant. Chat about any webpage, automate browser actions, 
   - **Requires Obsidian desktop app installed** for full functionality (search, backlinks, graph view)
 - **Customizable UI** — 14 color presets, dark/light mode, adjustable font size
 - **Multi-language** — English, Polish, Spanish, French, German, Russian
-- **OpenRouter** — use any model from OpenRouter's model catalog
+- **OpenRouter** — use any model from OpenRouter's model catalog (requires API key)
+- **Ollama (local)** — run a local model with zero cost and full privacy (no API key needed)
 
 ## Installation
 
@@ -35,10 +36,21 @@ AI-powered browser assistant. Chat about any webpage, automate browser actions, 
 
 ## Setup
 
+Choose your provider:
+
+**OpenRouter** (cloud, hundreds of models):
 1. Click the extension icon in the toolbar, or use the keyboard shortcut
 2. Click **Settings** (gear icon)
-3. Paste your [OpenRouter API key](https://openrouter.ai/keys)
-4. Pick a model from the dropdown and start chatting
+3. Set Provider to **OpenRouter**
+4. Paste your [OpenRouter API key](https://openrouter.ai/keys)
+5. Pick a model and start chatting
+
+**Ollama** (local, free, private):
+1. Install [Ollama](https://ollama.com) and download a model (e.g. `ollama pull llama3`)
+2. Make sure Ollama is running (`ollama serve`)
+3. Click the extension icon and go to **Settings**
+4. Set Provider to **Ollama (Local)** — leave URL empty for default `localhost:11434`
+5. Select a model and start chatting
 
 ## How It Works
 

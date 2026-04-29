@@ -5,9 +5,9 @@ Browser assistant powered by OpenRouter. Chat about any webpage, automate action
 ## Screenshots
 
 <p float="left">
-  <img src="docs/screenshot1.png" width="300"/>
-  <img src="docs/screenshot2.png" width="300"/>
-  <img src="docs/screenshot3.png" width="300"/>
+  <img src="docs/screenshot1.png" width="200"/>
+  <img src="docs/screenshot2.png" width="200"/>
+  <img src="docs/screenshot3.png" width="200"/>
 </p>
 
 ## Features

@@ -44,13 +44,16 @@ async function injectIntoTab(tabId) {
   injectedTabs.add(tabId);
   try {
     const tab = await chrome.tabs.get(tabId);
-    if (!tab.url || !tab.url.startsWith('http')) return;
+    if (!tab.url || !tab.url.startsWith('http') || tab.url.startsWith('chrome')) return;
     await chrome.scripting.executeScript({
       target: { tabId },
       files: ['content.js'],
     });
   } catch (err) {
-    console.error('[OpenAgent] injectIntoTab: failed', tabId, err.message);
+    // chrome:// pages, extensions, etc. don't grant host permissions
+    if (err.message && !err.message.includes('Cannot access contents')) {
+      console.warn('[OpenAgent] injectIntoTab: failed', tabId, err.message);
+    }
   }
 }
 

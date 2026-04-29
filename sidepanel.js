@@ -240,7 +240,7 @@ function showStartProxyBtn() {
     const cmd = isMac
       ? 'cd ~/Downloads/openagent/proxy && node server.js'
       : isWin
-        ? 'node "%USERPROFILE%\\Downloads\\openagent\\proxy\\server.js"'
+        ? '"%USERPROFILE%\\AppData\\Local\\Programs\\Node.js\\node.exe" "%USERPROFILE%\\Downloads\\openagent\\proxy\\server.js"'
         : 'cd ~/Downloads/openagent/proxy && node server.js';
     navigator.clipboard.writeText(cmd).then(() => {
       showCopyNotification(cmd, isMac);
@@ -261,7 +261,7 @@ function showStartProxyBtn() {
 
 function showCopyNotification(cmd, isMac) {
   const isWin = navigator.platform.toLowerCase().startsWith('win');
-  const hint = isMac ? 'Open Terminal (⌘+Space → "Terminal") and paste the command.' : isWin ? 'Open CMD or PowerShell and paste the command. Make sure Node.js is installed first.' : 'Open terminal and paste the command.';
+  const hint = isMac ? 'Open Terminal (⌘+Space → "Terminal") and paste the command.' : isWin ? 'Open CMD or PowerShell and paste. If "node" is not found, install Node.js from nodejs.org first.' : 'Open terminal and paste the command.';
   const el = document.createElement('div');
   el.style.cssText = 'position:fixed;top:10%;left:10%;right:10%;background:#1e1e1e;border:1px solid #555;border-radius:8px;padding:16px;color:#fff;font-family:monospace;font-size:14px;z-index:99999;text-align:center';
   el.innerHTML = `<strong>Command copied!</strong><br><br>${hint}<br><br><code style="display:block;background:#333;padding:8px;border-radius:4px;margin-top:8px;word-break:break-all">${cmd}</code>`;

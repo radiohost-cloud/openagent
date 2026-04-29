@@ -235,15 +235,30 @@ function showStartProxyBtn() {
   btn.style.cssText = 'background: rgba(255,255,255,0.08); color: #fff; border: 1px solid rgba(255,255,255,0.15); border-radius: 4px; padding: 2px 8px; font-size: 11px; cursor: pointer; font-family: inherit; margin-left: 6px;';
   btn.addEventListener('click', (e) => {
     e.stopPropagation();
-    // Open Terminal with the proxy start command
-    const script = 'tell application "Terminal"\n  do script "cd ~/Downloads/openagent/proxy && node server.js"\nend tell';
-    window.open('data:application/applescript;charset=utf-8,' + encodeURIComponent(script));
+    navigator.clipboard.writeText('cd ~/Downloads/openagent/proxy && node server.js').then(() => {
+      showCopyNotification();
+    }).catch(() => {
+      const el = document.createElement('div');
+      el.style.cssText = 'position:fixed;top:10%;left:10%;right:10%;background:#1e1e1e;border:1px solid #555;border-radius:8px;padding:16px;color:#fff;font-family:monospace;font-size:14px;z-index:99999;max-width:400px;margin:0 auto';
+      el.innerHTML = '<strong>Run in Terminal:</strong><br><br><code style="display:block;background:#333;padding:8px;border-radius:4px;margin-top:8px;word-break:break-all">cd ~/Downloads/openagent/proxy && node server.js</code>';
+      el.onclick = () => el.remove();
+      document.body.appendChild(el);
+    });
   });
 
   const statusEl = dom.status;
   if (statusEl) {
     statusEl.parentNode.insertBefore(btn, statusEl.nextSibling);
   }
+}
+
+function showCopyNotification() {
+  const el = document.createElement('div');
+  el.style.cssText = 'position:fixed;top:10%;left:10%;right:10%;background:#1e1e1e;border:1px solid #555;border-radius:8px;padding:16px;color:#fff;font-family:monospace;font-size:14px;z-index:99999;text-align:center';
+  el.innerHTML = '<strong>Command copied!</strong><br><br>Open Terminal (⌘+Space → "Terminal") and paste the command.<br><br><code style="display:block;background:#333;padding:8px;border-radius:4px;margin-top:8px">cd ~/Downloads/openagent/proxy && node server.js</code>';
+  el.onclick = () => el.remove();
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 5000);
 }
 
 function hideStartProxyBtn() {

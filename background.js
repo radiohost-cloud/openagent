@@ -198,7 +198,6 @@ async function handlePromptSend(message, sendResponse) {
       body: JSON.stringify({
         model: settings.model || 'openai/gpt-4o',
         messages: msgs,
-        provider: { preset: settings.provider || 'openrouter' },
       }),
     });
 

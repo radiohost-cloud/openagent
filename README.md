@@ -15,6 +15,8 @@ Browser assistant powered by OpenRouter. Chat about any webpage, automate action
 - **Chat with AI** about the current page context
 - **Browser automation** (click, type, scroll, navigate)
 - **Obsidian integration** — save notes directly to your vault using File System Access API
+  - The extension uses the File System Access API to write `.md` files directly to a folder
+  - **Obsidian desktop app must be installed** for full functionality — the extension only saves files, it does not manage your vault or provide Obsidian features like search, backlinks, or plugins
   - Click the vault icon in the header to select your Obsidian vault folder
   - Toggle auto-save to append entire conversation to a single note per session
   - Manual notes created with `vault_write` get their own `.md` files
@@ -39,6 +41,8 @@ Browser assistant powered by OpenRouter. Chat about any webpage, automate action
 4. Select a model and start chatting
 
 ## Obsidian Vault
+
+> **Note:** This extension saves `.md` files to a folder of your choice. Full Obsidian experience (search, backlinks, plugins, graph view) requires [Obsidian](https://obsidian.md) to be installed and running.
 
 1. Click the **vault icon** in the header (or go to Settings → Obsidian Vault)
 2. Click **"Select folder"** and choose your Obsidian vault directory

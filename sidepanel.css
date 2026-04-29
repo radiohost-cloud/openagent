@@ -1259,6 +1259,11 @@ details[open] .vault-summary::before {
   background: #4ade80;
 }
 
+.vault-status.active {
+  background: #4ade80;
+  box-shadow: 0 0 0 2px rgba(74, 222, 128, 0.3);
+}
+
 .vault-info {
   flex: 1;
   min-width: 0;

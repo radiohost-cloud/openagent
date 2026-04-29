@@ -49,6 +49,7 @@ const i18nStrings = {
     btnVaultOn: 'Vault on — click to disable',
     btnVaultOff: 'Vault off — click to enable',
     btnVaultNotSet: 'No vault selected — click to select',
+    btnVaultReauth: 'Vault saved — click to re-authorize',
     langEnglish: 'English',
     langPolish: 'Polski',
     linkOpenrouterKeys: 'Get API key →',
@@ -96,6 +97,7 @@ const i18nStrings = {
     btnVaultOn: 'Magazyn włączony — kliknij by wyłączyć',
     btnVaultOff: 'Magazyn wyłączony — kliknij by włączyć',
     btnVaultNotSet: 'Nie wybrano magazynu — kliknij by wybrać',
+    btnVaultReauth: 'Magazyn zapisany — kliknij by autoryzować ponownie',
     langEnglish: 'English',
     langPolish: 'Polski',
     linkOpenrouterKeys: 'Pobierz klucz API →',
@@ -142,6 +144,7 @@ const i18nStrings = {
     btnVaultOn: 'Almacén activado — clic para desactivar',
     btnVaultOff: 'Almacén desactivado — clic para activar',
     btnVaultNotSet: 'Ningún almacén seleccionado — clic para seleccionar',
+    btnVaultReauth: 'Almacén guardado — clic para reautorizar',
     langEnglish: 'English',
     langPolish: 'Polski',
     linkOpenrouterKeys: 'Obtener clave API →',
@@ -188,6 +191,7 @@ const i18nStrings = {
     btnVaultOn: 'Coffre activé — clic pour désactiver',
     btnVaultOff: 'Coffre désactivé — clic pour activer',
     btnVaultNotSet: 'Aucun coffre sélectionné — clic pour sélectionner',
+    btnVaultReauth: 'Coffre enregistré — clic pour réautoriser',
     langEnglish: 'English',
     langPolish: 'Polski',
     linkOpenrouterKeys: 'Obtenir une clé API →',
@@ -234,6 +238,7 @@ const i18nStrings = {
     btnVaultOn: 'Tresor aktiviert — klicken zum Deaktivieren',
     btnVaultOff: 'Tresor deaktiviert — klicken zum Aktivieren',
     btnVaultNotSet: 'Kein Tresor ausgewählt — klicken zum Auswählen',
+    btnVaultReauth: 'Tresor gespeichert — klicken zum Erneut autorisieren',
     langEnglish: 'English',
     langPolish: 'Polski',
     linkOpenrouterKeys: 'API-Schlüssel erhalten →',
@@ -280,6 +285,7 @@ const i18nStrings = {
     btnVaultOn: 'Хранилище включено — нажмите для выключения',
     btnVaultOff: 'Хранилище выключено — нажмите для включения',
     btnVaultNotSet: 'Хранилище не выбрано — нажмите для выбора',
+    btnVaultReauth: 'Хранилище сохранено — нажмите для повторной авторизации',
     langEnglish: 'English',
     langPolish: 'Polski',
     linkOpenrouterKeys: 'Получить API-ключ →',
@@ -364,7 +370,7 @@ async function pickVaultFolder() {
     state.settings.vaultPath = dirHandle.name;
     dom.vaultPathInput.value = dirHandle.name;
     dom.vaultPathInput.title = 'Selected: ' + dirHandle.name;
-    if (dom.vaultStatus) dom.vaultStatus.classList.add('ready');
+    if (dom.vaultStatus) dom.vaultStatus.classList.add('ready', 'active');
     await sendBgMessage({
       type: 'settings.save',
       data: { ...state.settings },
@@ -458,26 +464,28 @@ async function init() {
 }
 
 function updateVaultBtn() {
-  const hasVault = !!state.settings.vaultPath;
+  const hasHandle = !!state.vaultDirHandle;
+  const hasPath = !!state.settings.vaultPath;
   const isOn = state.autoVault;
 
-  dom.vaultBtn.classList.toggle('active', isOn);
-  if (dom.vaultStatus) dom.vaultStatus.classList.toggle('ready', hasVault);
+  dom.vaultBtn.classList.toggle('active', hasHandle && isOn);
+  if (dom.vaultStatus) dom.vaultStatus.classList.toggle('ready', hasHandle);
 
-  if (!hasVault) {
+  if (!hasPath) {
     dom.vaultBtn.title = i18n('btnVaultNotSet');
-  } else if (isOn) {
-    dom.vaultBtn.title = i18n('btnVaultOn');
+  } else if (hasHandle) {
+    dom.vaultBtn.title = isOn ? i18n('btnVaultOn') : i18n('btnVaultOff');
   } else {
-    dom.vaultBtn.title = i18n('btnVaultOff');
+    dom.vaultBtn.title = i18n('btnVaultReauth');
   }
 }
 
 function toggleVaultOnBtn() {
+  if (!state.vaultDirHandle) return;
   state.autoVault = !state.autoVault;
   saveAutoVault();
   updateVaultBtn();
-  setStatus(state.autoVault ? i18n('statusVaultReady') : i18n('statusVaultNotSet'), state.autoVault ? 'success' : 'info');
+  setStatus(state.autoVault ? i18n('statusVaultReady') : i18n('btnVaultOff'), state.autoVault ? 'success' : 'info');
 }
 
 async function saveAutoVault() {
@@ -548,6 +556,9 @@ function bindEvents() {
   dom.vaultBtn.addEventListener('click', () => {
     if (state.vaultDirHandle) {
       toggleVaultOnBtn();
+    } else if (state.settings.vaultPath) {
+      // Vault path was saved but handle expired — re-authorize
+      pickVaultFolder();
     } else {
       pickVaultFolder();
     }
@@ -574,8 +585,11 @@ async function loadSettings() {
     if (state.settings.vaultPath) {
       dom.vaultPathInput.value = state.settings.vaultPath;
       dom.vaultPathInput.title = 'Selected: ' + state.settings.vaultPath;
-      state.vaultReady = true;
     }
+    // vaultDirHandle is session-only (FileSystemDirectoryHandle not serializable).
+    // vaultReady reflects whether we have an active handle, not just a saved path.
+    // The user must re-authorize via pickVaultFolder() after page reload.
+    state.vaultReady = false;
 
     const autoData = await sendBgMessage({ type: 'autovault.load' });
     state.autoVault = autoData?.autoVault || false;
@@ -838,7 +852,7 @@ async function handleSend() {
       state.messages.push({ role: 'assistant', content: finalContent });
       renderMessage('assistant', finalContent);
 
-      if (state.autoVault && state.vaultReady) {
+      if (state.autoVault && state.vaultDirHandle) {
         saveAutoVaultNote().catch((err) => console.error('[SP] auto-vault error:', err));
       }
     }

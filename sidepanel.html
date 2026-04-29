@@ -141,11 +141,15 @@
               <div class="vault-row">
                 <div class="vault-status" id="vaultStatusDot"></div>
                 <div class="vault-info">
-                  <div class="vault-label" data-i18n="settingsVaultPath">Vault Folder</div>
-                  <input type="text" id="vaultPathInput" class="vault-path-input" data-i18n-placeholder="settingsVaultPathPlaceholder" placeholder="Click 'Select folder' to choose your vault" readonly />
+                  <div class="vault-header-row">
+                    <span class="vault-label" data-i18n="settingsVaultPath">Folder</span>
+                  </div>
+                  <div class="vault-input-row">
+                    <input type="text" id="vaultPathInput" class="vault-path-input" data-i18n-placeholder="settingsVaultPathPlaceholder" placeholder="Click Select folder to choose your vault" readonly />
+                    <button id="vaultSelectBtn" class="vault-select-btn" data-i18n="settingsSelectFolder">Select folder</button>
+                  </div>
                   <div class="form-hint" data-i18n="settingsVaultPathHint">Notes are saved directly to your vault.</div>
                 </div>
-                <button id="vaultSelectBtn" class="vault-select-btn" data-i18n="settingsSelectFolder">Select folder</button>
               </div>
             </div>
           </details>

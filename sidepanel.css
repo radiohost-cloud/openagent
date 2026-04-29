@@ -1267,12 +1267,21 @@ details[open] .vault-summary::before {
 .vault-label {
   font-size: 11px;
   color: var(--muted);
-  margin-bottom: 4px;
   font-weight: 500;
 }
 
+.vault-header-row {
+  margin-bottom: 4px;
+}
+
+.vault-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
 .vault-path-input {
-  width: 100%;
+  flex: 1;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 4px;
@@ -1282,6 +1291,7 @@ details[open] .vault-summary::before {
   cursor: default;
   outline: none;
   font-family: inherit;
+  height: 30px;
 }
 
 .vault-path-input:focus {
@@ -1293,13 +1303,16 @@ details[open] .vault-summary::before {
   border: 1px solid rgba(255,255,255,0.12);
   color: var(--text);
   border-radius: 4px;
-  padding: 6px 12px;
+  padding: 0 12px;
   font-size: 12px;
   cursor: pointer;
   font-family: inherit;
   white-space: nowrap;
   flex-shrink: 0;
   transition: background 0.15s, border-color 0.15s;
+  height: 30px;
+  display: flex;
+  align-items: center;
 }
 
 .vault-select-btn:hover {

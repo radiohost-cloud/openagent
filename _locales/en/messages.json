@@ -53,8 +53,8 @@
   "btnVaultOn": { "message": "Vault ready — click to change" },
   "btnVaultOff": { "message": "No vault selected — click to select" },
   "settingsVaultTitle": { "message": "Obsidian Vault" },
-  "settingsVaultPath": { "message": "Vault Folder" },
-  "settingsVaultPathPlaceholder": { "message": "Click 'Select folder' to choose your vault" },
+  "settingsVaultPath": { "message": "Folder" },
+  "settingsVaultPathPlaceholder": { "message": "Click Select folder to choose your vault" },
   "settingsVaultPathHint": { "message": "Notes are saved directly to your vault." },
   "settingsSelectFolder": { "message": "Select folder" },
   "settingsChangeFolder": { "message": "Change folder" }

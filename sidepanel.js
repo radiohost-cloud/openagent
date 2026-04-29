@@ -52,8 +52,8 @@ const i18nStrings = {
     langPolish: 'Polski',
     linkOpenrouterKeys: 'Get API key →',
     settingsVaultTitle: 'Obsidian Vault',
-    settingsVaultPath: 'Vault Folder',
-    settingsVaultPathPlaceholder: 'Click "Select folder" to choose your vault',
+    settingsVaultPath: 'Folder',
+    settingsVaultPathPlaceholder: 'Click Select folder to choose your vault',
     settingsVaultPathHint: 'Notes are saved directly to your vault.',
     settingsSelectFolder: 'Select folder',
     settingsChangeFolder: 'Change folder',
@@ -98,8 +98,8 @@ const i18nStrings = {
     langPolish: 'Polski',
     linkOpenrouterKeys: 'Pobierz klucz API →',
     settingsVaultTitle: 'Magazyn Obsidian',
-    settingsVaultPath: 'Folder magazynu',
-    settingsVaultPathPlaceholder: 'Kliknij "Wybierz folder" aby wybrać magazyn',
+    settingsVaultPath: 'Folder',
+    settingsVaultPathPlaceholder: 'Kliknij Wybierz folder aby wybrać magazyn',
     settingsVaultPathHint: 'Notatki są zapisywane bezpośrednio w magazynie.',
     settingsSelectFolder: 'Wybierz folder',
     settingsChangeFolder: 'Zmień folder',
@@ -135,6 +135,7 @@ const dom = {
   langSelect: $('#langSelect'),
   vaultPathInput: $('#vaultPathInput'),
   vaultSelectBtn: $('#vaultSelectBtn'),
+  vaultStatus: $('#vaultStatusDot'),
 };
 
 // ─── i18n ────────────────────────────────────────────────────────────────────
@@ -181,6 +182,7 @@ async function pickVaultFolder() {
     state.vaultReady = true;
     dom.vaultPathInput.value = dirHandle.name;
     dom.vaultPathInput.title = 'Selected: ' + dirHandle.name;
+    if (dom.vaultStatus) dom.vaultStatus.classList.add('ready');
     updateVaultBtn();
     setStatus(i18n('statusVaultReady'), 'success');
   } catch (err) {
@@ -263,10 +265,12 @@ function updateVaultBtn() {
   if (state.vaultReady) {
     dom.vaultBtn.classList.add('active');
     dom.vaultBtn.title = i18n('btnVaultOn');
+    if (dom.vaultStatus) dom.vaultStatus.classList.add('ready');
     setStatus(i18n('statusVaultReady'), 'success');
   } else {
     dom.vaultBtn.classList.remove('active');
     dom.vaultBtn.title = i18n('btnVaultOff');
+    if (dom.vaultStatus) dom.vaultStatus.classList.remove('ready');
   }
 }
 

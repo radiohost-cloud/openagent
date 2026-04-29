@@ -53,8 +53,8 @@
   "btnVaultOn": { "message": "Magazyn gotowy — kliknij by zmienić" },
   "btnVaultOff": { "message": "Nie wybrano magazynu — kliknij by wybrać" },
   "settingsVaultTitle": { "message": "Magazyn Obsidian" },
-  "settingsVaultPath": { "message": "Folder magazynu" },
-  "settingsVaultPathPlaceholder": { "message": "Kliknij 'Wybierz folder' aby wybrać magazyn" },
+  "settingsVaultPath": { "message": "Folder" },
+  "settingsVaultPathPlaceholder": { "message": "Kliknij Wybierz folder aby wybrać magazyn" },
   "settingsVaultPathHint": { "message": "Notatki są zapisywane bezpośrednio w magazynie." },
   "settingsSelectFolder": { "message": "Wybierz folder" },
   "settingsChangeFolder": { "message": "Zmień folder" }

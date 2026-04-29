@@ -4,7 +4,7 @@
     "description": "Extension name."
   },
   "extensionDescription": {
-    "message": "OpenAgent-powered browser assistant. Chat about any webpage, automate actions.",
+    "message": "OpenAgent-powered browser assistant. Chat about any webpage, automate actions, save notes to Obsidian.",
     "description": "Extension description."
   },
   "actionOpenSidePanel": {
@@ -20,7 +20,7 @@
   "inputPlaceholder": { "message": "Message OpenAgent..." },
   "emptyStateText": { "message": "Ask OpenAgent anything about the current page." },
   "statusProxyConnected": { "message": "Proxy connected" },
-  "statusProxyOffline": { "message": "Proxy offline — run: node proxy/server.js" },
+  "statusProxyOffline": { "message": "Proxy offline — run: cd proxy && node server.js" },
   "statusApiKeyNeeded": { "message": "Set API key in Settings" },
   "statusModel": { "message": "Model:" },
   "statusPageContextLoaded": { "message": "Page context loaded" },
@@ -47,14 +47,16 @@
   "settingsProxyOffline": { "message": "Proxy offline" },
   "settingsStartProxy": { "message": "Start proxy: node proxy/server.js" },
   "settingsLoading": { "message": "Loading..." },
-  "settingsNoModels": { "message": "No models" },
   "linkOpenrouterKeys": { "message": "Get API key →" },
   "btnSave": { "message": "Save" },
   "btnClear": { "message": "Clear conversation" },
   "btnReadPage": { "message": "Read this page" },
   "btnSettings": { "message": "Settings" },
+  "btnVault": { "message": "Auto-save to Obsidian" },
+  "btnVaultOn": { "message": "Auto-save to Obsidian enabled (click to disable)" },
+  "btnVaultOff": { "message": "Auto-save to Obsidian disabled (click to enable)" },
   "settingsVaultTitle": { "message": "Obsidian Vault" },
   "settingsVaultPath": { "message": "Vault Path" },
   "settingsVaultPathPlaceholder": { "message": "/Users/you/Documents/my-vault" },
-  "settingsVaultPathHint": { "message": "Notes are saved to .openagent/ in your vault." }
+  "settingsVaultPathHint": { "message": "Notes are saved directly to your vault." }
 }

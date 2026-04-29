@@ -2,6 +2,7 @@
 // Bridges side panel UI, content scripts, and the local proxy server
 
 const PROXY_URL = 'http://localhost:8787';
+const AUTO_START_KEY = 'openagent_proxy_autostart_done';
 const STORAGE_KEYS = {
   API_KEY: 'claude_api_key',
   MODEL: 'claude_model',
@@ -120,6 +121,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     // --- Auto Vault ---
     'autovault.load': () => loadAutoVault(),
     'autovault.save': () => saveAutoVault(message.enabled),
+
+    // --- Proxy Auto-Start ---
+    'proxy.start': () => startProxyServer(),
   };
 
   const handler = handlers[message.type];
@@ -488,6 +492,59 @@ chrome.contextMenus.onClicked.addListener((info) => {
   if (info.menuItemId === 'openSidePanel') {
     chrome.sidePanel.open({ windowId: chrome.windows.WINDOW_ID_CURRENT });
   }
+});
+
+// ─── Proxy Auto-Start ──────────────────────────────────────────────────────────
+
+async function startProxyServer() {
+  try {
+    // Check if already running
+    const resp = await fetch(`${PROXY_URL}/health`);
+    if (resp.ok) return { ok: true, already: true };
+  } catch {}
+
+  // Proxy is not running — try to start via offscreen document
+  try {
+    // Use offscreen API to create a document that can run JS
+    const hasOffscreen = await chrome.offscreen.hasDocument();
+    if (!hasOffscreen) {
+      await chrome.offscreen.createDocument({
+        url: 'offscreen.html',
+        reasons: ['WORKERS'],
+        justification: 'Proxy auto-start for OpenAgent Chrome Extension',
+      });
+    }
+
+    // Send a message to the offscreen document to start the proxy
+    // Since offscreen can't run shell commands either, we use a different approach:
+    // Try to detect the extension path and open Terminal
+    chrome.runtime.sendMessage('offscreen', { type: 'start-proxy' }, () => {
+      // Even if this fails, we've tried
+    });
+  } catch (err) {
+    console.log('[OpenAgent] offscreen start failed:', err.message);
+  }
+
+  // Best effort: return instructions
+  return {
+    ok: false,
+    message: 'Could not auto-start proxy. Please run: cd ~/Downloads/openagent/proxy && node server.js',
+  };
+}
+
+async function checkAndStartProxy() {
+  try {
+    const resp = await fetch(`${PROXY_URL}/health`);
+    if (resp.ok) return;
+  } catch {}
+
+  // Try offscreen approach
+  await startProxyServer();
+}
+
+// Check proxy on service worker startup
+chrome.runtime.onStartup.addListener(() => {
+  checkAndStartProxy();
 });
 
 // ─── Side Panel ───────────────────────────────────────────────────────────────

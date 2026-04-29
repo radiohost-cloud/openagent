@@ -4,7 +4,7 @@
     "description": "Extension name."
   },
   "extensionDescription": {
-    "message": "Asystent przeglądarki zasilany przez OpenRouter. Czatuj o dowolnej stronie, automatyzuj działania.",
+    "message": "Asystent przeglądarki zasilany przez OpenRouter. Czatuj o dowolnej stronie, automatyzuj działania, zapisuj notatki do Obsidian.",
     "description": "Extension description."
   },
   "actionOpenSidePanel": {
@@ -20,7 +20,7 @@
   "inputPlaceholder": { "message": "Napisz do OpenAgent..." },
   "emptyStateText": { "message": "Zadaj OpenAgentowi pytanie o aktualną stronę." },
   "statusProxyConnected": { "message": "Proxy połączone" },
-  "statusProxyOffline": { "message": "Proxy offline — uruchom: node proxy/server.js" },
+  "statusProxyOffline": { "message": "Proxy offline — uruchom: cd proxy && node server.js" },
   "statusApiKeyNeeded": { "message": "Ustaw klucz API w Ustawieniach" },
   "statusModel": { "message": "Model:" },
   "statusPageContextLoaded": { "message": "Kontekst strony wczytany" },
@@ -33,7 +33,8 @@
   "settingsModel": { "message": "Model" },
   "settingsSystemPrompt": { "message": "System Prompt" },
   "settingsSystemPromptPlaceholder": { "message": "Opcjonalne instrukcje..." },
-  "settingsTheme": { "message": "Motyw" },
+  "settingsBaseTheme": { "message": "Baza" },
+  "settingsPreset": { "message": "Styl" },
   "settingsThemeDark": { "message": "Ciemny" },
   "settingsThemeLight": { "message": "Jasny" },
   "settingsLanguage": { "message": "Język" },
@@ -46,14 +47,16 @@
   "settingsProxyOffline": { "message": "Proxy offline" },
   "settingsStartProxy": { "message": "Uruchom proxy: node proxy/server.js" },
   "settingsLoading": { "message": "Ładowanie..." },
-  "settingsNoModels": { "message": "Brak modeli" },
   "linkOpenrouterKeys": { "message": "Pobierz klucz API →" },
   "btnSave": { "message": "Zapisz" },
   "btnClear": { "message": "Wyczyść rozmowę" },
   "btnReadPage": { "message": "Wczytaj stronę" },
   "btnSettings": { "message": "Ustawienia" },
+  "btnVault": { "message": "Automatyczny zapis do Obsidian" },
+  "btnVaultOn": { "message": "Automatyczny zapis włączony (kliknij by wyłączyć)" },
+  "btnVaultOff": { "message": "Automatyczny zapis wyłączony (kliknij by włączyć)" },
   "settingsVaultTitle": { "message": "Magazyn Obsidian" },
   "settingsVaultPath": { "message": "Ścieżka do magazynu" },
   "settingsVaultPathPlaceholder": { "message": "/Użytkownik/ty/Dokumenty/moj-magazyn" },
-  "settingsVaultPathHint": { "message": "Notatki są zapisywane w folderze .openagent w magazynie." }
+  "settingsVaultPathHint": { "message": "Notatki są zapisywane bezpośrednio w magazynie." }
 }

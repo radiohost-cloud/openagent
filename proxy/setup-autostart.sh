@@ -1,21 +1,19 @@
 #!/bin/bash
 # Auto-start setup for OpenAgent Proxy
 
+cd "$(dirname "$0")" || exit 1
+
 AGENT_PLIST="$HOME/Library/LaunchAgents/com.openagent.proxy.plist"
-NODE_BIN=$(which node 2>/dev/null || echo "/usr/local/bin/node")
+PROXY_DIR="$(pwd)"
 
 echo "OpenAgent Proxy — Auto-start Setup"
 echo "==================================="
+echo "Proxy directory: $PROXY_DIR"
 
 if [ -f "$AGENT_PLIST" ]; then
   echo "Auto-start already installed."
   echo "To remove: launchctl unload $AGENT_PLIST && rm $AGENT_PLIST"
   exit 0
-fi
-
-# Detect node path
-if [ ! -x "$NODE_BIN" ]; then
-  NODE_BIN=$(node -e "console.log(process.execPath)" 2>/dev/null)
 fi
 
 cat > "$AGENT_PLIST" << EOF
@@ -29,7 +27,7 @@ cat > "$AGENT_PLIST" << EOF
   <array>
     <string>/bin/sh</string>
     <string>-c</string>
-    <string>cd $(pwd) && node server.js</string>
+    <string>cd $PROXY_DIR && node server.js</string>
   </array>
   <key>RunAtLoad</key>
   <true/>
@@ -42,8 +40,7 @@ EOF
 launchctl bootstrap gui/$(id -u) "$AGENT_PLIST" 2>/dev/null
 launchctl start com.openagent.proxy 2>/dev/null
 
-echo "Done! Proxy will start automatically after each login/restart."
-echo "Agent: $AGENT_PLIST"
 echo ""
-echo "Start manually: node server.js"
-echo "Remove auto-start: launchctl unload $AGENT_PLIST && rm $AGENT_PLIST"
+echo "Done! Proxy will start automatically after each login/restart."
+echo "To start manually: cd $PROXY_DIR && node server.js"
+echo "To remove auto-start: launchctl unload $AGENT_PLIST && rm $AGENT_PLIST"

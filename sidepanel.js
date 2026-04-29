@@ -182,6 +182,7 @@ async function init() {
   renderMessages();
   bindEvents();
   checkProxyConnection();
+  startProxyAutomatically();
   loadModels();
   updateModelBadge();
   loadAutoVaultState();
@@ -219,12 +220,49 @@ async function checkProxyConnection() {
     const res = await fetch('http://localhost:8787/health', { method: 'GET' });
     if (!res.ok) throw new Error();
     setStatus(i18n('statusProxyConnected'), 'success');
+    hideStartProxyBtn();
   } catch {
-    setStatus(i18n('statusProxyOffline'), 'error');
+    showStartProxyBtn();
   }
 }
 
+function showStartProxyBtn() {
+  const existing = document.getElementById('startProxyBtn');
+  if (existing) return;
+  const btn = document.createElement('button');
+  btn.id = 'startProxyBtn';
+  btn.textContent = 'Start Proxy';
+  btn.style.cssText = 'background: rgba(255,255,255,0.08); color: #fff; border: 1px solid rgba(255,255,255,0.15); border-radius: 4px; padding: 2px 8px; font-size: 11px; cursor: pointer; font-family: inherit; margin-left: 6px;';
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    // Open Terminal with the proxy start command
+    const script = 'tell application "Terminal"\n  do script "cd ~/Downloads/openagent/proxy && node server.js"\nend tell';
+    window.open('data:application/applescript;charset=utf-8,' + encodeURIComponent(script));
+  });
+
+  const statusEl = dom.status;
+  if (statusEl) {
+    statusEl.parentNode.insertBefore(btn, statusEl.nextSibling);
+  }
+}
+
+function hideStartProxyBtn() {
+  const btn = document.getElementById('startProxyBtn');
+  if (btn) btn.remove();
+}
+
 // ─── Events ──────────────────────────────────────────────────────────────────
+
+async function startProxyAutomatically() {
+  try {
+    const res = await fetch('http://localhost:8787/health', { method: 'GET' });
+    if (res.ok) return;
+  } catch {}
+  // Proxy down — try to start via service worker
+  try {
+    await sendBgMessage({ type: 'proxy.start' });
+  } catch {}
+}
 
 function bindEvents() {
   dom.sendBtn.addEventListener('click', handleSend);

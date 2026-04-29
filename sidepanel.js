@@ -190,6 +190,10 @@ async function pickVaultFolder() {
   }
 }
 
+// Vault is accessible as long as the side panel is open.
+// The user picks the folder once per session via the icon or Settings.
+// The AI uses <vault_read> and <vault_write> XML tags in responses.
+
 async function vaultWrite(filename, content) {
   if (!state.vaultDirHandle) {
     return { error: 'No vault selected. Go to Settings to pick your vault folder.' };

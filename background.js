@@ -202,7 +202,6 @@ async function handlePromptSend(message, sendResponse) {
       console.log('[Ollama] sending to', `${baseUrl}/api/chat`, 'model:', settings.model);
       response = await fetch(`${baseUrl}/api/chat`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           model: settings.model || 'llama3',
           messages: msgs,

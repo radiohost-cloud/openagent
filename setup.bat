@@ -8,67 +8,55 @@ echo.
 set "EXTENSION_DIR=%~dp0"
 set "EXTENSION_DIR=%EXTENSION_DIR:~0,-1%"
 set "PROXY_DIR=%EXTENSION_DIR%\proxy"
-set "DESKTOP=%USERPROFILE%\Desktop"
 
 REM ─── Proxy auto-start ───────────────────────────────────
 echo Installing proxy auto-start...
 schtasks /create /tn "OpenAgentProxy" /tr "node \"%PROXY_DIR%\server.js\"" /sc ONLOGON /f >nul 2>&1
 if %ERRORLEVEL% EQU 0 (
-  echo   - Proxy auto-start installed (Task Scheduler).
+  echo   [OK] Proxy auto-start (Task Scheduler)
 ) else (
-  echo   - Task Scheduler failed — proxy needs manual start.
+  echo   [--] Task Scheduler not available - proxy needs manual start
 )
 
-REM ─── Create Chrome shortcut with extension loaded ───────
-echo Creating Chrome shortcut...
-
+REM ─── Find Chrome ──────────────────────────────────────────
 set "CHROME_PATH="
 where chrome >nul 2>&1 && set "CHROME_PATH=chrome"
 if not defined CHROME_PATH (
   if exist "%ProgramFiles%\Google\Chrome\Application\chrome.exe" set "CHROME_PATH=%ProgramFiles%\Google\Chrome\Application\chrome.exe"
   if exist "%LocalAppData%\Google\Chrome\Application\chrome.exe" set "CHROME_PATH=%LocalAppData%\Google\Chrome\Application\chrome.exe"
 )
-
-set "SHORTCUT_PATH=%DESKTOP%\OpenAgent (with extension).lnk"
-set "PS_SCRIPT=%TEMP%\create_shortcut.ps1"
-
-echo Set oWS = WScript.CreateObject("WScript.Shell") > "%PS_SCRIPT%"
-echo Set oFS = CreateObject("Scripting.FileSystemObject") >> "%PS_SCRIPT%"
-echo strDesktop = oWS.SpecialFolders("Desktop") >> "%PS_SCRIPT%"
-echo Set oLink = oWS.CreateShortcut("%SHORTCUT_PATH%") >> "%PS_SCRIPT%"
-echo oLink.TargetPath = "%CHROME_PATH%" >> "%PS_SCRIPT%"
-echo oLink.Arguments = "--load-extension=%EXTENSION_DIR%" >> "%PS_SCRIPT%"
-echo oLink.Description = "OpenAgent Chrome Extension" >> "%PS_SCRIPT%"
-echo oLink.Save >> "%PS_SCRIPT%"
-cscript //B "%PS_SCRIPT%"
-del "%PS_SCRIPT%"
-
-if exist "%SHORTCUT_PATH%" (
-  echo   - Chrome shortcut created on Desktop.
-) else (
-  echo   - Could not create shortcut.
+if not defined CHROME_PATH (
+  if exist "%ProgramFiles (x86)\Google\Chrome\Application\chrome.exe" set "CHROME_PATH=%ProgramFiles (x86)%\Google\Chrome\Application\chrome.exe"
 )
 
-REM ─── Start proxy ────────────────────────────────────────
+REM ─── Open Chrome extensions page ─────────────────────────
 echo.
-echo Starting proxy server...
+echo Opening Chrome extension page...
+if defined CHROME_PATH (
+  start "" "%CHROME_PATH%" "chrome://extensions/"
+) else (
+  echo   Could not find Chrome. Please open Chrome manually and go to chrome://extensions/
+)
+
+REM ─── Copy extension folder path to clipboard ──────────────
+echo | set /p="Extension folder: %EXTENSION_DIR%" | clip
+echo   Extension folder path copied to clipboard.
+
+REM ─── Start proxy ──────────────────────────────────────────
+echo.
 cd /d "%PROXY_DIR%"
 start "OpenAgent Proxy" node server.js
-
-REM ─── Open Chrome with extension ─────────────────────────
-if defined CHROME_PATH (
-  start "" "%CHROME_PATH%" "--load-extension=%EXTENSION_DIR%"
-  echo   - Chrome opened with extension loaded.
-)
-
-echo.
-echo Done!
-if exist "%SHORTCUT_PATH%" (
-  echo   Shortcut on Desktop: "OpenAgent (with extension)"
-  echo   Double-click it to launch Chrome with the extension.
-) else (
-  echo   Open Chrome, enable Developer mode, click Load unpacked, select this folder.
-)
 echo   Proxy running at http://localhost:8787
+
 echo.
-pause
+echo ============================================
+echo NEXT STEP - takes 10 seconds:
+echo   1. In Chrome, enable "Developer mode" (top right)
+echo   2. Click "Load unpacked"
+echo   3. Paste clipboard path or navigate to: %EXTENSION_DIR%
+echo   4. Select the folder and click "Select Folder"
+echo ============================================
+echo.
+echo Press any key to open this folder in Explorer...
+pause > nul
+explorer "%EXTENSION_DIR%"

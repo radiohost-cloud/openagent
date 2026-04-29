@@ -675,6 +675,7 @@ async function handleSaveSettings() {
   const preset = dom.themePreset.value;
   const language = state.settings.language;
   const vaultPath = dom.vaultPathInput.value.trim();
+  const fontSize = dom.fontSizeSelect.value;
 
   try {
     const provider = dom.providerSelect.value;

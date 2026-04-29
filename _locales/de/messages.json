@@ -1,34 +1,61 @@
 {
   "extensionName": {
-    "message": "Chromex",
-    "description": "Extension name shown in Chrome surfaces."
+    "message": "OpenAgent",
+    "description": "Extension name."
   },
   "extensionDescription": {
-    "message": "Ein von OpenAgent unterstützter Browserassistent für Seitenkontext, Tabs, Sprache und Bildbearbeitung.",
-    "description": "Short extension description shown in Chrome and the Chrome Web Store."
+    "message": "Von OpenAgent unterstützter Browser-Assistent. Chatten Sie über jede Webseite, automatisieren Sie Aktionen, speichern Sie Notizen in Obsidian.",
+    "description": "Extension description."
   },
   "actionOpenSidePanel": {
-    "message": "Chromex öffnen",
-    "description": "Tooltip for the browser action button."
+    "message": "OpenAgent öffnen",
+    "description": "Browser action tooltip."
   },
   "commandOpenSidePanel": {
-    "message": "Chromex öffnen",
-    "description": "Keyboard shortcut description for opening the side panel."
+    "message": "OpenAgent öffnen",
+    "description": "Keyboard shortcut description."
   },
-  "commandOpenPopup": {
-    "message": "Chromex-Popup öffnen",
-    "description": "Keyboard shortcut description for opening the popup workspace."
-  },
-  "contextAskPage": {
-    "message": "Chromex zu dieser Seite fragen",
-    "description": "Context menu item for asking about the current page."
-  },
-  "contextEditImage": {
-    "message": "Dieses Bild mit Chromex bearbeiten",
-    "description": "Context menu item for editing an image with Chromex."
-  },
-  "contextSummarizeYoutube": {
-    "message": "Dieses YouTube-Video zusammenfassen",
-    "description": "Context menu item for summarizing a YouTube video."
-  }
+  "msgLabelYou": { "message": "Sie" },
+  "msgLabelClaude": { "message": "OpenAgent" },
+  "inputPlaceholder": { "message": "Nachricht an OpenAgent..." },
+  "emptyStateText": { "message": "Fragen Sie OpenAgent alles über die aktuelle Seite." },
+  "statusProxyConnected": { "message": "Bereit" },
+  "statusApiKeyNeeded": { "message": "API-Schlüssel in Einstellungen festlegen" },
+  "statusModel": { "message": "Modell:" },
+  "statusPageContextLoaded": { "message": "Seitenkontext geladen" },
+  "settingsTitle": { "message": "Einstellungen" },
+  "settingsProvider": { "message": "Anbieter" },
+  "settingsApiKey": { "message": "API-Schlüssel" },
+  "settingsApiKeyPlaceholder": { "message": "sk-or-..." },
+  "settingsModelSearch": { "message": "Modellsuche" },
+  "settingsModelSearchPlaceholder": { "message": "Modelle filtern..." },
+  "settingsModel": { "message": "Modell" },
+  "settingsSystemPrompt": { "message": "System-Prompt" },
+  "settingsSystemPromptPlaceholder": { "message": "Optionale Anweisungen..." },
+  "settingsBaseTheme": { "message": "Basis" },
+  "settingsPreset": { "message": "Stil" },
+  "settingsThemeDark": { "message": "Dunkel" },
+  "settingsThemeLight": { "message": "Hell" },
+  "settingsLanguage": { "message": "Sprache" },
+  "langEnglish": { "message": "English" },
+  "langPolish": { "message": "Polski" },
+  "settingsSaved": { "message": "Gespeichert" },
+  "settingsModelsHint": { "message": "Modelle verfügbar" },
+  "settingsNoModels": { "message": "Keine Modelle" },
+  "settingsEnterApiKey": { "message": "API-Schlüssel in Einstellungen eingeben" },
+  "settingsLoading": { "message": "Laden..." },
+  "linkOpenrouterKeys": { "message": "API-Schlüssel erhalten →" },
+  "btnSave": { "message": "Speichern" },
+  "btnClear": { "message": "Konversation löschen" },
+  "btnReadPage": { "message": "Diese Seite lesen" },
+  "btnSettings": { "message": "Einstellungen" },
+  "btnVault": { "message": "Tresor-Ordner auswählen" },
+  "btnVaultOn": { "message": "Tresor bereit — klicken zum Ändern" },
+  "btnVaultOff": { "message": "Kein Tresor ausgewählt — klicken zum Auswählen" },
+  "settingsVaultTitle": { "message": "Obsidian-Tresor" },
+  "settingsVaultPath": { "message": "Ordner" },
+  "settingsVaultPathPlaceholder": { "message": "Klicken Sie auf Ordner auswählen, um Ihren Tresor zu wählen" },
+  "settingsVaultPathHint": { "message": "Notizen werden direkt in Ihrem Tresor gespeichert." },
+  "settingsSelectFolder": { "message": "Ordner auswählen" },
+  "settingsChangeFolder": { "message": "Ordner ändern" }
 }

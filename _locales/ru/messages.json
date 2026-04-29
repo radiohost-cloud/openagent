@@ -1,34 +1,61 @@
 {
   "extensionName": {
-    "message": "Chromex",
-    "description": "Extension name shown in Chrome surfaces."
+    "message": "OpenAgent",
+    "description": "Extension name."
   },
   "extensionDescription": {
-    "message": "Браузерный помощник на базе OpenAgent для контекста страниц, вкладок, голоса и редактирования изображений.",
-    "description": "Short extension description shown in Chrome and the Chrome Web Store."
+    "message": "Браузерный ассистент на базе OpenAgent. Общайтесь о любой веб-странице, автоматизируйте действия, сохраняйте заметки в Obsidian.",
+    "description": "Extension description."
   },
   "actionOpenSidePanel": {
-    "message": "Открыть Chromex",
-    "description": "Tooltip for the browser action button."
+    "message": "Открыть OpenAgent",
+    "description": "Browser action tooltip."
   },
   "commandOpenSidePanel": {
-    "message": "Открыть Chromex",
-    "description": "Keyboard shortcut description for opening the side panel."
+    "message": "Открыть OpenAgent",
+    "description": "Keyboard shortcut description."
   },
-  "commandOpenPopup": {
-    "message": "Открыть всплывающее окно Chromex",
-    "description": "Keyboard shortcut description for opening the popup workspace."
-  },
-  "contextAskPage": {
-    "message": "Спросить Chromex об этой странице",
-    "description": "Context menu item for asking about the current page."
-  },
-  "contextEditImage": {
-    "message": "Редактировать это изображение с Chromex",
-    "description": "Context menu item for editing an image with Chromex."
-  },
-  "contextSummarizeYoutube": {
-    "message": "Суммировать это видео YouTube",
-    "description": "Context menu item for summarizing a YouTube video."
-  }
+  "msgLabelYou": { "message": "Вы" },
+  "msgLabelClaude": { "message": "OpenAgent" },
+  "inputPlaceholder": { "message": "Напишите OpenAgent..." },
+  "emptyStateText": { "message": "Задайте OpenAgent вопрос о текущей странице." },
+  "statusProxyConnected": { "message": "Готово" },
+  "statusApiKeyNeeded": { "message": "Установите API-ключ в Настройках" },
+  "statusModel": { "message": "Модель:" },
+  "statusPageContextLoaded": { "message": "Контекст страницы загружен" },
+  "settingsTitle": { "message": "Настройки" },
+  "settingsProvider": { "message": "Провайдер" },
+  "settingsApiKey": { "message": "API-ключ" },
+  "settingsApiKeyPlaceholder": { "message": "sk-or-..." },
+  "settingsModelSearch": { "message": "Поиск модели" },
+  "settingsModelSearchPlaceholder": { "message": "Фильтровать модели..." },
+  "settingsModel": { "message": "Модель" },
+  "settingsSystemPrompt": { "message": "Системный промпт" },
+  "settingsSystemPromptPlaceholder": { "message": "Дополнительные инструкции..." },
+  "settingsBaseTheme": { "message": "База" },
+  "settingsPreset": { "message": "Стиль" },
+  "settingsThemeDark": { "message": "Тёмный" },
+  "settingsThemeLight": { "message": "Светлый" },
+  "settingsLanguage": { "message": "Язык" },
+  "langEnglish": { "message": "English" },
+  "langPolish": { "message": "Polski" },
+  "settingsSaved": { "message": "Сохранено" },
+  "settingsModelsHint": { "message": "моделей доступно" },
+  "settingsNoModels": { "message": "Нет моделей" },
+  "settingsEnterApiKey": { "message": "Введите API-ключ в Настройках" },
+  "settingsLoading": { "message": "Загрузка..." },
+  "linkOpenrouterKeys": { "message": "Получить API-ключ →" },
+  "btnSave": { "message": "Сохранить" },
+  "btnClear": { "message": "Очистить разговор" },
+  "btnReadPage": { "message": "Прочитать эту страницу" },
+  "btnSettings": { "message": "Настройки" },
+  "btnVault": { "message": "Выбрать папку хранилища" },
+  "btnVaultOn": { "message": "Хранилище готово — нажмите для изменения" },
+  "btnVaultOff": { "message": "Хранилище не выбрано — нажмите для выбора" },
+  "settingsVaultTitle": { "message": "Хранилище Obsidian" },
+  "settingsVaultPath": { "message": "Папка" },
+  "settingsVaultPathPlaceholder": { "message": "Нажмите Выбрать папку, чтобы выбрать хранилище" },
+  "settingsVaultPathHint": { "message": "Заметки сохраняются напрямую в хранилище." },
+  "settingsSelectFolder": { "message": "Выбрать папку" },
+  "settingsChangeFolder": { "message": "Изменить папку" }
 }

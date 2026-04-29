@@ -1,34 +1,61 @@
 {
   "extensionName": {
-    "message": "Chromex",
-    "description": "Extension name shown in Chrome surfaces."
+    "message": "OpenAgent",
+    "description": "Extension name."
   },
   "extensionDescription": {
-    "message": "Un assistant de navigateur propulsé par OpenAgent pour le contexte des pages, les onglets, la voix et l'édition d'images.",
-    "description": "Short extension description shown in Chrome and the Chrome Web Store."
+    "message": "Assistant de navigation alimenté par OpenAgent. Discutez de n'importe quelle page web, automatisez des actions, enregistrez des notes dans Obsidian.",
+    "description": "Extension description."
   },
   "actionOpenSidePanel": {
-    "message": "Ouvrir Chromex",
-    "description": "Tooltip for the browser action button."
+    "message": "Ouvrir OpenAgent",
+    "description": "Browser action tooltip."
   },
   "commandOpenSidePanel": {
-    "message": "Ouvrir Chromex",
-    "description": "Keyboard shortcut description for opening the side panel."
+    "message": "Ouvrir OpenAgent",
+    "description": "Keyboard shortcut description."
   },
-  "commandOpenPopup": {
-    "message": "Ouvrir la fenêtre Chromex",
-    "description": "Keyboard shortcut description for opening the popup workspace."
-  },
-  "contextAskPage": {
-    "message": "Demander à Chromex à propos de cette page",
-    "description": "Context menu item for asking about the current page."
-  },
-  "contextEditImage": {
-    "message": "Modifier cette image avec Chromex",
-    "description": "Context menu item for editing an image with Chromex."
-  },
-  "contextSummarizeYoutube": {
-    "message": "Résumer cette vidéo YouTube",
-    "description": "Context menu item for summarizing a YouTube video."
-  }
+  "msgLabelYou": { "message": "Vous" },
+  "msgLabelClaude": { "message": "OpenAgent" },
+  "inputPlaceholder": { "message": "Envoyez un message à OpenAgent..." },
+  "emptyStateText": { "message": "Posez à OpenAgent n'importe quelle question sur la page actuelle." },
+  "statusProxyConnected": { "message": "Prêt" },
+  "statusApiKeyNeeded": { "message": "Définissez la clé API dans les Paramètres" },
+  "statusModel": { "message": "Modèle :" },
+  "statusPageContextLoaded": { "message": "Contexte de la page chargé" },
+  "settingsTitle": { "message": "Paramètres" },
+  "settingsProvider": { "message": "Fournisseur" },
+  "settingsApiKey": { "message": "Clé API" },
+  "settingsApiKeyPlaceholder": { "message": "sk-or-..." },
+  "settingsModelSearch": { "message": "Recherche de modèle" },
+  "settingsModelSearchPlaceholder": { "message": "Filtrer les modèles..." },
+  "settingsModel": { "message": "Modèle" },
+  "settingsSystemPrompt": { "message": "Prompt système" },
+  "settingsSystemPromptPlaceholder": { "message": "Instructions optionnelles..." },
+  "settingsBaseTheme": { "message": "Base" },
+  "settingsPreset": { "message": "Style" },
+  "settingsThemeDark": { "message": "Sombre" },
+  "settingsThemeLight": { "message": "Clair" },
+  "settingsLanguage": { "message": "Langue" },
+  "langEnglish": { "message": "English" },
+  "langPolish": { "message": "Polski" },
+  "settingsSaved": { "message": "Enregistré" },
+  "settingsModelsHint": { "message": "modèles disponibles" },
+  "settingsNoModels": { "message": "Aucun modèle" },
+  "settingsEnterApiKey": { "message": "Entrez la clé API dans les Paramètres" },
+  "settingsLoading": { "message": "Chargement..." },
+  "linkOpenrouterKeys": { "message": "Obtenir une clé API →" },
+  "btnSave": { "message": "Enregistrer" },
+  "btnClear": { "message": "Effacer la conversation" },
+  "btnReadPage": { "message": "Lire cette page" },
+  "btnSettings": { "message": "Paramètres" },
+  "btnVault": { "message": "Sélectionner le dossier du coffre" },
+  "btnVaultOn": { "message": "Coffre prêt — clic pour modifier" },
+  "btnVaultOff": { "message": "Aucun coffre sélectionné — clic pour sélectionner" },
+  "settingsVaultTitle": { "message": "Coffre Obsidian" },
+  "settingsVaultPath": { "message": "Dossier" },
+  "settingsVaultPathPlaceholder": { "message": "Cliquez sur Sélectionner un dossier pour choisir votre coffre" },
+  "settingsVaultPathHint": { "message": "Les notes sont enregistrées directement dans votre coffre." },
+  "settingsSelectFolder": { "message": "Sélectionner un dossier" },
+  "settingsChangeFolder": { "message": "Modifier le dossier" }
 }

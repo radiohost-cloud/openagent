@@ -1,34 +1,61 @@
 {
   "extensionName": {
-    "message": "Chromex",
-    "description": "Extension name shown in Chrome surfaces."
+    "message": "OpenAgent",
+    "description": "Extension name."
   },
   "extensionDescription": {
-    "message": "Un asistente de navegador con tecnología OpenAgent para contexto de páginas, pestañas, voz y edición de imágenes.",
-    "description": "Short extension description shown in Chrome and the Chrome Web Store."
+    "message": "Asistente de navegador impulsado por OpenAgent. Chatea sobre cualquier página web, automatiza acciones, guarda notas en Obsidian.",
+    "description": "Extension description."
   },
   "actionOpenSidePanel": {
-    "message": "Abrir Chromex",
-    "description": "Tooltip for the browser action button."
+    "message": "Abrir OpenAgent",
+    "description": "Browser action tooltip."
   },
   "commandOpenSidePanel": {
-    "message": "Abrir Chromex",
-    "description": "Keyboard shortcut description for opening the side panel."
+    "message": "Abrir OpenAgent",
+    "description": "Keyboard shortcut description."
   },
-  "commandOpenPopup": {
-    "message": "Abrir ventana emergente de Chromex",
-    "description": "Keyboard shortcut description for opening the popup workspace."
-  },
-  "contextAskPage": {
-    "message": "Preguntar a Chromex sobre esta página",
-    "description": "Context menu item for asking about the current page."
-  },
-  "contextEditImage": {
-    "message": "Editar esta imagen con Chromex",
-    "description": "Context menu item for editing an image with Chromex."
-  },
-  "contextSummarizeYoutube": {
-    "message": "Resumir este video de YouTube",
-    "description": "Context menu item for summarizing a YouTube video."
-  }
+  "msgLabelYou": { "message": "Tú" },
+  "msgLabelClaude": { "message": "OpenAgent" },
+  "inputPlaceholder": { "message": "Envía un mensaje a OpenAgent..." },
+  "emptyStateText": { "message": "Pregúntale a OpenAgent cualquier cosa sobre la página actual." },
+  "statusProxyConnected": { "message": "Listo" },
+  "statusApiKeyNeeded": { "message": "Establece la clave API en Ajustes" },
+  "statusModel": { "message": "Modelo:" },
+  "statusPageContextLoaded": { "message": "Contexto de página cargado" },
+  "settingsTitle": { "message": "Ajustes" },
+  "settingsProvider": { "message": "Proveedor" },
+  "settingsApiKey": { "message": "Clave API" },
+  "settingsApiKeyPlaceholder": { "message": "sk-or-..." },
+  "settingsModelSearch": { "message": "Buscar modelo" },
+  "settingsModelSearchPlaceholder": { "message": "Filtrar modelos..." },
+  "settingsModel": { "message": "Modelo" },
+  "settingsSystemPrompt": { "message": "Prompt del sistema" },
+  "settingsSystemPromptPlaceholder": { "message": "Instrucciones opcionales..." },
+  "settingsBaseTheme": { "message": "Base" },
+  "settingsPreset": { "message": "Estilo" },
+  "settingsThemeDark": { "message": "Oscuro" },
+  "settingsThemeLight": { "message": "Claro" },
+  "settingsLanguage": { "message": "Idioma" },
+  "langEnglish": { "message": "English" },
+  "langPolish": { "message": "Polski" },
+  "settingsSaved": { "message": "Guardado" },
+  "settingsModelsHint": { "message": "modelos disponibles" },
+  "settingsNoModels": { "message": "Sin modelos" },
+  "settingsEnterApiKey": { "message": "Introduce la clave API en Ajustes" },
+  "settingsLoading": { "message": "Cargando..." },
+  "linkOpenrouterKeys": { "message": "Obtener clave API →" },
+  "btnSave": { "message": "Guardar" },
+  "btnClear": { "message": "Borrar conversación" },
+  "btnReadPage": { "message": "Leer esta página" },
+  "btnSettings": { "message": "Ajustes" },
+  "btnVault": { "message": "Seleccionar carpeta del almacén" },
+  "btnVaultOn": { "message": "Almacén listo — clic para cambiar" },
+  "btnVaultOff": { "message": "Ningún almacén seleccionado — clic para seleccionar" },
+  "settingsVaultTitle": { "message": "Bóveda de Obsidian" },
+  "settingsVaultPath": { "message": "Carpeta" },
+  "settingsVaultPathPlaceholder": { "message": "Haz clic en Seleccionar carpeta para elegir tu bóveda" },
+  "settingsVaultPathHint": { "message": "Las notas se guardan directamente en tu bóveda." },
+  "settingsSelectFolder": { "message": "Seleccionar carpeta" },
+  "settingsChangeFolder": { "message": "Cambiar carpeta" }
 }

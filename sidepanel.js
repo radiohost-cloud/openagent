@@ -239,9 +239,7 @@ function showStartProxyBtn() {
     const isWin = navigator.platform.toLowerCase().startsWith('win');
 
     if (isMac) {
-      const script = 'tell application "Terminal"\n  do script "cd \\"" & (POSIX path of (path to me)) & "proxy\\" && node server.js"\nend tell';
-      const url = 'data:application/x-applescript;charset=utf-8,' + encodeURIComponent(script);
-      window.open(url);
+      window.open('setup.sh');
       return;
     }
 

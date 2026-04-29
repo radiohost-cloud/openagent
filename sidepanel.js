@@ -382,12 +382,19 @@ async function pickVaultFolder() {
 // The user picks the folder once per session via the icon or Settings.
 // The AI uses <vault_read> and <vault_write> XML tags in responses.
 
-async function vaultWrite(filename, content) {
+async function vaultWrite(filename, content, append = false) {
   if (!state.vaultDirHandle) {
     return { error: 'No vault selected. Go to Settings to pick your vault folder.' };
   }
   try {
     const fileHandle = await state.vaultDirHandle.getFileHandle(filename, { create: true });
+    if (append) {
+      try {
+        const file = await fileHandle.getFile();
+        const existing = await file.text();
+        content = existing + '\n\n---\n\n' + content;
+      } catch {}
+    }
     const writable = await fileHandle.createWritable();
     await writable.write(content);
     await writable.close();
@@ -395,6 +402,17 @@ async function vaultWrite(filename, content) {
   } catch (err) {
     return { error: err.message };
   }
+}
+
+function getOrCreateSessionFilename() {
+  if (state.currentVaultFilename) return state.currentVaultFilename;
+  const date = new Date();
+  const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  const timeStr = `${String(date.getHours()).padStart(2, '0')}-${String(date.getMinutes()).padStart(2, '0')}`;
+  const pageTitle = state.pageContext?.metadata?.title || state.pageContext?.title || 'OpenAgent';
+  const safeTitle = pageTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').substring(0, 40);
+  state.currentVaultFilename = `openagent-${safeTitle}-${dateStr}-${timeStr}.md`;
+  return state.currentVaultFilename;
 }
 
 async function vaultReadFiles(query = '', limit = 20) {
@@ -1031,7 +1049,6 @@ async function processVaultToolCalls(messageContent) {
   const errors = [];
 
   const readMatches = [...messageContent.matchAll(/<vault_read\s+query="([^"]*)"\s*\/>/gi)];
-  const writeMatches = [...messageContent.matchAll(/<vault_write\s+filename="([^"]+\.md)"\s*>([\s\S]*?)<\/vault_write>/gi)];
 
   for (const match of readMatches) {
     const query = match[1] || '';
@@ -1043,10 +1060,26 @@ async function processVaultToolCalls(messageContent) {
     }
   }
 
-  for (const match of writeMatches) {
+  // Explicit filename: <vault_write filename="X.md">
+  const explicitWrites = [...messageContent.matchAll(/<vault_write\s+filename="([^"]+\.md)"\s*>([\s\S]*?)<\/vault_write>/gi)];
+  for (const match of explicitWrites) {
     const filename = match[1];
     const content = match[2].trim();
-    const result = await vaultWrite(filename, content);
+    const result = await vaultWrite(filename, content, false);
+    if (result && !result.error) {
+      writeResults.push(result.path);
+    } else if (result?.error) {
+      errors.push(`Write error: ${result.error}`);
+    }
+  }
+
+  // Session file: <vault_write>content</vault_write> (no filename)
+  const sessionWrites = [...messageContent.matchAll(/<vault_write>([\s\S]*?)<\/vault_write>/gi)];
+  for (const match of sessionWrites) {
+    const content = match[1].trim();
+    if (!content) continue;
+    const filename = getOrCreateSessionFilename();
+    const result = await vaultWrite(filename, content, true);
     if (result && !result.error) {
       writeResults.push(result.path);
     } else if (result?.error) {
@@ -1066,14 +1099,7 @@ async function saveAutoVaultNote() {
   const date = new Date();
   const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
   const timeStr = `${String(date.getHours()).padStart(2, '0')}-${String(date.getMinutes()).padStart(2, '0')}`;
-
-  if (!state.currentVaultFilename) {
-    const pageTitle = state.pageContext?.metadata?.title || state.pageContext?.title || 'OpenAgent';
-    const safeTitle = pageTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').substring(0, 40);
-    state.currentVaultFilename = `openagent-${safeTitle}-${dateStr}-${timeStr}.md`;
-  }
-
-  const filename = state.currentVaultFilename;
+  const filename = getOrCreateSessionFilename();
   const pageUrl = state.pageContext?.metadata?.url || state.pageContext?.url || '';
 
   const content = `# Session — ${dateStr} ${timeStr}\n\n` +
@@ -1082,7 +1108,7 @@ async function saveAutoVaultNote() {
     conversationText +
     `\n\n---\n*OpenAgent Chrome Extension*`;
 
-  const result = await vaultWrite(filename, content);
+  const result = await vaultWrite(filename, content, false);
   if (result && !result.error) {
     console.log('[SP] auto-vault saved:', result.path);
   } else {

@@ -199,6 +199,7 @@ async function handlePromptSend(message, sendResponse) {
     let response;
     if (settings.provider === 'ollama') {
       const baseUrl = settings.ollamaUrl || 'http://localhost:11434';
+      console.log('[Ollama] sending to', `${baseUrl}/api/chat`, 'model:', settings.model);
       response = await fetch(`${baseUrl}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -209,6 +210,7 @@ async function handlePromptSend(message, sendResponse) {
       });
       if (!response.ok) {
         const text = await response.text();
+        console.error('[Ollama] error', response.status, text);
         sendResponse({ error: `Ollama error (${response.status}): ${text}` });
         return;
       }

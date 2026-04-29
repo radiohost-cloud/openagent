@@ -22,6 +22,7 @@ html, body {
   background: var(--bg);
   color: var(--text);
   font-size: var(--font-size);
+  font-family: var(--font);
   transition: font-size 0.2s;
 }
 
@@ -45,6 +46,7 @@ html, body {
   border-bottom: 1px solid var(--border);
   background: var(--surface);
   flex-shrink: 0;
+  font-family: var(--font);
   -webkit-app-region: drag;
 }
 
@@ -66,6 +68,7 @@ html, body {
   min-width: 0;
   flex: 1;
   overflow: hidden;
+  font-family: var(--font);
 }
 
 .header-ctx .ctx-dot {
@@ -160,6 +163,7 @@ html, body {
   flex-direction: column;
   scrollbar-width: thin;
   scrollbar-color: var(--surface-2) transparent;
+  font-family: var(--font);
 }
 
 .messages::-webkit-scrollbar { width: 4px; }
@@ -187,6 +191,7 @@ html, body {
   letter-spacing: 0.08em;
   margin-bottom: 6px;
   color: var(--muted);
+  font-family: var(--font);
 }
 
 .message.user .message-label { color: var(--muted); }
@@ -197,6 +202,7 @@ html, body {
   color: var(--text);
   white-space: pre-wrap;
   word-break: break-word;
+  font-family: var(--font);
 }
 
 .message.user .message-content { color: var(--user-text); }
@@ -243,6 +249,7 @@ html, body {
   gap: 16px;
   color: var(--muted);
   padding: 32px;
+  font-family: var(--font);
 }
 
 .empty-logo {
@@ -342,6 +349,7 @@ html, body {
   border-top: 1px solid var(--border);
   background: var(--surface);
   flex-shrink: 0;
+  font-family: var(--font);
 }
 
 .input-wrapper {
@@ -411,6 +419,7 @@ html, body {
   justify-content: center;
   z-index: 100;
   backdrop-filter: blur(4px);
+  font-family: var(--font);
 }
 
 .modal.hidden { display: none; }
@@ -424,6 +433,7 @@ html, body {
   max-height: 85%;
   overflow-y: auto;
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.7);
+  font-family: var(--font);
   scrollbar-width: thin;
   scrollbar-color: var(--surface-2) transparent;
 }
@@ -443,6 +453,7 @@ html, body {
   font-size: 13px;
   font-weight: 600;
   color: var(--text);
+  font-family: var(--font);
 }
 
 .modal-body { padding: 16px 18px; }
@@ -470,6 +481,7 @@ html, body {
   margin-bottom: 6px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
+  font-family: var(--font);
 }
 
 .form-group input,
@@ -583,12 +595,14 @@ html, body {
   margin-top: 5px;
   font-size: 11px;
   color: var(--muted);
+  font-family: var(--font);
 }
 
 .settings-status {
   margin-top: 8px;
   font-size: 11px;
   color: #6fcf97;
+  font-family: var(--font);
 }
 
 .settings-status.error { color: #cc6666; }
@@ -1152,6 +1166,7 @@ body.light[data-preset="papercolor-light"] {
   gap: 10px;
   margin-bottom: 16px;
   align-items: flex-end;
+  font-family: var(--font);
 }
 
 .settings-row .form-group--sm {
@@ -1167,6 +1182,7 @@ body.light[data-preset="papercolor-light"] {
   margin-bottom: 5px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
+  font-family: var(--font);
 }
 
 .toggle-group {
@@ -1305,6 +1321,7 @@ details[open] .vault-summary::before {
   font-size: 11px;
   color: var(--muted);
   font-weight: 500;
+  font-family: var(--font);
 }
 
 .vault-header-row {
@@ -1327,7 +1344,7 @@ details[open] .vault-summary::before {
   color: var(--text);
   cursor: default;
   outline: none;
-  font-family: inherit;
+  font-family: var(--font);
   height: 30px;
 }
 
@@ -1343,7 +1360,7 @@ details[open] .vault-summary::before {
   padding: 0 12px;
   font-size: 12px;
   cursor: pointer;
-  font-family: inherit;
+  font-family: var(--font);
   white-space: nowrap;
   flex-shrink: 0;
   transition: background 0.15s, border-color 0.15s;
@@ -1361,4 +1378,5 @@ details[open] .vault-summary::before {
   margin-top: 5px;
   font-size: 10px;
   color: var(--muted);
+  font-family: var(--font);
 }

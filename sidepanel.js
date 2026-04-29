@@ -384,6 +384,9 @@ async function pickVaultFolder() {
 
 async function vaultWrite(filename, content, append = false) {
   if (!state.vaultDirHandle) {
+    if (state.settings.vaultPath) {
+      return { error: 'Vault folder access expired — click the Obsidian button to re-authorize.' };
+    }
     return { error: 'No vault selected. Go to Settings to pick your vault folder.' };
   }
   try {
@@ -454,29 +457,19 @@ async function init() {
   collectPageContext();
 }
 
-// ─── Auto Vault ───────────────────────────────────────────────────────────────
-
-async function loadAutoVaultState() {
-  try {
-    const data = await sendBgMessage({ type: 'autovault.load' });
-    state.autoVault = data?.autoVault || false;
-    updateVaultBtn();
-  } catch {}
-}
-
 function updateVaultBtn() {
-  if (!state.settings.vaultPath) {
-    dom.vaultBtn.classList.remove('active');
+  const hasVault = !!state.settings.vaultPath;
+  const isOn = state.autoVault;
+
+  dom.vaultBtn.classList.toggle('active', isOn);
+  if (dom.vaultStatus) dom.vaultStatus.classList.toggle('ready', hasVault);
+
+  if (!hasVault) {
     dom.vaultBtn.title = i18n('btnVaultNotSet');
-    if (dom.vaultStatus) dom.vaultStatus.classList.remove('ready');
-  } else if (state.autoVault) {
-    dom.vaultBtn.classList.add('active');
+  } else if (isOn) {
     dom.vaultBtn.title = i18n('btnVaultOn');
-    if (dom.vaultStatus) dom.vaultStatus.classList.add('ready');
   } else {
-    dom.vaultBtn.classList.remove('active');
     dom.vaultBtn.title = i18n('btnVaultOff');
-    if (dom.vaultStatus) dom.vaultStatus.classList.remove('ready');
   }
 }
 
@@ -553,7 +546,7 @@ function bindEvents() {
   dom.clearBtn.addEventListener('click', clearConversation);
 
   dom.vaultBtn.addEventListener('click', () => {
-    if (state.settings.vaultPath) {
+    if (state.vaultDirHandle) {
       toggleVaultOnBtn();
     } else {
       pickVaultFolder();

@@ -156,9 +156,10 @@ function applyI18n() {
   }
   dom.input.placeholder = i18n('inputPlaceholder');
   if (dom.langSelect) {
-    const opts = dom.langSelect.options;
-    opts[0].textContent = i18n('langEnglish');
-    opts[1].textContent = i18n('langPolish');
+    for (const opt of dom.langSelect.options) {
+      const key = opt.dataset.i18n;
+      if (key) opt.textContent = i18n(key);
+    }
   }
   if (dom.themeDark) dom.themeDark.textContent = i18n('settingsThemeDark');
   if (dom.themeLight) dom.themeLight.textContent = i18n('settingsThemeLight');

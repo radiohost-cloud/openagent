@@ -5,7 +5,6 @@
   "minimum_chrome_version": "116",
   "default_locale": "en",
   "description": "__MSG_extensionDescription__",
-  "keywords": ["AI", "assistant", "browser", "chat", "obsidian", "notes", "automation", "productivity", "webpage"],
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'"
   },

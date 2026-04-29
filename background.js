@@ -23,11 +23,13 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
   await injectIntoTab(activeInfo.tabId);
 });
 
-chrome.webNavigation?.onCompleted?.addListener(async (details) => {
-  if (!details.frameId) {
-    await injectIntoTab(details.tabId);
-  }
-}, { url: [{ schemes: ['http', 'https'] }] });
+if (chrome.webNavigation && chrome.webNavigation.onCompleted) {
+  chrome.webNavigation.onCompleted.addListener(async (details) => {
+    if (!details.frameId) {
+      await injectIntoTab(details.tabId);
+    }
+  }, { url: [{ schemes: ['http', 'https'] }] });
+}
 
 chrome.tabs.query({ url: ['http://*/*', 'https://*/*'] }, async (tabs) => {
   for (const tab of tabs) {

@@ -40,13 +40,7 @@
       "32": "icons/openagent-32.png",
       "48": "icons/openagent-48.png",
       "128": "icons/openagent-128.png"
-    },
-    "theme_icons": [
-      { "dark": "icons/openagent-dark-16.png", "light": "icons/openagent-light-16.png", "size": 16 },
-      { "dark": "icons/openagent-dark-32.png", "light": "icons/openagent-light-32.png", "size": 32 },
-      { "dark": "icons/openagent-dark-48.png", "light": "icons/openagent-light-48.png", "size": 48 },
-      { "dark": "icons/openagent-dark-128.png", "light": "icons/openagent-light-128.png", "size": 128 }
-    ]
+    }
   },
   "host_permissions": [
     "http://localhost:8787/*",

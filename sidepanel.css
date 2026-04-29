@@ -10,7 +10,7 @@
   --accent: #3C3C3C;
   --accent-dim: rgba(255, 255, 255, 0.06);
   --user-text: #d9d9d9;
-  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font: 'JetBrains Mono', 'SF Mono', 'Fira Code', 'Consolas', monospace;
   font-family: var(--font);
   font-size: var(--font-size);
   color-scheme: dark;
@@ -25,9 +25,9 @@ html, body {
   transition: font-size 0.2s;
 }
 
-:root, [data-font-size="medium"] { --font-size: 14px; }
-[data-font-size="small"] { --font-size: 12px; }
-[data-font-size="large"] { --font-size: 16px; }
+:root, [data-font-size="medium"] { --font-size: 13px; }
+[data-font-size="small"] { --font-size: 11px; }
+[data-font-size="large"] { --font-size: 15px; }
 
 #app {
   display: flex;

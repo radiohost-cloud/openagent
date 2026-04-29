@@ -26,6 +26,24 @@ Browser assistant powered by OpenRouter. Chat about any webpage, automate action
 4. Click the **Obsidian icon** in the header to enable auto-save
 5. Conversations are saved as `openagent-{page}-{date}-{time}.md` directly in your vault
 
+## Auto-start Proxy
+
+The proxy server needs to be running for the extension to work. Run the setup script once:
+
+```bash
+cd proxy
+chmod +x setup-autostart.sh
+./setup-autostart.sh
+```
+
+After this, the proxy will start automatically after every login or restart (macOS LaunchAgent). No need to manually run it again.
+
+To remove auto-start:
+```bash
+launchctl unload ~/Library/LaunchAgents/com.openagent.proxy.plist
+rm ~/Library/LaunchAgents/com.openagent.proxy.plist
+```
+
 ## Setup
 
 ### 1. Install the extension

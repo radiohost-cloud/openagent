@@ -4,8 +4,8 @@
     "description": "Extension name."
   },
   "extensionDescription": {
-    "message": "AI-powered browser assistant. Chat about any webpage, automate actions, and save notes directly to Obsidian.",
-    "description": "Extension description."
+    "message": "AI assistant that understands any webpage, automates browser actions, and saves notes to Obsidian.",
+    "description": "Extension description (Chrome Web Store short description)."
   },
   "actionOpenSidePanel": {
     "message": "Open OpenAgent",

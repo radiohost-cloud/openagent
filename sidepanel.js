@@ -155,12 +155,6 @@ function applyI18n() {
     el.title = i18n(el.dataset.i18nTitle);
   }
   dom.input.placeholder = i18n('inputPlaceholder');
-  if (dom.langSelect) {
-    for (const opt of dom.langSelect.options) {
-      const key = opt.dataset.i18n;
-      if (key) opt.textContent = i18n(key);
-    }
-  }
   if (dom.themeDark) dom.themeDark.textContent = i18n('settingsThemeDark');
   if (dom.themeLight) dom.themeLight.textContent = i18n('settingsThemeLight');
 }

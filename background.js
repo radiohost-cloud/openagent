@@ -203,8 +203,9 @@ async function handlePromptSend(message, sendResponse) {
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: { message: await response.text() } }));
-      sendResponse({ error: `API error (${response.status}): ${error?.error?.message || response.statusText}` });
+      const text = await response.text();
+      const errJson = (() => { try { return JSON.parse(text); } catch { return null; } })();
+      sendResponse({ error: `API error (${response.status}): ${errJson?.error?.message || text}` });
       return;
     }
 

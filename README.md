@@ -24,7 +24,7 @@ Browser assistant powered by OpenRouter. Chat about any webpage, automate action
   - Manual notes created with `vault_write` get their own `.md` files
   - Notes saved directly to vault root (no hidden folders)
 - **Side panel UI** with theme support (dark/light + 14 color presets)
-- **Multi-language** (English, Polish)
+- **Multi-language** (English, Polish, Spanish, French, German, Russian)
 - **OpenRouter integration** for model selection
 
 ## Installation
@@ -64,7 +64,7 @@ Default: `Alt+Shift+O` to open the side panel (configurable in `chrome://extensi
 ├── sidepanel.*        # Side panel UI
 ├── offscreen.*        # Offscreen document
 ├── icons/             # Extension icons
-├── _locales/          # i18n strings (EN, PL)
+├── _locales/          # i18n strings (EN, PL, ES, FR, DE, RU)
 └── docs/              # Screenshots
 ```
 

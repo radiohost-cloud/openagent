@@ -2,7 +2,7 @@
 
 const state = {
   messages: [],
-  settings: { apiKey: '', provider: 'openrouter', model: '', systemPrompt: '', theme: 'dark', preset: 'default', language: 'en', vaultPath: '' },
+  settings: { apiKey: '', provider: 'openrouter', model: '', systemPrompt: '', theme: 'dark', preset: 'default', language: 'en', vaultPath: '', fontSize: 'medium' },
   pageContext: null,
   isLoading: false,
   allModels: [],
@@ -59,6 +59,7 @@ const i18nStrings = {
     settingsVaultPathHint: 'Notes are saved directly to your vault.',
     settingsSelectFolder: 'Select folder',
     settingsChangeFolder: 'Change folder',
+    settingsFontSize: 'Font size',
   },
   pl: {
     msgLabelYou: 'Ty',
@@ -107,6 +108,7 @@ const i18nStrings = {
     settingsVaultPathHint: 'Notatki są zapisywane bezpośrednio w magazynie.',
     settingsSelectFolder: 'Wybierz folder',
     settingsChangeFolder: 'Zmień folder',
+    settingsFontSize: 'Wielkość czcionki',
   },
   es: {
     msgLabelYou: 'Tú',
@@ -154,6 +156,7 @@ const i18nStrings = {
     settingsVaultPathHint: 'Las notas se guardan directamente en tu bóveda.',
     settingsSelectFolder: 'Seleccionar carpeta',
     settingsChangeFolder: 'Cambiar carpeta',
+    settingsFontSize: 'Tamaño de fuente',
   },
   fr: {
     msgLabelYou: 'Vous',
@@ -201,6 +204,7 @@ const i18nStrings = {
     settingsVaultPathHint: 'Les notes sont enregistrées directement dans votre coffre.',
     settingsSelectFolder: 'Sélectionner un dossier',
     settingsChangeFolder: 'Modifier le dossier',
+    settingsFontSize: 'Taille de police',
   },
   de: {
     msgLabelYou: 'Sie',
@@ -248,6 +252,7 @@ const i18nStrings = {
     settingsVaultPathHint: 'Notizen werden direkt in Ihrem Tresor gespeichert.',
     settingsSelectFolder: 'Ordner auswählen',
     settingsChangeFolder: 'Ordner ändern',
+    settingsFontSize: 'Schriftgröße',
   },
   ru: {
     msgLabelYou: 'Вы',
@@ -295,6 +300,7 @@ const i18nStrings = {
     settingsVaultPathHint: 'Заметки сохраняются напрямую в хранилище.',
     settingsSelectFolder: 'Выбрать папку',
     settingsChangeFolder: 'Изменить папку',
+    settingsFontSize: 'Размер шрифта',
   },
 };
 
@@ -317,7 +323,7 @@ const dom = {
   modelList: $('#modelList'),
   modelSearch: $('#modelSearch'),
   modelHint: $('#modelHint'),
-  modelBadge: $('#modelBadge'),
+  headerCtx: $('#headerCtx'),
   systemPromptInput: $('#systemPromptInput'),
   settingsStatus: $('#settingsStatus'),
   status: $('#status'),
@@ -325,6 +331,7 @@ const dom = {
   themeLight: $('#themeLight'),
   themePreset: $('#themePreset'),
   langSelect: $('#langSelect'),
+  fontSizeSelect: $('#fontSizeSelect'),
   vaultPathInput: $('#vaultPathInput'),
   vaultSelectBtn: $('#vaultSelectBtn'),
   vaultStatus: $('#vaultStatusDot'),
@@ -358,6 +365,10 @@ function applyTheme(theme, preset = 'default') {
   document.body.dataset.preset = preset;
   dom.themeDark.classList.toggle('active', theme === 'dark');
   dom.themeLight.classList.toggle('active', theme === 'light');
+}
+
+function applyFontSize(size) {
+  document.body.dataset.fontSize = size;
 }
 
 // ─── Vault (File System Access API) ─────────────────────────────────────────
@@ -456,6 +467,8 @@ async function init() {
   applyTheme(state.settings.theme, state.settings.preset);
   dom.langSelect.value = state.settings.language;
   dom.themePreset.value = state.settings.preset || 'default';
+  dom.fontSizeSelect.value = state.settings.fontSize;
+  applyFontSize(state.settings.fontSize);
   renderMessages();
   bindEvents();
   loadModels();
@@ -535,6 +548,12 @@ function bindEvents() {
   dom.themePreset.addEventListener('change', () => {
     state.settings.preset = dom.themePreset.value;
     applyTheme(state.settings.theme, state.settings.preset);
+  });
+
+  dom.fontSizeSelect.addEventListener('change', () => {
+    state.settings.fontSize = dom.fontSizeSelect.value;
+    applyFontSize(state.settings.fontSize);
+    sendBgMessage({ type: 'settings.save', data: { ...state.settings } }).catch(() => {});
   });
 
   dom.langSelect.addEventListener('change', () => {
@@ -691,8 +710,10 @@ function renderModelList(models) {
       state.settings.model = model.id;
       await sendBgMessage({ type: 'settings.save', data: { ...state.settings } });
       updateModelBadge();
-      setStatus(escapeHtml(name), 'success');
-      setTimeout(() => toggleModal(false), 300);
+      dom.modelHint.textContent = '✓ ' + name;
+      setTimeout(() => {
+        dom.modelHint.textContent = state.allModels.length + ' ' + i18n('settingsModelsHint');
+      }, 2000);
     });
     dom.modelList.appendChild(item);
   }
@@ -893,20 +914,19 @@ function prependPageContext(metadata) {
   const existing = dom.messages.querySelector('.page-ctx');
   if (existing) existing.remove();
 
-  const div = document.createElement('div');
-  div.className = 'page-ctx';
-  div.innerHTML = `
-    <span class="ctx-dot"></span>
-    <span class="ctx-title">${escapeHtml(metadata.title || 'Untitled')}</span>
-    <span class="ctx-url">${escapeHtml(metadata.url || '')}</span>
-  `;
-  dom.messages.prepend(div);
+  if (dom.headerCtx) {
+    dom.headerCtx.innerHTML = `
+      <span class="ctx-dot"></span>
+      <span class="ctx-title">${escapeHtml(metadata.title || 'Untitled')}</span>
+    `;
+  }
 }
 
 function clearConversation() {
   state.messages = [];
   state.pageContext = null;
   state.currentVaultFilename = null;
+  if (dom.headerCtx) dom.headerCtx.innerHTML = '';
   renderMessages();
 }
 
@@ -1005,14 +1025,6 @@ function setStatus(text, type = '') {
 
 function updateModelBadge() {
   const model = state.settings.model;
-  if (model) {
-    const short = model.includes('/')
-      ? model.split('/')[1].replace(/-(?:2024|2025)[0-9]*$/, '')
-      : model;
-    dom.modelBadge.textContent = short;
-  } else {
-    dom.modelBadge.textContent = '-';
-  }
   if (model) {
     dom.status.textContent = i18n('statusModel') + ' ' + (model.includes('/') ? model.split('/')[1].replace(/-(?:2024|2025)[0-9]*$/, '') : model);
     dom.status.className = 'status';

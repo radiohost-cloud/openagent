@@ -14,13 +14,7 @@
       <!-- Header -->
       <header class="header">
         <div class="header-brand">
-          <svg class="brand-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 2L2 7l10 5 10-5-10-5z" fill="currentColor" opacity="0.9"/>
-            <path d="M2 17l10 5 10-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M2 12l10 5 10-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.5"/>
-          </svg>
-          <span class="brand-name">OpenAgent</span>
-          <span id="modelBadge" class="model-badge">-</span>
+          <div id="headerCtx" class="header-ctx"></div>
         </div>
         <div class="header-actions">
           <button id="vaultBtn" class="header-btn" data-i18n-title="btnVault" title="Auto-save to Obsidian (off)">
@@ -100,6 +94,8 @@
                 <option value="everforest">Everforest</option>
               </select>
             </div>
+          </div>
+          <div class="settings-row">
             <div class="form-group form-group--sm">
               <label data-i18n="settingsLanguage">Language</label>
               <select id="langSelect" class="settings-select">
@@ -109,6 +105,14 @@
                 <option value="fr">Français</option>
                 <option value="de">Deutsch</option>
                 <option value="ru">Русский</option>
+              </select>
+            </div>
+            <div class="form-group form-group--sm">
+              <label data-i18n="settingsFontSize">Font size</label>
+              <select id="fontSizeSelect" class="settings-select">
+                <option value="small">Small</option>
+                <option value="medium">Medium</option>
+                <option value="large">Large</option>
               </select>
             </div>
           </div>

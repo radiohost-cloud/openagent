@@ -12,6 +12,7 @@ const STORAGE_KEYS = {
   VAULT_PATH: 'openagent_vault_path',
   VAULT_HANDLE: 'openagent_vault_handle',
   AUTO_VAULT: 'openagent_auto_vault',
+  FONT_SIZE: 'openagent_font_size',
 };
 
 // ─── Auto-inject content script on page load ───────────────────────────────────
@@ -159,6 +160,7 @@ async function loadSettings() {
     language: result[STORAGE_KEYS.LANGUAGE] || 'en',
     vaultPath: result[STORAGE_KEYS.VAULT_PATH] || '',
     autoVault: result[STORAGE_KEYS.AUTO_VAULT] || false,
+    fontSize: result[STORAGE_KEYS.FONT_SIZE] || 'medium',
   };
 }
 
@@ -172,6 +174,7 @@ async function saveSettings(data) {
     [STORAGE_KEYS.PRESET]: data.preset || 'default',
     [STORAGE_KEYS.LANGUAGE]: data.language || 'en',
     [STORAGE_KEYS.VAULT_PATH]: data.vaultPath || '',
+    [STORAGE_KEYS.FONT_SIZE]: data.fontSize || 'medium',
   });
   return { ok: true };
 }

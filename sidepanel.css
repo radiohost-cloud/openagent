@@ -12,7 +12,7 @@
   --user-text: #d9d9d9;
   --font: 'JetBrains Mono', 'SF Mono', 'Fira Code', 'Consolas', monospace;
   font-family: var(--font);
-  font-size: 13px;
+  font-size: var(--font-size);
   color-scheme: dark;
 }
 
@@ -21,7 +21,13 @@ html, body {
   overflow: hidden;
   background: var(--bg);
   color: var(--text);
+  font-size: var(--font-size);
+  transition: font-size 0.2s;
 }
+
+:root, [data-font-size="medium"] { --font-size: 13px; }
+[data-font-size="small"] { --font-size: 11px; }
+[data-font-size="large"] { --font-size: 15px; }
 
 #app {
   display: flex;
@@ -35,7 +41,7 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 14px;
+  padding: 4px 12px;
   border-bottom: 1px solid var(--border);
   background: var(--surface);
   flex-shrink: 0;
@@ -47,6 +53,33 @@ html, body {
   align-items: center;
   gap: 8px;
   -webkit-app-region: no-drag;
+  min-width: 0;
+  flex: 1;
+}
+
+.header-ctx {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  color: var(--muted);
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+.header-ctx .ctx-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #4ade80;
+  flex-shrink: 0;
+}
+
+.header-ctx .ctx-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .brand-icon {
@@ -160,7 +193,6 @@ html, body {
 .message.assistant .message-label { color: #888888; }
 
 .message-content {
-  font-size: 13px;
   line-height: 1.6;
   color: var(--text);
   white-space: pre-wrap;

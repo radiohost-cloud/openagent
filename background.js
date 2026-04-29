@@ -202,20 +202,37 @@ async function handlePromptSend(message, sendResponse) {
       console.log('[Ollama] sending to', `${baseUrl}/api/chat`, 'model:', settings.model);
       response = await fetch(`${baseUrl}/api/chat`, {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Origin': 'https://openagent.local',
+        },
         body: JSON.stringify({
           model: settings.model || 'llama3',
           messages: msgs,
         }),
       });
+      console.log('[Ollama] response status:', response.status);
       if (!response.ok) {
         const text = await response.text();
-        console.error('[Ollama] error', response.status, text, 'body:', JSON.stringify(msgs).slice(0, 200));
+        console.error('[Ollama] error', response.status, text);
         sendResponse({ error: `Ollama error (${response.status}): ${text}` });
         return;
       }
-      const data = await response.json();
-      const content = data.message?.content || '';
-      sendResponse({ content });
+      const text = await response.text();
+      console.log('[Ollama] response body:', text.slice(0, 300));
+      // Parse first ndjson line
+      for (const line of text.split('\n')) {
+        if (line.trim()) {
+          try {
+            const data = JSON.parse(line);
+            if (data.message?.content) {
+              sendResponse({ content: data.message.content });
+              return;
+            }
+          } catch {}
+        }
+      }
+      sendResponse({ content: text });
     } else {
       // OpenRouter
       if (!settings.apiKey) {

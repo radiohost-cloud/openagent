@@ -2,13 +2,13 @@
 
 const state = {
   messages: [],
-  settings: { apiKey: '', provider: 'openrouter', model: '', systemPrompt: '', theme: 'dark', preset: 'default', language: 'en' },
+  settings: { apiKey: '', provider: 'openrouter', model: '', systemPrompt: '', theme: 'dark', preset: 'default', language: 'en', vaultPath: '' },
   pageContext: null,
   isLoading: false,
   allModels: [],
   autoVault: false,
   currentVaultFilename: null,
-  vaultDirHandle: null, // File System Access API directory handle
+  vaultDirHandle: null,
   vaultReady: false,
 };
 
@@ -46,8 +46,9 @@ const i18nStrings = {
     btnReadPage: 'Read this page',
     btnSettings: 'Settings',
     btnVault: 'Select vault folder',
-    btnVaultOn: 'Vault ready — click to change',
-    btnVaultOff: 'No vault selected — click to select',
+    btnVaultOn: 'Vault on — click to disable',
+    btnVaultOff: 'Vault off — click to enable',
+    btnVaultNotSet: 'No vault selected — click to select',
     langEnglish: 'English',
     langPolish: 'Polski',
     linkOpenrouterKeys: 'Get API key →',
@@ -92,8 +93,9 @@ const i18nStrings = {
     btnReadPage: 'Wczytaj stronę',
     btnSettings: 'Ustawienia',
     btnVault: 'Wybierz folder magazynu',
-    btnVaultOn: 'Magazyn gotowy — kliknij by zmienić',
-    btnVaultOff: 'Nie wybrano magazynu — kliknij by wybrać',
+    btnVaultOn: 'Magazyn włączony — kliknij by wyłączyć',
+    btnVaultOff: 'Magazyn wyłączony — kliknij by włączyć',
+    btnVaultNotSet: 'Nie wybrano magazynu — kliknij by wybrać',
     langEnglish: 'English',
     langPolish: 'Polski',
     linkOpenrouterKeys: 'Pobierz klucz API →',
@@ -137,8 +139,9 @@ const i18nStrings = {
     btnReadPage: 'Leer esta página',
     btnSettings: 'Ajustes',
     btnVault: 'Seleccionar carpeta del almacén',
-    btnVaultOn: 'Almacén listo — clic para cambiar',
-    btnVaultOff: 'Ningún almacén seleccionado — clic para seleccionar',
+    btnVaultOn: 'Almacén activado — clic para desactivar',
+    btnVaultOff: 'Almacén desactivado — clic para activar',
+    btnVaultNotSet: 'Ningún almacén seleccionado — clic para seleccionar',
     langEnglish: 'English',
     langPolish: 'Polski',
     linkOpenrouterKeys: 'Obtener clave API →',
@@ -182,8 +185,9 @@ const i18nStrings = {
     btnReadPage: 'Lire cette page',
     btnSettings: 'Paramètres',
     btnVault: 'Sélectionner le dossier du coffre',
-    btnVaultOn: 'Coffre prêt — clic pour modifier',
-    btnVaultOff: 'Aucun coffre sélectionné — clic pour sélectionner',
+    btnVaultOn: 'Coffre activé — clic pour désactiver',
+    btnVaultOff: 'Coffre désactivé — clic pour activer',
+    btnVaultNotSet: 'Aucun coffre sélectionné — clic pour sélectionner',
     langEnglish: 'English',
     langPolish: 'Polski',
     linkOpenrouterKeys: 'Obtenir une clé API →',
@@ -227,8 +231,9 @@ const i18nStrings = {
     btnReadPage: 'Diese Seite lesen',
     btnSettings: 'Einstellungen',
     btnVault: 'Tresor-Ordner auswählen',
-    btnVaultOn: 'Tresor bereit — klicken zum Ändern',
-    btnVaultOff: 'Kein Tresor ausgewählt — klicken zum Auswählen',
+    btnVaultOn: 'Tresor aktiviert — klicken zum Deaktivieren',
+    btnVaultOff: 'Tresor deaktiviert — klicken zum Aktivieren',
+    btnVaultNotSet: 'Kein Tresor ausgewählt — klicken zum Auswählen',
     langEnglish: 'English',
     langPolish: 'Polski',
     linkOpenrouterKeys: 'API-Schlüssel erhalten →',
@@ -272,8 +277,9 @@ const i18nStrings = {
     btnReadPage: 'Прочитать эту страницу',
     btnSettings: 'Настройки',
     btnVault: 'Выбрать папку хранилища',
-    btnVaultOn: 'Хранилище готово — нажмите для изменения',
-    btnVaultOff: 'Хранилище не выбрано — нажмите для выбора',
+    btnVaultOn: 'Хранилище включено — нажмите для выключения',
+    btnVaultOff: 'Хранилище выключено — нажмите для включения',
+    btnVaultNotSet: 'Хранилище не выбрано — нажмите для выбора',
     langEnglish: 'English',
     langPolish: 'Polski',
     linkOpenrouterKeys: 'Получить API-ключ →',
@@ -355,9 +361,14 @@ async function pickVaultFolder() {
     const dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
     state.vaultDirHandle = dirHandle;
     state.vaultReady = true;
+    state.settings.vaultPath = dirHandle.name;
     dom.vaultPathInput.value = dirHandle.name;
     dom.vaultPathInput.title = 'Selected: ' + dirHandle.name;
     if (dom.vaultStatus) dom.vaultStatus.classList.add('ready');
+    await sendBgMessage({
+      type: 'settings.save',
+      data: { ...state.settings },
+    });
     updateVaultBtn();
     setStatus(i18n('statusVaultReady'), 'success');
   } catch (err) {
@@ -422,7 +433,6 @@ async function init() {
   bindEvents();
   loadModels();
   updateModelBadge();
-  loadAutoVaultState();
   collectPageContext();
 }
 
@@ -437,16 +447,26 @@ async function loadAutoVaultState() {
 }
 
 function updateVaultBtn() {
-  if (state.vaultReady) {
+  if (!state.settings.vaultPath) {
+    dom.vaultBtn.classList.remove('active');
+    dom.vaultBtn.title = i18n('btnVaultNotSet');
+    if (dom.vaultStatus) dom.vaultStatus.classList.remove('ready');
+  } else if (state.autoVault) {
     dom.vaultBtn.classList.add('active');
     dom.vaultBtn.title = i18n('btnVaultOn');
     if (dom.vaultStatus) dom.vaultStatus.classList.add('ready');
-    setStatus(i18n('statusVaultReady'), 'success');
   } else {
     dom.vaultBtn.classList.remove('active');
     dom.vaultBtn.title = i18n('btnVaultOff');
     if (dom.vaultStatus) dom.vaultStatus.classList.remove('ready');
   }
+}
+
+function toggleVaultOnBtn() {
+  state.autoVault = !state.autoVault;
+  saveAutoVault();
+  updateVaultBtn();
+  setStatus(state.autoVault ? i18n('statusVaultReady') : i18n('statusVaultNotSet'), state.autoVault ? 'success' : 'info');
 }
 
 async function saveAutoVault() {
@@ -515,7 +535,11 @@ function bindEvents() {
   dom.clearBtn.addEventListener('click', clearConversation);
 
   dom.vaultBtn.addEventListener('click', () => {
-    pickVaultFolder();
+    if (state.settings.vaultPath) {
+      toggleVaultOnBtn();
+    } else {
+      pickVaultFolder();
+    }
   });
 
   if (dom.vaultSelectBtn) {
@@ -535,6 +559,16 @@ async function loadSettings() {
     state.settings = { ...state.settings, ...data };
     dom.apiKeyInput.value = state.settings.apiKey || '';
     dom.systemPromptInput.value = state.settings.systemPrompt || '';
+
+    if (state.settings.vaultPath) {
+      dom.vaultPathInput.value = state.settings.vaultPath;
+      dom.vaultPathInput.title = 'Selected: ' + state.settings.vaultPath;
+      state.vaultReady = true;
+    }
+
+    const autoData = await sendBgMessage({ type: 'autovault.load' });
+    state.autoVault = autoData?.autoVault || false;
+    updateVaultBtn();
   } catch (err) {
     console.error('Failed to load settings:', err);
   }
@@ -547,13 +581,14 @@ async function handleSaveSettings() {
   const theme = state.settings.theme;
   const preset = dom.themePreset.value;
   const language = state.settings.language;
+  const vaultPath = dom.vaultPathInput.value.trim();
 
   try {
     await sendBgMessage({
       type: 'settings.save',
-      data: { apiKey, provider: 'openrouter', model, systemPrompt, theme, preset, language },
+      data: { apiKey, provider: 'openrouter', model, systemPrompt, theme, preset, language, vaultPath },
     });
-    state.settings = { apiKey, provider: 'openrouter', model, systemPrompt, theme, preset, language };
+    state.settings = { apiKey, provider: 'openrouter', model, systemPrompt, theme, preset, language, vaultPath };
     dom.settingsStatus.textContent = i18n('settingsSaved');
     dom.settingsStatus.className = 'settings-status';
     toggleModal(false);

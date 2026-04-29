@@ -9,6 +9,7 @@ const STORAGE_KEYS = {
   THEME: 'claude_theme',
   PRESET: 'claude_preset',
   LANGUAGE: 'claude_language',
+  VAULT_PATH: 'openagent_vault_path',
   VAULT_HANDLE: 'openagent_vault_handle',
   AUTO_VAULT: 'openagent_auto_vault',
 };
@@ -156,7 +157,7 @@ async function loadSettings() {
     theme: result[STORAGE_KEYS.THEME] || 'dark',
     preset: result[STORAGE_KEYS.PRESET] || 'default',
     language: result[STORAGE_KEYS.LANGUAGE] || 'en',
-    vaultHandle: result[STORAGE_KEYS.VAULT_HANDLE] || null,
+    vaultPath: result[STORAGE_KEYS.VAULT_PATH] || '',
     autoVault: result[STORAGE_KEYS.AUTO_VAULT] || false,
   };
 }
@@ -170,6 +171,7 @@ async function saveSettings(data) {
     [STORAGE_KEYS.THEME]: data.theme || 'dark',
     [STORAGE_KEYS.PRESET]: data.preset || 'default',
     [STORAGE_KEYS.LANGUAGE]: data.language || 'en',
+    [STORAGE_KEYS.VAULT_PATH]: data.vaultPath || '',
   });
   return { ok: true };
 }

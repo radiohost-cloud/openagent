@@ -2,6 +2,14 @@
 
 Browser assistant powered by OpenRouter. Chat about any webpage, automate actions, navigate pages with natural language, and automatically save your conversations to Obsidian.
 
+## Screenshots
+
+<p float="left">
+  <img src="docs/screenshot1.png" width="300"/>
+  <img src="docs/screenshot2.png" width="300"/>
+  <img src="docs/screenshot3.png" width="300"/>
+</p>
+
 ## Features
 
 - **Chat with AI** about the current page context

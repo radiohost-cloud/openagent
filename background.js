@@ -198,11 +198,8 @@ async function handlePromptSend(message, sendResponse) {
   try {
     let response;
     if (settings.provider === 'ollama') {
-      if (!settings.ollamaUrl) {
-        sendResponse({ error: 'Ollama URL not configured. Set it in Settings.' });
-        return;
-      }
-      response = await fetch(`${settings.ollamaUrl}/api/chat`, {
+      const baseUrl = settings.ollamaUrl || 'http://localhost:11434';
+      response = await fetch(`${baseUrl}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -293,11 +290,8 @@ async function startStream(message, sendResponse) {
   try {
     let response;
     if (settings.provider === 'ollama') {
-      if (!settings.ollamaUrl) {
-        sendResponse({ error: 'Ollama URL not configured. Set it in Settings.' });
-        return;
-      }
-      response = await fetch(`${settings.ollamaUrl}/api/chat`, {
+      const baseUrl = settings.ollamaUrl || 'http://localhost:11434';
+      response = await fetch(`${baseUrl}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

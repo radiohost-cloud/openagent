@@ -210,7 +210,7 @@ async function handlePromptSend(message, sendResponse) {
       });
       if (!response.ok) {
         const text = await response.text();
-        console.error('[Ollama] error', response.status, text);
+        console.error('[Ollama] error', response.status, text, 'body:', JSON.stringify(msgs).slice(0, 200));
         sendResponse({ error: `Ollama error (${response.status}): ${text}` });
         return;
       }

@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7c6af7"/>
+      <stop offset="100%" stop-color="#5b4fcf"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="white" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="white" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="512" height="512" rx="100" fill="url(#bg)"/>
+
+  <!-- Shine overlay -->
+  <rect width="512" height="256" rx="100" fill="url(#shine)"/>
+
+  <!-- Diamond body -->
+  <path d="M256 80 L128 192 L256 304 L384 192 Z" fill="white"/>
+
+  <!-- Right face (slightly darker) -->
+  <path d="M384 192 L256 304 L256 420 L384 320 Z" fill="rgba(0,0,0,0.12)"/>
+
+  <!-- Left face (highlight) -->
+  <path d="M256 80 L128 192 L256 304 L256 420 Z" fill="rgba(255,255,255,0.85)"/>
+
+  <!-- Center ridge -->
+  <path d="M128 192 L256 304 L384 192" stroke="rgba(0,0,0,0.1)" stroke-width="3" fill="none"/>
+
+  <!-- Horizontal bars -->
+  <rect x="128" y="330" width="256" height="28" rx="14" fill="white" opacity="0.9"/>
+  <rect x="128" y="378" width="256" height="28" rx="14" fill="white" opacity="0.65"/>
+  <rect x="128" y="426" width="180" height="28" rx="14" fill="white" opacity="0.4"/>
+</svg>

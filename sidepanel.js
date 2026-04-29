@@ -60,6 +60,7 @@ const i18nStrings = {
     settingsSelectFolder: 'Select folder',
     settingsChangeFolder: 'Change folder',
     settingsFontSize: 'Font size',
+    settingsCurrentModel: 'Current Model',
   },
   pl: {
     msgLabelYou: 'Ty',
@@ -109,6 +110,7 @@ const i18nStrings = {
     settingsSelectFolder: 'Wybierz folder',
     settingsChangeFolder: 'Zmień folder',
     settingsFontSize: 'Wielkość czcionki',
+    settingsCurrentModel: 'Aktualny model',
   },
   es: {
     msgLabelYou: 'Tú',
@@ -157,6 +159,7 @@ const i18nStrings = {
     settingsSelectFolder: 'Seleccionar carpeta',
     settingsChangeFolder: 'Cambiar carpeta',
     settingsFontSize: 'Tamaño de fuente',
+    settingsCurrentModel: 'Modelo actual',
   },
   fr: {
     msgLabelYou: 'Vous',
@@ -205,6 +208,7 @@ const i18nStrings = {
     settingsSelectFolder: 'Sélectionner un dossier',
     settingsChangeFolder: 'Modifier le dossier',
     settingsFontSize: 'Taille de police',
+    settingsCurrentModel: 'Modèle actuel',
   },
   de: {
     msgLabelYou: 'Sie',
@@ -253,6 +257,7 @@ const i18nStrings = {
     settingsSelectFolder: 'Ordner auswählen',
     settingsChangeFolder: 'Ordner ändern',
     settingsFontSize: 'Schriftgröße',
+    settingsCurrentModel: 'Aktuelles Modell',
   },
   ru: {
     msgLabelYou: 'Вы',
@@ -301,6 +306,7 @@ const i18nStrings = {
     settingsSelectFolder: 'Выбрать папку',
     settingsChangeFolder: 'Изменить папку',
     settingsFontSize: 'Размер шрифта',
+    settingsCurrentModel: 'Текущая модель',
   },
 };
 

@@ -1,8 +1,6 @@
 // background.js - Chrome Extension Service Worker
-// Bridges side panel UI, content scripts, and the local proxy server
+// Direct OpenRouter API calls + File System Access API for vault
 
-const PROXY_URL = 'http://localhost:8787';
-const AUTO_START_KEY = 'openagent_proxy_autostart_done';
 const STORAGE_KEYS = {
   API_KEY: 'claude_api_key',
   MODEL: 'claude_model',
@@ -11,13 +9,12 @@ const STORAGE_KEYS = {
   THEME: 'claude_theme',
   PRESET: 'claude_preset',
   LANGUAGE: 'claude_language',
-  VAULT_PATH: 'openagent_vault_path',
+  VAULT_HANDLE: 'openagent_vault_handle',
   AUTO_VAULT: 'openagent_auto_vault',
 };
 
 // ─── Auto-inject content script on page load ───────────────────────────────────
 
-// Track which tabs have been injected to avoid double-injection
 const injectedTabs = new Set();
 
 chrome.tabs.onActivated.addListener(async (activeInfo) => {
@@ -43,15 +40,11 @@ async function injectIntoTab(tabId) {
   injectedTabs.add(tabId);
   try {
     const tab = await chrome.tabs.get(tabId);
-    if (!tab.url || !tab.url.startsWith('http')) {
-      console.log('[OpenAgent] injectIntoTab: skipping non-http tab', tabId, tab.url);
-      return;
-    }
+    if (!tab.url || !tab.url.startsWith('http')) return;
     await chrome.scripting.executeScript({
       target: { tabId },
       files: ['content.js'],
     });
-    console.log('[OpenAgent] injectIntoTab: injected into', tabId, tab.url);
   } catch (err) {
     console.log('[OpenAgent] injectIntoTab: failed', tabId, err.message);
   }
@@ -61,13 +54,9 @@ async function injectIntoTab(tabId) {
 
 async function getWebTab() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!tab) {
-    console.log('[OpenAgent] getWebTab: no active tab');
-    return null;
-  }
+  if (!tab) return null;
 
   if (tab.url && (tab.url.startsWith('http://') || tab.url.startsWith('https://'))) {
-    console.log('[OpenAgent] getWebTab: using active tab', tab.id, tab.url);
     return tab;
   }
 
@@ -76,69 +65,41 @@ async function getWebTab() {
     windowId: tab.windowId,
   });
 
-  console.log('[OpenAgent] getWebTab: active tab is', tab.url, '-> found', webTabs.length, 'web tabs');
-  if (webTabs.length > 0) {
-    const result = webTabs[0];
-    console.log('[OpenAgent] getWebTab: using tab', result.id, result.url);
-    return result;
-  }
-
-  return null;
+  return webTabs.length > 0 ? webTabs[0] : null;
 }
 
 // ─── Message Router ───────────────────────────────────────────────────────────
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   const handlers = {
-    // --- Settings ---
     'settings.load': () => loadSettings(),
     'settings.save': () => saveSettings(message.data),
-
-    // --- Content Script Injection ---
     'inject.content': () => injectContentScript(),
-
-    // --- Page Context ---
     'page.collect': () => sendToContentScript('page.collect'),
     'page.dom.snapshot': () => sendToContentScript('page.dom.snapshot'),
     'page.dom.perform': () => sendToContentScript('page.dom.perform', { steps: message.steps }),
     'page.navigate': () => sendNavigateAction(message.url),
-
-    // --- Chat ---
     'prompt.send': () => handlePromptSend(message, sendResponse),
     'conversation.clear': () => ({ ok: true }),
-
-    // --- Browser Context ---
     'context.tabs.list': () => listOpenTabs(),
     'context.history.search': () => searchHistory(message.query),
-
-    // --- Streaming ---
     'stream.start': () => startStream(message, sendResponse),
-
-    // --- Vault ---
     'vault.read': () => handleVaultRead(message),
     'vault.write': () => handleVaultWrite(message),
-
-    // --- Auto Vault ---
+    'vault.pick': () => pickVaultDirectory(),
     'autovault.load': () => loadAutoVault(),
     'autovault.save': () => saveAutoVault(message.enabled),
-
-    // --- Proxy Auto-Start ---
-    'proxy.start': () => startProxyServer(),
   };
 
   const handler = handlers[message.type];
-  if (!handler) {
-    return false;
-  }
+  if (!handler) return false;
 
   const result = handler();
   if (result instanceof Promise) {
     result.then(sendResponse).catch((err) => sendResponse({ error: err.message }));
     return true;
   }
-  if (result !== undefined) {
-    sendResponse(result);
-  }
+  if (result !== undefined) sendResponse(result);
   return true;
 });
 
@@ -148,13 +109,9 @@ async function injectContentScript() {
   const tab = await getWebTab();
   if (!tab?.id) return { error: 'No active web page tab found' };
   try {
-    await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      files: ['content.js'],
-    });
+    await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] });
     return { ok: true, tabId: tab.id };
   } catch (err) {
-    // Already injected is fine
     return { ok: true, tabId: tab.id };
   }
 }
@@ -163,29 +120,16 @@ async function sendToContentScript(type, payload) {
   const tab = await getWebTab();
   if (!tab?.id) return { error: 'No active web page tab found' };
 
-  // Only inject if we can't send a message (script not loaded yet)
   try {
-    const result = await chrome.tabs.sendMessage(tab.id, { type, ...payload });
-    console.log('[OpenAgent] sendToContentScript', type, '-> ok:', result?.ok, 'error:', result?.error, 'url:', result?.rawCapture?.metadata?.url);
-    return result;
+    return await chrome.tabs.sendMessage(tab.id, { type, ...payload });
   } catch (err) {
-    // Script not injected yet — inject it and retry once
-    console.log('[OpenAgent] sendMessage failed, injecting:', err.message);
     try {
-      await chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        files: ['content.js'],
-      });
-    } catch (e) {
-      console.log('[OpenAgent] inject failed:', e.message);
-    }
+      await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] });
+    } catch (e) {}
     try {
-      const result = await chrome.tabs.sendMessage(tab.id, { type, ...payload });
-      console.log('[OpenAgent] sendToContentScript', type, 'retry -> ok:', result?.ok, 'error:', result?.error);
-      return result;
+      return await chrome.tabs.sendMessage(tab.id, { type, ...payload });
     } catch (e) {
-      console.log('[OpenAgent] sendMessage retry failed:', e.message);
-      return { error: `Cannot communicate with page. Try reloading the page.` };
+      return { error: 'Cannot communicate with page. Try reloading the page.' };
     }
   }
 }
@@ -200,32 +144,10 @@ async function sendNavigateAction(url) {
   }
 }
 
-async function ensureContentScript(tabId, tabUrl) {
-  try {
-    await chrome.scripting.executeScript({
-      target: { tabId },
-      files: ['content.js'],
-    });
-  } catch (err) {
-    // Script may already be injected — this is fine
-    console.debug('ensureContentScript:', err.message);
-  }
-}
-
 // ─── Settings ─────────────────────────────────────────────────────────────────
 
 async function loadSettings() {
-  const result = await chrome.storage.local.get([
-    STORAGE_KEYS.API_KEY,
-    STORAGE_KEYS.MODEL,
-    STORAGE_KEYS.PROVIDER,
-    STORAGE_KEYS.SYSTEM_PROMPT,
-    STORAGE_KEYS.THEME,
-    STORAGE_KEYS.PRESET,
-    STORAGE_KEYS.LANGUAGE,
-    STORAGE_KEYS.VAULT_PATH,
-    STORAGE_KEYS.AUTO_VAULT,
-  ]);
+  const result = await chrome.storage.local.get(Object.values(STORAGE_KEYS));
   return {
     apiKey: result[STORAGE_KEYS.API_KEY] || '',
     model: result[STORAGE_KEYS.MODEL] || '',
@@ -234,7 +156,7 @@ async function loadSettings() {
     theme: result[STORAGE_KEYS.THEME] || 'dark',
     preset: result[STORAGE_KEYS.PRESET] || 'default',
     language: result[STORAGE_KEYS.LANGUAGE] || 'en',
-    vaultPath: result[STORAGE_KEYS.VAULT_PATH] || '',
+    vaultHandle: result[STORAGE_KEYS.VAULT_HANDLE] || null,
     autoVault: result[STORAGE_KEYS.AUTO_VAULT] || false,
   };
 }
@@ -248,7 +170,6 @@ async function saveSettings(data) {
     [STORAGE_KEYS.THEME]: data.theme || 'dark',
     [STORAGE_KEYS.PRESET]: data.preset || 'default',
     [STORAGE_KEYS.LANGUAGE]: data.language || 'en',
-    [STORAGE_KEYS.VAULT_PATH]: data.vaultPath || '',
   });
   return { ok: true };
 }
@@ -263,61 +184,45 @@ async function handlePromptSend(message, sendResponse) {
   }
 
   const { conversationHistory, pageContext, autoVault } = message;
-  const messages = buildMessages(conversationHistory, pageContext, settings.systemPrompt, settings.vaultPath, autoVault);
+  const msgs = buildMessages(conversationHistory, pageContext, settings.systemPrompt, autoVault);
 
   try {
-    const response = await fetch(`${PROXY_URL}/api/chat`, {
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Authorization': `Bearer ${settings.apiKey}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': chrome.runtime.getURL('/'),
+        'X-Title': 'OpenAgent Chrome Extension',
+      },
       body: JSON.stringify({
-        messages,
-        apiKey: settings.apiKey,
-        model: settings.model,
-        provider: settings.provider,
+        model: settings.model || 'openai/gpt-4o',
+        messages: msgs,
+        provider: { preset: settings.provider || 'openrouter' },
       }),
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      sendResponse({ error: `Proxy error (${response.status}): ${error}` });
+      const error = await response.json().catch(() => ({ error: { message: await response.text() } }));
+      sendResponse({ error: `API error (${response.status}): ${error?.error?.message || response.statusText}` });
       return;
     }
 
     const data = await response.json();
-    sendResponse({ content: data.content || '' });
+    const content = data.choices?.[0]?.message?.content || '';
+    sendResponse({ content });
   } catch (err) {
-    sendResponse({ error: `Cannot connect to proxy at ${PROXY_URL}. Is the server running?` });
+    sendResponse({ error: `Request failed: ${err.message}` });
   }
 }
 
-function buildVaultInstructions(vaultPath) {
-  return `VAULT TOOLS — You have two tools to persist and recall information across conversations:
-
-1. VAULT_READ: Use <vault_read query="optional search term" /> to read existing notes from the user's Obsidian vault.
-   When to use: user asks to recall something, check memories, see past notes, or refers to "my notes" / "what did we save".
-
-2. VAULT_WRITE: Use <vault_write filename="descriptive-name-YYYY-MM-DD.md">markdown content here</vault_write> to save important information to the vault.
-   When to use: user asks to save something, remember something, or you want to proactively persist key information.
-   - Always wrap the full note content in the tag, including markdown headers.
-   - Use descriptive filenames: lowercase with hyphens and a date suffix. Example: "web-research-2026-04-29.md"
-   - The vault directory is: ${vaultPath}
-
-IMPORTANT: Remove vault tool tags from your response after executing them. Always confirm when you save a note (e.g., "Saved to vault as web-research-2026-04-29.md").`;
-}
-
-function buildMessages(history, pageContext, systemPrompt, vaultPath, autoVault) {
+function buildMessages(history, pageContext, systemPrompt, autoVault) {
   const msgs = [];
-  const vaultInstructions = vaultPath ? buildVaultInstructions(vaultPath) : '';
 
-  const combinedSystem = (() => {
-    if (systemPrompt && vaultInstructions) return `${systemPrompt}\n\n${vaultInstructions}`;
-    if (systemPrompt) return systemPrompt;
-    if (vaultInstructions) return vaultInstructions;
-    return null;
-  })();
+  const systemContent = systemPrompt || null;
 
-  if (combinedSystem) {
-    msgs.push({ role: 'system', content: combinedSystem });
+  if (systemContent) {
+    msgs.push({ role: 'system', content: systemContent });
   }
   if (pageContext) {
     msgs.push({
@@ -329,13 +234,11 @@ function buildMessages(history, pageContext, systemPrompt, vaultPath, autoVault)
     msgs.push({ role: msg.role, content: msg.content });
   }
 
-  // Auto-vault: append instruction to last user message
-  if (autoVault && vaultPath) {
-    const autoVaultNote = `\n\n[NOTE: AUTO-VAULT ENABLED — After responding, proactively identify important information discussed in this conversation and save a concise summary note to the Obsidian vault using <vault_write filename="topic-date.md">...</vault_write>. Focus on key facts, decisions, URLs, code snippets, or anything the user would want to remember. Do not save trivial conversational filler.]`;
-    // Find the last user message and append the instruction
+  if (autoVault) {
+    const note = `\n\n[NOTE: AUTO-VAULT ENABLED — After responding, proactively identify important information discussed in this conversation and save a concise summary note to the Obsidian vault using <vault_write filename="topic-date.md">...</vault_write>. Focus on key facts, decisions, URLs, code snippets, or anything the user would want to remember.]`;
     for (let i = msgs.length - 1; i >= 0; i--) {
       if (msgs[i].role === 'user') {
-        msgs[i].content += autoVaultNote;
+        msgs[i].content += note;
         break;
       }
     }
@@ -354,24 +257,28 @@ async function startStream(message, sendResponse) {
   }
 
   const { conversationHistory, pageContext, autoVault } = message;
-  const messages = buildMessages(conversationHistory, pageContext, settings.systemPrompt, settings.vaultPath, autoVault);
+  const msgs = buildMessages(conversationHistory, pageContext, settings.systemPrompt, autoVault);
 
   try {
-    const response = await fetch(`${PROXY_URL}/api/chat`, {
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Authorization': `Bearer ${settings.apiKey}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': chrome.runtime.getURL('/'),
+        'X-Title': 'OpenAgent Chrome Extension',
+      },
       body: JSON.stringify({
-        messages,
-        apiKey: settings.apiKey,
-        model: settings.model,
-        provider: settings.provider,
+        model: settings.model || 'openai/gpt-4o',
+        messages: msgs,
         stream: true,
+        provider: { preset: settings.provider || 'openrouter' },
       }),
     });
 
     if (!response.ok) {
       const error = await response.text();
-      sendResponse({ error: `Proxy error (${response.status}): ${error}` });
+      sendResponse({ error: `API error (${response.status}): ${error}` });
       return;
     }
 
@@ -380,17 +287,13 @@ async function startStream(message, sendResponse) {
     let done = false;
     let fullText = '';
 
-    const sendChunk = (chunk) => {
-      chrome.runtime.sendMessage({ type: 'stream.chunk', content: chunk }).catch(() => {});
-    };
-
     while (!done) {
       const { value, done: d } = await reader.read();
       done = d;
       if (value) {
         const chunk = decoder.decode(value, { stream: !done });
         fullText += chunk;
-        sendChunk(chunk);
+        chrome.runtime.sendMessage({ type: 'stream.chunk', content: chunk }).catch(() => {});
       }
     }
 
@@ -422,47 +325,22 @@ async function searchHistory(query) {
   });
 }
 
-// ─── Vault ────────────────────────────────────────────────────────────────────
+// ─── Vault (File System Access API) ──────────────────────────────────────────
 
-async function handleVaultRead(message) {
-  const settings = await chrome.storage.local.get([STORAGE_KEYS.VAULT_PATH]);
-  const vaultPath = settings[STORAGE_KEYS.VAULT_PATH];
-  if (!vaultPath) return { error: 'Vault path not configured. Set it in Settings.' };
+async function pickVaultDirectory() {
   try {
-    const resp = await fetch(`${PROXY_URL}/api/vault/read`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ vaultPath, query: message.query || '', limit: message.limit || 20 }),
-    });
-    const data = await resp.json();
-    if (!resp.ok) return { error: data.error };
-    return data;
+    const dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+    await chrome.storage.local.set({ [STORAGE_KEYS.VAULT_HANDLE]: 'granted' });
+    return { ok: true, path: dirHandle.name };
   } catch (err) {
-    return { error: `Cannot connect to proxy: ${err.message}` };
+    if (err.name === 'AbortError') return { ok: false, cancelled: true };
+    return { error: err.message };
   }
 }
 
-async function handleVaultWrite(message) {
-  const settings = await chrome.storage.local.get([STORAGE_KEYS.VAULT_PATH]);
-  const vaultPath = settings[STORAGE_KEYS.VAULT_PATH];
-  if (!vaultPath) return { error: 'Vault path not configured. Set it in Settings.' };
-  try {
-    const resp = await fetch(`${PROXY_URL}/api/vault/write`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ vaultPath, filename: message.filename, content: message.content }),
-    });
-    const text = await resp.text();
-    console.log('[BG] proxy raw response:', text);
-    const data = JSON.parse(text);
-    console.log('[BG] proxy JSON:', JSON.stringify(data));
-    if (!resp.ok) return { error: data.error };
-    return data;
-  } catch (err) {
-    console.error('[BG] vault.write error:', err);
-    return { error: `Cannot connect to proxy: ${err.message}` };
-  }
-}
+// File System Access API — vault operations in the side panel context
+// The side panel uses chrome.storage to persist a "vault ready" flag
+// and communicates via the message protocol for vault operations
 
 // ─── Auto Vault ───────────────────────────────────────────────────────────────
 
@@ -492,59 +370,6 @@ chrome.contextMenus.onClicked.addListener((info) => {
   if (info.menuItemId === 'openSidePanel') {
     chrome.sidePanel.open({ windowId: chrome.windows.WINDOW_ID_CURRENT });
   }
-});
-
-// ─── Proxy Auto-Start ──────────────────────────────────────────────────────────
-
-async function startProxyServer() {
-  try {
-    // Check if already running
-    const resp = await fetch(`${PROXY_URL}/health`);
-    if (resp.ok) return { ok: true, already: true };
-  } catch {}
-
-  // Proxy is not running — try to start via offscreen document
-  try {
-    // Use offscreen API to create a document that can run JS
-    const hasOffscreen = await chrome.offscreen.hasDocument();
-    if (!hasOffscreen) {
-      await chrome.offscreen.createDocument({
-        url: 'offscreen.html',
-        reasons: ['WORKERS'],
-        justification: 'Proxy auto-start for OpenAgent Chrome Extension',
-      });
-    }
-
-    // Send a message to the offscreen document to start the proxy
-    // Since offscreen can't run shell commands either, we use a different approach:
-    // Try to detect the extension path and open Terminal
-    chrome.runtime.sendMessage('offscreen', { type: 'start-proxy' }, () => {
-      // Even if this fails, we've tried
-    });
-  } catch (err) {
-    console.log('[OpenAgent] offscreen start failed:', err.message);
-  }
-
-  // Best effort: return instructions
-  return {
-    ok: false,
-    message: 'Could not auto-start proxy. Run start-proxy.bat (Windows) or start-proxy.sh (Mac/Linux) from the extension folder.',
-  };
-}
-
-async function checkAndStartProxy() {
-  try {
-    const resp = await fetch(`${PROXY_URL}/health`);
-    if (resp.ok) return;
-  } catch {}
-
-  // Try offscreen approach
-  await startProxyServer();
-}
-
-// Check proxy on service worker startup
-chrome.runtime.onStartup.addListener(() => {
-  checkAndStartProxy();
 });
 
 // ─── Side Panel ───────────────────────────────────────────────────────────────

@@ -1,6 +1,6 @@
 # OpenAgent — Chrome Extension
 
-Browser assistant powered by OpenRouter. Chat about any webpage, automate actions, navigate pages with natural language, and automatically save your conversations to Obsidian.
+Browser assistant powered by OpenRouter. Chat about any webpage, automate actions, navigate pages with natural language, and save notes directly to Obsidian.
 
 ## Screenshots
 
@@ -14,88 +14,53 @@ Browser assistant powered by OpenRouter. Chat about any webpage, automate action
 
 - **Chat with AI** about the current page context
 - **Browser automation** (click, type, scroll, navigate)
-- **Obsidian integration** — save notes directly to your vault
-  - Toggle button in header to enable auto-save mode
-  - Auto-save appends entire conversation to a single note per session
+- **Obsidian integration** — save notes directly to your vault using File System Access API
+  - Click the vault icon in the header to select your Obsidian vault folder
+  - Toggle auto-save to append entire conversation to a single note per session
   - Manual notes created with `vault_write` get their own `.md` files
   - Notes saved directly to vault root (no hidden folders)
 - **Side panel UI** with theme support (dark/light + 14 color presets)
 - **Multi-language** (English, Polish)
 - **OpenRouter integration** for model selection
 
-## Obsidian Setup
+## Installation
 
-1. Open the extension → **Settings**
-2. Find the **Obsidian Vault** section (expand it)
-3. Enter your vault path, e.g.:
-   - macOS: `/Users/you/Library/Mobile Documents/iCloud~md~obsidian/Documents/my-vault`
-   - Windows: `C:\Users\you\Documents\Obsidian\my-vault`
-   - Linux: `/home/you/Documents/my-vault`
-4. Click the **Obsidian icon** in the header to enable auto-save
-5. Conversations are saved as `openagent-{page}-{date}-{time}.md` directly in your vault
-
-## Auto-start Proxy
-
-The proxy server needs to be running for the extension to work. Run the setup script once:
-
-```bash
-cd proxy
-chmod +x setup-autostart.sh
-./setup-autostart.sh
-```
-
-After this, the proxy will start automatically after every login or restart (macOS LaunchAgent). No need to manually run it again.
-
-To remove auto-start:
-```bash
-launchctl unload ~/Library/LaunchAgents/com.openagent.proxy.plist
-rm ~/Library/LaunchAgents/com.openagent.proxy.plist
-```
+1. Download or clone this repo
+2. Open `chrome://extensions/`
+3. Enable **Developer mode** (top right)
+4. Click **Load unpacked**
+5. Select this directory
 
 ## Setup
 
-### 1. Install the extension
-
-1. Open `chrome://extensions/`
-2. Enable **Developer mode** (top right)
-3. Click **Load unpacked**
-4. Select this directory
-
-### 2. Start the proxy
-
-```bash
-cd proxy
-npm install
-npm start
-```
-
-The proxy runs at `http://localhost:8787` and forwards requests to OpenRouter.
-
-### 3. Get an API key
-
-1. Sign up at [openrouter.ai](https://openrouter.ai)
-2. Generate an API key at [openrouter.ai/keys](https://openrouter.ai/keys)
-3. Open the extension, go to **Settings**, paste the API key
+1. Open the extension (click the toolbar icon or use `Alt+Shift+O`)
+2. Go to **Settings**
+3. Paste your [OpenRouter API key](https://openrouter.ai/keys)
 4. Select a model and start chatting
 
-## Project Structure
+## Obsidian Vault
 
-```
-├── manifest.json          # Chrome extension manifest
-├── background.js         # Service worker
-├── content.js           # Content script (FAB + page automation)
-├── sidepanel.*          # Side panel UI
-├── mic-permission.html  # Microphone permission flow
-├── offscreen.*          # Offscreen document
-├── proxy/               # Local proxy server (Express)
-│   └── server.js
-├── icons/               # Extension icons
-└── _locales/            # i18n strings (57 languages)
-```
+1. Click the **vault icon** in the header (or go to Settings → Obsidian Vault)
+2. Click **"Select folder"** and choose your Obsidian vault directory
+3. The browser will remember your selection across sessions
+4. Toggle auto-save to automatically append conversation to a note
 
 ## Keyboard Shortcut
 
 Default: `Alt+Shift+O` to open the side panel (configurable in `chrome://extensions/shortcuts`).
+
+## Project Structure
+
+```
+├── manifest.json      # Chrome extension manifest
+├── background.js      # Service worker
+├── content.js         # Content script (FAB + page automation)
+├── sidepanel.*        # Side panel UI
+├── offscreen.*        # Offscreen document
+├── icons/             # Extension icons
+├── _locales/          # i18n strings (EN, PL)
+└── docs/              # Screenshots
+```
 
 ## License
 

@@ -2,12 +2,14 @@
 
 const state = {
   messages: [],
-  settings: { apiKey: '', provider: 'openrouter', model: '', systemPrompt: '', theme: 'dark', preset: 'default', language: 'en', vaultPath: '' },
+  settings: { apiKey: '', provider: 'openrouter', model: '', systemPrompt: '', theme: 'dark', preset: 'default', language: 'en' },
   pageContext: null,
   isLoading: false,
   allModels: [],
   autoVault: false,
-  currentVaultFilename: null, // tracks the ongoing session note
+  currentVaultFilename: null,
+  vaultDirHandle: null, // File System Access API directory handle
+  vaultReady: false,
 };
 
 const i18nStrings = {
@@ -16,11 +18,11 @@ const i18nStrings = {
     msgLabelClaude: 'OpenAgent',
     inputPlaceholder: 'Message OpenAgent...',
     emptyStateText: 'Ask OpenAgent anything about the current page.',
-    statusProxyConnected: 'Proxy connected',
-    statusProxyOffline: 'Proxy offline — run: node proxy/server.js',
     statusApiKeyNeeded: 'Set API key in Settings',
     statusModel: 'Model:',
     statusPageContextLoaded: 'Page context loaded',
+    statusVaultReady: 'Vault ready',
+    statusVaultNotSet: 'Select vault folder in Settings',
     settingsTitle: 'Settings',
     settingsApiKey: 'API Key',
     settingsApiKeyPlaceholder: 'sk-or-...',
@@ -36,8 +38,6 @@ const i18nStrings = {
     settingsLanguage: 'Language',
     settingsSaved: 'Saved',
     settingsEnterApiKey: 'Enter API key in Settings',
-    settingsProxyOffline: 'Proxy offline',
-    settingsStartProxy: 'Start proxy: node proxy/server.js',
     settingsLoading: 'Loading...',
     settingsModelsHint: 'models available',
     settingsNoModels: 'No models',
@@ -45,16 +45,18 @@ const i18nStrings = {
     btnClear: 'Clear conversation',
     btnReadPage: 'Read this page',
     btnSettings: 'Settings',
-    btnVault: 'Auto-save to Obsidian',
-    btnVaultOn: 'Auto-save to Obsidian enabled (click to disable)',
-    btnVaultOff: 'Auto-save to Obsidian disabled (click to enable)',
+    btnVault: 'Select vault folder',
+    btnVaultOn: 'Vault ready — click to change',
+    btnVaultOff: 'No vault selected — click to select',
     langEnglish: 'English',
     langPolish: 'Polski',
     linkOpenrouterKeys: 'Get API key →',
     settingsVaultTitle: 'Obsidian Vault',
-    settingsVaultPath: 'Vault Path',
-    settingsVaultPathPlaceholder: '/Users/you/Documents/my-vault',
+    settingsVaultPath: 'Vault Folder',
+    settingsVaultPathPlaceholder: 'Click "Select folder" to choose your vault',
     settingsVaultPathHint: 'Notes are saved directly to your vault.',
+    settingsSelectFolder: 'Select folder',
+    settingsChangeFolder: 'Change folder',
   },
   pl: {
     msgLabelYou: 'Ty',
@@ -62,11 +64,11 @@ const i18nStrings = {
     extensionName: 'OpenAgent',
     inputPlaceholder: 'Napisz do OpenAgent...',
     emptyStateText: 'Zadaj OpenAgentowi pytanie o aktualną stronę.',
-    statusProxyConnected: 'Proxy połączone',
-    statusProxyOffline: 'Proxy offline — uruchom: node proxy/server.js',
     statusApiKeyNeeded: 'Ustaw klucz API w Ustawieniach',
     statusModel: 'Model:',
     statusPageContextLoaded: 'Kontekst strony wczytany',
+    statusVaultReady: 'Magazyn gotowy',
+    statusVaultNotSet: 'Wybierz folder magazynu w Ustawieniach',
     settingsTitle: 'Ustawienia',
     settingsApiKey: 'Klucz API',
     settingsApiKeyPlaceholder: 'sk-or-...',
@@ -82,8 +84,6 @@ const i18nStrings = {
     settingsLanguage: 'Język',
     settingsSaved: 'Zapisano',
     settingsEnterApiKey: 'Wpisz klucz API w Ustawieniach',
-    settingsProxyOffline: 'Proxy offline',
-    settingsStartProxy: 'Uruchom proxy: node proxy/server.js',
     settingsLoading: 'Ładowanie...',
     settingsModelsHint: 'modeli dostępnych',
     settingsNoModels: 'Brak modeli',
@@ -91,16 +91,18 @@ const i18nStrings = {
     btnClear: 'Wyczyść rozmowę',
     btnReadPage: 'Wczytaj stronę',
     btnSettings: 'Ustawienia',
-    btnVault: 'Automatyczny zapis do Obsidian',
-    btnVaultOn: 'Automatyczny zapis włączony (kliknij by wyłączyć)',
-    btnVaultOff: 'Automatyczny zapis wyłączony (kliknij by włączyć)',
+    btnVault: 'Wybierz folder magazynu',
+    btnVaultOn: 'Magazyn gotowy — kliknij by zmienić',
+    btnVaultOff: 'Nie wybrano magazynu — kliknij by wybrać',
     langEnglish: 'English',
     langPolish: 'Polski',
     linkOpenrouterKeys: 'Pobierz klucz API →',
     settingsVaultTitle: 'Magazyn Obsidian',
-    settingsVaultPath: 'Ścieżka do magazynu',
-    settingsVaultPathPlaceholder: '/Użytkownik/ty/Dokumenty/moj-magazyn',
+    settingsVaultPath: 'Folder magazynu',
+    settingsVaultPathPlaceholder: 'Kliknij "Wybierz folder" aby wybrać magazyn',
     settingsVaultPathHint: 'Notatki są zapisywane bezpośrednio w magazynie.',
+    settingsSelectFolder: 'Wybierz folder',
+    settingsChangeFolder: 'Zmień folder',
   },
 };
 
@@ -132,6 +134,7 @@ const dom = {
   themePreset: $('#themePreset'),
   langSelect: $('#langSelect'),
   vaultPathInput: $('#vaultPathInput'),
+  vaultSelectBtn: $('#vaultSelectBtn'),
 };
 
 // ─── i18n ────────────────────────────────────────────────────────────────────
@@ -151,13 +154,11 @@ function applyI18n() {
     el.title = i18n(el.dataset.i18nTitle);
   }
   dom.input.placeholder = i18n('inputPlaceholder');
-  // Translate language select options
   if (dom.langSelect) {
     const opts = dom.langSelect.options;
     opts[0].textContent = i18n('langEnglish');
     opts[1].textContent = i18n('langPolish');
   }
-  // Translate toggle buttons
   if (dom.themeDark) dom.themeDark.textContent = i18n('settingsThemeDark');
   if (dom.themeLight) dom.themeLight.textContent = i18n('settingsThemeLight');
 }
@@ -171,6 +172,63 @@ function applyTheme(theme, preset = 'default') {
   dom.themeLight.classList.toggle('active', theme === 'light');
 }
 
+// ─── Vault (File System Access API) ─────────────────────────────────────────
+
+async function pickVaultFolder() {
+  try {
+    const dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+    state.vaultDirHandle = dirHandle;
+    state.vaultReady = true;
+    dom.vaultPathInput.value = dirHandle.name;
+    dom.vaultPathInput.title = 'Selected: ' + dirHandle.name;
+    updateVaultBtn();
+    setStatus(i18n('statusVaultReady'), 'success');
+  } catch (err) {
+    if (err.name !== 'AbortError') {
+      setStatus('Vault error: ' + err.message, 'error');
+    }
+  }
+}
+
+async function vaultWrite(filename, content) {
+  if (!state.vaultDirHandle) {
+    return { error: 'No vault selected. Go to Settings to pick your vault folder.' };
+  }
+  try {
+    const fileHandle = await state.vaultDirHandle.getFileHandle(filename, { create: true });
+    const writable = await fileHandle.createWritable();
+    await writable.write(content);
+    await writable.close();
+    return { ok: true, path: filename };
+  } catch (err) {
+    return { error: err.message };
+  }
+}
+
+async function vaultReadFiles(query = '', limit = 20) {
+  if (!state.vaultDirHandle) {
+    return { error: 'No vault selected', notes: [] };
+  }
+  const notes = [];
+  try {
+    for await (const entry of state.vaultDirHandle.values()) {
+      if (entry.kind !== 'file' || !entry.name.endsWith('.md')) continue;
+      if (notes.length >= limit) break;
+      try {
+        const file = await entry.getFile();
+        const text = await file.text();
+        const q = query.toLowerCase();
+        if (!query || text.toLowerCase().includes(q) || entry.name.toLowerCase().includes(q)) {
+          notes.push({ filename: entry.name, content: text });
+        }
+      } catch {}
+    }
+  } catch (err) {
+    return { error: err.message, notes };
+  }
+  return { notes };
+}
+
 // ─── Init ─────────────────────────────────────────────────────────────────────
 
 async function init() {
@@ -181,13 +239,13 @@ async function init() {
   dom.themePreset.value = state.settings.preset || 'default';
   renderMessages();
   bindEvents();
-  checkProxyConnection();
-  startProxyAutomatically();
   loadModels();
   updateModelBadge();
   loadAutoVaultState();
   collectPageContext();
 }
+
+// ─── Auto Vault ───────────────────────────────────────────────────────────────
 
 async function loadAutoVaultState() {
   try {
@@ -198,9 +256,10 @@ async function loadAutoVaultState() {
 }
 
 function updateVaultBtn() {
-  if (state.autoVault) {
+  if (state.vaultReady) {
     dom.vaultBtn.classList.add('active');
     dom.vaultBtn.title = i18n('btnVaultOn');
+    setStatus(i18n('statusVaultReady'), 'success');
   } else {
     dom.vaultBtn.classList.remove('active');
     dom.vaultBtn.title = i18n('btnVaultOff');
@@ -213,81 +272,7 @@ async function saveAutoVault() {
   } catch {}
 }
 
-// ─── Proxy ───────────────────────────────────────────────────────────────────
-
-async function checkProxyConnection() {
-  try {
-    const res = await fetch('http://localhost:8787/health', { method: 'GET' });
-    if (!res.ok) throw new Error();
-    setStatus(i18n('statusProxyConnected'), 'success');
-    hideStartProxyBtn();
-  } catch {
-    showStartProxyBtn();
-  }
-}
-
-function showStartProxyBtn() {
-  const existing = document.getElementById('startProxyBtn');
-  if (existing) return;
-  const btn = document.createElement('button');
-  btn.id = 'startProxyBtn';
-  btn.textContent = 'Start Proxy';
-  btn.style.cssText = 'background: rgba(255,255,255,0.08); color: #fff; border: 1px solid rgba(255,255,255,0.15); border-radius: 4px; padding: 2px 8px; font-size: 11px; cursor: pointer; font-family: inherit; margin-left: 6px;';
-  btn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    const isMac = navigator.platform.toLowerCase().startsWith('mac');
-    const isWin = navigator.platform.toLowerCase().startsWith('win');
-
-    if (isMac) {
-      window.open('setup.sh');
-      return;
-    }
-
-    if (isWin) {
-      window.open('setup.bat');
-      return;
-    }
-
-    // Fallback for other platforms
-    navigator.clipboard.writeText('cd ~/Downloads/openagent/proxy && node server.js').then(() => {
-      showCopyNotification('cd ~/Downloads/openagent/proxy && node server.js');
-    });
-  });
-
-  const statusEl = dom.status;
-  if (statusEl) {
-    statusEl.parentNode.insertBefore(btn, statusEl.nextSibling);
-  }
-}
-
-function showCopyNotification(cmd) {
-  const isWin = navigator.platform.toLowerCase().startsWith('win');
-  const hint = isWin ? 'Setup is running. A CMD window will open — keep it running.' : 'Open terminal and paste the command.';
-  const el = document.createElement('div');
-  el.style.cssText = 'position:fixed;top:10%;left:10%;right:10%;background:#1e1e1e;border:1px solid #555;border-radius:8px;padding:16px;color:#fff;font-family:monospace;font-size:14px;z-index:99999;text-align:center';
-  el.innerHTML = `<strong>Command copied!</strong><br><br>${hint}<br><br><code style="display:block;background:#333;padding:8px;border-radius:4px;margin-top:8px;word-break:break-all">${cmd}</code>`;
-  el.onclick = () => el.remove();
-  document.body.appendChild(el);
-  setTimeout(() => el.remove(), 5000);
-}
-
-function hideStartProxyBtn() {
-  const btn = document.getElementById('startProxyBtn');
-  if (btn) btn.remove();
-}
-
 // ─── Events ──────────────────────────────────────────────────────────────────
-
-async function startProxyAutomatically() {
-  try {
-    const res = await fetch('http://localhost:8787/health', { method: 'GET' });
-    if (res.ok) return;
-  } catch {}
-  // Proxy down — try to start via service worker
-  try {
-    await sendBgMessage({ type: 'proxy.start' });
-  } catch {}
-}
 
 function bindEvents() {
   dom.sendBtn.addEventListener('click', handleSend);
@@ -347,10 +332,12 @@ function bindEvents() {
   dom.clearBtn.addEventListener('click', clearConversation);
 
   dom.vaultBtn.addEventListener('click', () => {
-    state.autoVault = !state.autoVault;
-    updateVaultBtn();
-    saveAutoVault();
+    pickVaultFolder();
   });
+
+  if (dom.vaultSelectBtn) {
+    dom.vaultSelectBtn.addEventListener('click', () => pickVaultFolder());
+  }
 
   dom.modelSearch.addEventListener('input', () => {
     filterModels(dom.modelSearch.value);
@@ -365,7 +352,6 @@ async function loadSettings() {
     state.settings = { ...state.settings, ...data };
     dom.apiKeyInput.value = state.settings.apiKey || '';
     dom.systemPromptInput.value = state.settings.systemPrompt || '';
-    dom.vaultPathInput.value = state.settings.vaultPath || '';
   } catch (err) {
     console.error('Failed to load settings:', err);
   }
@@ -378,18 +364,16 @@ async function handleSaveSettings() {
   const theme = state.settings.theme;
   const preset = dom.themePreset.value;
   const language = state.settings.language;
-  const vaultPath = dom.vaultPathInput.value.trim();
 
   try {
     await sendBgMessage({
       type: 'settings.save',
-      data: { apiKey, provider: 'openrouter', model, systemPrompt, theme, preset, language, vaultPath },
+      data: { apiKey, provider: 'openrouter', model, systemPrompt, theme, preset, language },
     });
-    state.settings = { apiKey, provider: 'openrouter', model, systemPrompt, theme, preset, language, vaultPath };
+    state.settings = { apiKey, provider: 'openrouter', model, systemPrompt, theme, preset, language };
     dom.settingsStatus.textContent = i18n('settingsSaved');
     dom.settingsStatus.className = 'settings-status';
     toggleModal(false);
-    // Load models in background
     loadModels();
     updateModelBadge();
   } catch (err) {
@@ -412,18 +396,18 @@ async function loadModels() {
   }
 
   try {
-    const resp = await fetch(
-      `http://localhost:8787/api/models?apiKey=${encodeURIComponent(apiKey)}&provider=openrouter`
-    );
+    const resp = await fetch('https://openrouter.ai/api/v1/models', {
+      headers: { 'Authorization': `Bearer ${apiKey}` },
+    });
     const data = await resp.json();
 
     if (data.error) {
-      dom.modelList.innerHTML = `<div class="model-loading">${escapeHtml(data.error)}</div>`;
-      dom.modelHint.textContent = data.error;
+      dom.modelList.innerHTML = `<div class="model-loading">${escapeHtml(data.error.message || data.error)}</div>`;
+      dom.modelHint.textContent = data.error.message || data.error;
       return;
     }
 
-    state.allModels = data.models;
+    state.allModels = data.data || [];
     renderModelList(state.allModels);
 
     const saved = state.settings.model;
@@ -438,8 +422,8 @@ async function loadModels() {
     dom.modelHint.textContent = state.allModels.length + ' ' + i18n('settingsModelsHint');
     updateModelBadge();
   } catch (err) {
-    dom.modelList.innerHTML = `<div class="model-loading">${i18n('settingsProxyOffline')}</div>`;
-    dom.modelHint.textContent = i18n('settingsStartProxy');
+    dom.modelList.innerHTML = `<div class="model-loading">Error: ${escapeHtml(err.message)}</div>`;
+    dom.modelHint.textContent = err.message;
   }
 }
 
@@ -453,16 +437,18 @@ function renderModelList(models) {
     const item = document.createElement('div');
     item.className = 'model-item';
     item.dataset.modelId = model.id;
+    const name = model.name || model.id || '';
+    const provider = model.id?.includes('/') ? model.id.split('/')[0] : '';
     item.innerHTML = `
-      <span class="model-name">${escapeHtml(model.name)}</span>
-      <span class="model-provider">${escapeHtml(model.provider || '')}</span>
+      <span class="model-name">${escapeHtml(name)}</span>
+      <span class="model-provider">${escapeHtml(provider)}</span>
     `;
     item.addEventListener('click', async () => {
       selectModelItem(model.id);
       state.settings.model = model.id;
       await sendBgMessage({ type: 'settings.save', data: { ...state.settings } });
       updateModelBadge();
-      setStatus(escapeHtml(model.name), 'success');
+      setStatus(escapeHtml(name), 'success');
       setTimeout(() => toggleModal(false), 300);
     });
     dom.modelList.appendChild(item);
@@ -482,7 +468,7 @@ function filterModels(query) {
   }
   const q = query.toLowerCase();
   renderModelList(state.allModels.filter(
-    (m) => m.id.toLowerCase().includes(q) || m.name.toLowerCase().includes(q)
+    (m) => (m.id || '').toLowerCase().includes(q) || (m.name || '').toLowerCase().includes(q)
   ));
 }
 
@@ -520,7 +506,6 @@ async function handleNavigation(url, originalText) {
     loadingDiv.querySelector('.message-content').textContent = `Opened ${url}`;
     state.messages.push({ role: 'assistant', content: `Opened ${url}` });
 
-    // Update page context after navigation
     setTimeout(async () => {
       try {
         const data = await sendBgMessage({ type: 'page.collect' });
@@ -547,7 +532,6 @@ const NAV_PATTERNS = [
 function extractNavigationIntent(text) {
   const trimmed = text.trim();
 
-  // Pattern: "otwórz tvn24.pl" / "idź do onet.pl" / "go to wikipedia.org"
   const match = trimmed.match(NAV_PATTERNS[0]);
   if (match) {
     let url = match[1].trim();
@@ -557,7 +541,6 @@ function extractNavigationIntent(text) {
     return url;
   }
 
-  // Pattern: bare domain like "tvn24.pl"
   const bareMatch = trimmed.match(NAV_PATTERNS[1]);
   if (bareMatch) {
     const url = bareMatch[1];
@@ -580,7 +563,6 @@ async function handleSend() {
     return;
   }
 
-  // Intercept navigation intents directly
   const navUrl = extractNavigationIntent(text);
   if (navUrl) {
     await handleNavigation(navUrl, text);
@@ -616,10 +598,7 @@ async function handleSend() {
         finalContent += '\n\n**Vault errors:**\n' + errors.join('\n');
       }
       if (writeResults.length > 0) {
-        const confirmed = writeResults.map((p) => {
-        const filename = p.split('/').pop();
-        return `✓ Saved: ${filename}`;
-      }).join('\n');
+        const confirmed = writeResults.map((p) => `✓ Saved: ${p.split('/').pop()}`).join('\n');
         finalContent = content.replace(/<vault_write[^>]*>[\s\S]*?<\/vault_write>/gi, '');
         finalContent += '\n\n' + confirmed;
       }
@@ -630,8 +609,7 @@ async function handleSend() {
       state.messages.push({ role: 'assistant', content: finalContent });
       renderMessage('assistant', finalContent);
 
-      // Auto-vault: save conversation summary to Obsidian
-      if (state.autoVault && state.settings.vaultPath) {
+      if (state.autoVault && state.vaultReady) {
         saveAutoVaultNote().catch((err) => console.error('[SP] auto-vault error:', err));
       }
     }
@@ -650,24 +628,20 @@ async function collectPageContext() {
   try {
     const data = await sendBgMessage({ type: 'page.collect' });
     if (data.error) {
-      console.log('[OpenAgent] collectPageContext error:', data.error);
       setStatus(data.error, 'error');
       return;
     }
     if (!data.rawCapture) {
-      console.log('[OpenAgent] collectPageContext: no rawCapture', data);
       setStatus('No page data received', 'error');
       return;
     }
 
     state.pageContext = data.rawCapture;
-    console.log('[OpenAgent] collectPageContext: got', data.rawCapture?.metadata?.url, data.rawCapture?.metadata?.title);
     if (data.rawCapture?.metadata) {
       prependPageContext(data.rawCapture.metadata);
       setStatus(i18n('statusPageContextLoaded'), 'success');
     }
   } catch (err) {
-    console.log('[OpenAgent] collectPageContext catch:', err.message);
     setStatus('Error: ' + err.message, 'error');
   }
 }
@@ -728,7 +702,6 @@ function renderMessage(role, content) {
 
   const div = document.createElement('div');
   div.className = `message ${role}`;
-
   const label = role === 'user' ? i18n('msgLabelYou') : i18n('msgLabelClaude');
   const formatted = formatContent(content);
 
@@ -834,23 +807,6 @@ function escapeHtml(str) {
 
 // ─── Vault Tool Processing ─────────────────────────────────────────────────────
 
-function buildVaultInstructions() {
-  const vp = state.settings.vaultPath;
-  if (!vp) return '';
-  return `VAULT TOOLS — You have two tools to persist and recall information across conversations:
-
-1. VAULT_READ: Use <vault_read query="optional search term" /> to read existing notes from the user's Obsidian vault.
-   When to use: user asks to recall something, check memories, see past notes, or refers to "my notes" / "what did we save".
-
-2. VAULT_WRITE: Use <vault_write filename="descriptive-name-YYYY-MM-DD.md">markdown content here</vault_write> to save important information to the vault.
-   When to use: user asks to save something, remember something, or you want to proactively persist key information.
-   - Always wrap the full note content in the tag, including markdown headers.
-   - Use descriptive filenames: lowercase with hyphens and a date suffix. Example: "web-research-2026-04-29.md"
-   - The vault directory is: ${vp}
-
-IMPORTANT: Remove vault tool tags from your response after executing them. Always confirm when you save a note (e.g., "Saved to vault as web-research-2026-04-29.md").`;
-}
-
 async function processVaultToolCalls(messageContent) {
   const readResults = [];
   const writeResults = [];
@@ -861,30 +817,22 @@ async function processVaultToolCalls(messageContent) {
 
   for (const match of readMatches) {
     const query = match[1] || '';
-    try {
-      const result = await sendBgMessage({ type: 'vault.read', query, limit: 20 });
-      if (result && !result.error && result.notes) {
-        readResults.push(...result.notes);
-      } else if (result?.error) {
-        errors.push(`Read error: ${result.error}`);
-      }
-    } catch (err) {
-      errors.push(`Read error: ${err.message}`);
+    const result = await vaultReadFiles(query, 20);
+    if (result && !result.error && result.notes) {
+      readResults.push(...result.notes);
+    } else if (result?.error) {
+      errors.push(`Read error: ${result.error}`);
     }
   }
 
   for (const match of writeMatches) {
     const filename = match[1];
     const content = match[2].trim();
-    try {
-      const result = await sendBgMessage({ type: 'vault.write', filename, content });
-      if (result && !result.error) {
-        writeResults.push(result.path);
-      } else if (result?.error) {
-        errors.push(`Write error: ${result.error}`);
-      }
-    } catch (err) {
-      errors.push(`Write error: ${err.message}`);
+    const result = await vaultWrite(filename, content);
+    if (result && !result.error) {
+      writeResults.push(result.path);
+    } else if (result?.error) {
+      errors.push(`Write error: ${result.error}`);
     }
   }
 
@@ -901,7 +849,6 @@ async function saveAutoVaultNote() {
   const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
   const timeStr = `${String(date.getHours()).padStart(2, '0')}-${String(date.getMinutes()).padStart(2, '0')}`;
 
-  // Create filename once per session, reuse it
   if (!state.currentVaultFilename) {
     const pageTitle = state.pageContext?.metadata?.title || state.pageContext?.title || 'OpenAgent';
     const safeTitle = pageTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').substring(0, 40);
@@ -917,15 +864,11 @@ async function saveAutoVaultNote() {
     conversationText +
     `\n\n---\n*OpenAgent Chrome Extension*`;
 
-  try {
-    const result = await sendBgMessage({ type: 'vault.write', filename, content });
-    if (result && !result.error) {
-      console.log('[SP] auto-vault saved:', result.path);
-    } else {
-      console.error('[SP] auto-vault failed:', result?.error);
-    }
-  } catch (err) {
-    console.error('[SP] auto-vault error:', err);
+  const result = await vaultWrite(filename, content);
+  if (result && !result.error) {
+    console.log('[SP] auto-vault saved:', result.path);
+  } else {
+    console.error('[SP] auto-vault failed:', result?.error);
   }
 }
 
@@ -933,7 +876,6 @@ function buildConversationText() {
   const lines = [];
   for (const msg of state.messages) {
     const role = msg.role === 'user' ? '**You**' : '**OpenAgent**';
-    // Strip vault tags and "From vault:" sections for cleaner notes
     let content = msg.content || '';
     content = content.replace(/<vault_write[^>]*>[\s\S]*?<\/vault_write>/gi, '');
     content = content.replace(/<vault_read[^>]*\/>/gi, '');

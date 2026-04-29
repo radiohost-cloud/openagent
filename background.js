@@ -528,7 +528,7 @@ async function startProxyServer() {
   // Best effort: return instructions
   return {
     ok: false,
-    message: 'Could not auto-start proxy. Please run: cd ~/Downloads/openagent/proxy && node server.js',
+    message: 'Could not auto-start proxy. On Windows run: cd %USERPROFILE%\Downloads\openagent\proxy && node server.js',
   };
 }
 

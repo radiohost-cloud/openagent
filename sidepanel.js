@@ -237,19 +237,22 @@ function showStartProxyBtn() {
     e.stopPropagation();
     const isMac = navigator.platform.toLowerCase().startsWith('mac');
     const isWin = navigator.platform.toLowerCase().startsWith('win');
-    const cmd = isMac
-      ? 'cd ~/Downloads/openagent/proxy && node server.js'
-      : isWin
-        ? '"%USERPROFILE%\\AppData\\Local\\Programs\\Node.js\\node.exe" "%USERPROFILE%\\Downloads\\openagent\\proxy\\server.js"'
-        : 'cd ~/Downloads/openagent/proxy && node server.js';
-    navigator.clipboard.writeText(cmd).then(() => {
-      showCopyNotification(cmd, isMac);
-    }).catch(() => {
-      const el = document.createElement('div');
-      el.style.cssText = 'position:fixed;top:10%;left:10%;right:10%;background:#1e1e1e;border:1px solid #555;border-radius:8px;padding:16px;color:#fff;font-family:monospace;font-size:14px;z-index:99999;max-width:400px;margin:0 auto';
-      el.innerHTML = `<strong>Run in Terminal:</strong><br><br><code style="display:block;background:#333;padding:8px;border-radius:4px;margin-top:8px;word-break:break-all">${cmd}</code>`;
-      el.onclick = () => el.remove();
-      document.body.appendChild(el);
+
+    if (isMac) {
+      const script = 'tell application "Terminal"\n  do script "cd \\"" & (POSIX path of (path to me)) & "proxy\\" && node server.js"\nend tell';
+      const url = 'data:application/x-applescript;charset=utf-8,' + encodeURIComponent(script);
+      window.open(url);
+      return;
+    }
+
+    if (isWin) {
+      window.open('start-proxy.bat');
+      return;
+    }
+
+    // Fallback for other platforms
+    navigator.clipboard.writeText('cd ~/Downloads/openagent/proxy && node server.js').then(() => {
+      showCopyNotification('cd ~/Downloads/openagent/proxy && node server.js');
     });
   });
 
@@ -259,9 +262,9 @@ function showStartProxyBtn() {
   }
 }
 
-function showCopyNotification(cmd, isMac) {
+function showCopyNotification(cmd) {
   const isWin = navigator.platform.toLowerCase().startsWith('win');
-  const hint = isMac ? 'Open Terminal (⌘+Space → "Terminal") and paste the command.' : isWin ? 'Open CMD or PowerShell and paste. If "node" is not found, install Node.js from nodejs.org first.' : 'Open terminal and paste the command.';
+  const hint = isWin ? 'A CMD window should open. If not, install Node.js from nodejs.org first.' : 'Open terminal and paste the command.';
   const el = document.createElement('div');
   el.style.cssText = 'position:fixed;top:10%;left:10%;right:10%;background:#1e1e1e;border:1px solid #555;border-radius:8px;padding:16px;color:#fff;font-family:monospace;font-size:14px;z-index:99999;text-align:center';
   el.innerHTML = `<strong>Command copied!</strong><br><br>${hint}<br><br><code style="display:block;background:#333;padding:8px;border-radius:4px;margin-top:8px;word-break:break-all">${cmd}</code>`;

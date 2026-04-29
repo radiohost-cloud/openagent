@@ -14,6 +14,16 @@
     "48": "icons/openagent-48.png",
     "128": "icons/openagent-128.png"
   },
+  "action": {
+    "default_title": "__MSG_actionOpenSidePanel__",
+    "default_icon": {
+      "16": "icons/openagent-16.png",
+      "24": "icons/openagent-24.png",
+      "32": "icons/openagent-32.png",
+      "48": "icons/openagent-48.png",
+      "128": "icons/openagent-128.png"
+    }
+  },
   "permissions": [
     "sidePanel",
     "activeTab",
@@ -31,16 +41,6 @@
   },
   "side_panel": {
     "default_path": "sidepanel.html"
-  },
-  "action": {
-    "default_title": "__MSG_actionOpenSidePanel__",
-    "default_icon": {
-      "16": "icons/openagent-16.png",
-      "24": "icons/openagent-24.png",
-      "32": "icons/openagent-32.png",
-      "48": "icons/openagent-48.png",
-      "128": "icons/openagent-128.png"
-    }
   },
   "host_permissions": [
     "<all_urls>"

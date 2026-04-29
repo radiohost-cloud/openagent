@@ -1,0 +1,34 @@
+{
+  "extensionName": {
+    "message": "Chromex",
+    "description": "Extension name shown in Chrome surfaces."
+  },
+  "extensionDescription": {
+    "message": "Un asistent de browser bazat pe OpenAgent pentru contextul paginii, file, voce și editare de imagini.",
+    "description": "Short extension description shown in Chrome and the Chrome Web Store."
+  },
+  "actionOpenSidePanel": {
+    "message": "Deschide Chromex",
+    "description": "Tooltip for the browser action button."
+  },
+  "commandOpenSidePanel": {
+    "message": "Deschide Chromex",
+    "description": "Keyboard shortcut description for opening the side panel."
+  },
+  "commandOpenPopup": {
+    "message": "Deschide fereastra popup Chromex",
+    "description": "Keyboard shortcut description for opening the popup workspace."
+  },
+  "contextAskPage": {
+    "message": "Întreabă Chromex despre această pagină",
+    "description": "Context menu item for asking about the current page."
+  },
+  "contextEditImage": {
+    "message": "Editează această imagine cu Chromex",
+    "description": "Context menu item for editing an image with Chromex."
+  },
+  "contextSummarizeYoutube": {
+    "message": "Rezumă acest videoclip YouTube",
+    "description": "Context menu item for summarizing a YouTube video."
+  }
+}

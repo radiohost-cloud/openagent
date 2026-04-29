@@ -1,0 +1,34 @@
+{
+  "extensionName": {
+    "message": "Chromex",
+    "description": "Extension name shown in Chrome surfaces."
+  },
+  "extensionDescription": {
+    "message": "„OpenAgent“ valdoma naršyklės pagalba puslapio kontekstui, kortelėms, balsui ir vaizdų redagavimui.",
+    "description": "Short extension description shown in Chrome and the Chrome Web Store."
+  },
+  "actionOpenSidePanel": {
+    "message": "Atidaryti Chromex",
+    "description": "Tooltip for the browser action button."
+  },
+  "commandOpenSidePanel": {
+    "message": "Atidaryti Chromex",
+    "description": "Keyboard shortcut description for opening the side panel."
+  },
+  "commandOpenPopup": {
+    "message": "Atidaryti Chromex iškylantįjį langą",
+    "description": "Keyboard shortcut description for opening the popup workspace."
+  },
+  "contextAskPage": {
+    "message": "Paklausti Chromex apie šį puslapį",
+    "description": "Context menu item for asking about the current page."
+  },
+  "contextEditImage": {
+    "message": "Redaguoti šį vaizdą su Chromex",
+    "description": "Context menu item for editing an image with Chromex."
+  },
+  "contextSummarizeYoutube": {
+    "message": "Apibendrinti šį YouTube vaizdo įrašą",
+    "description": "Context menu item for summarizing a YouTube video."
+  }
+}

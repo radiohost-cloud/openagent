@@ -1,0 +1,34 @@
+{
+  "extensionName": {
+    "message": "Chromex",
+    "description": "Extension name shown in Chrome surfaces."
+  },
+  "extensionDescription": {
+    "message": "Sayfa bağlamı, sekmeler, ses ve görüntü düzenleme için OpenAgent destekli tarayıcı asistanı.",
+    "description": "Short extension description shown in Chrome and the Chrome Web Store."
+  },
+  "actionOpenSidePanel": {
+    "message": "Chromex'i aç",
+    "description": "Tooltip for the browser action button."
+  },
+  "commandOpenSidePanel": {
+    "message": "Chromex'i aç",
+    "description": "Keyboard shortcut description for opening the side panel."
+  },
+  "commandOpenPopup": {
+    "message": "Chromex açılır penceresini aç",
+    "description": "Keyboard shortcut description for opening the popup workspace."
+  },
+  "contextAskPage": {
+    "message": "Bu sayfa hakkında Chromex'e sor",
+    "description": "Context menu item for asking about the current page."
+  },
+  "contextEditImage": {
+    "message": "Bu görüntüyü Chromex ile düzenle",
+    "description": "Context menu item for editing an image with Chromex."
+  },
+  "contextSummarizeYoutube": {
+    "message": "Bu YouTube videosunu özetle",
+    "description": "Context menu item for summarizing a YouTube video."
+  }
+}

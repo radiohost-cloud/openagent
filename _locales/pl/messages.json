@@ -1,0 +1,55 @@
+{
+  "extensionName": {
+    "message": "OpenAgent",
+    "description": "Extension name."
+  },
+  "extensionDescription": {
+    "message": "Asystent przeglądarki zasilany przez OpenRouter. Czatuj o dowolnej stronie, automatyzuj działania.",
+    "description": "Extension description."
+  },
+  "actionOpenSidePanel": {
+    "message": "Otwórz OpenAgent",
+    "description": "Browser action tooltip."
+  },
+  "commandOpenSidePanel": {
+    "message": "Otwórz OpenAgent",
+    "description": "Keyboard shortcut description."
+  },
+  "msgLabelYou": { "message": "Ty" },
+  "msgLabelClaude": { "message": "OpenAgent" },
+  "inputPlaceholder": { "message": "Napisz do OpenAgent..." },
+  "emptyStateText": { "message": "Zadaj OpenAgentowi pytanie o aktualną stronę." },
+  "statusProxyConnected": { "message": "Proxy połączone" },
+  "statusProxyOffline": { "message": "Proxy offline — uruchom: node proxy/server.js" },
+  "statusApiKeyNeeded": { "message": "Ustaw klucz API w Ustawieniach" },
+  "statusModel": { "message": "Model:" },
+  "statusPageContextLoaded": { "message": "Kontekst strony wczytany" },
+  "settingsTitle": { "message": "Ustawienia" },
+  "settingsProvider": { "message": "Dostawca" },
+  "settingsApiKey": { "message": "Klucz API" },
+  "settingsApiKeyPlaceholder": { "message": "sk-or-..." },
+  "settingsModelSearch": { "message": "Szukaj modelu" },
+  "settingsModelSearchPlaceholder": { "message": "Filtruj modele..." },
+  "settingsModel": { "message": "Model" },
+  "settingsSystemPrompt": { "message": "System Prompt" },
+  "settingsSystemPromptPlaceholder": { "message": "Opcjonalne instrukcje..." },
+  "settingsTheme": { "message": "Motyw" },
+  "settingsThemeDark": { "message": "Ciemny" },
+  "settingsThemeLight": { "message": "Jasny" },
+  "settingsLanguage": { "message": "Język" },
+  "langEnglish": { "message": "English" },
+  "langPolish": { "message": "Polski" },
+  "settingsSaved": { "message": "Zapisano" },
+  "settingsModelsHint": { "message": "modeli dostępnych" },
+  "settingsNoModels": { "message": "Brak modeli" },
+  "settingsEnterApiKey": { "message": "Wpisz klucz API w Ustawieniach" },
+  "settingsProxyOffline": { "message": "Proxy offline" },
+  "settingsStartProxy": { "message": "Uruchom proxy: node proxy/server.js" },
+  "settingsLoading": { "message": "Ładowanie..." },
+  "settingsNoModels": { "message": "Brak modeli" },
+  "linkOpenrouterKeys": { "message": "Pobierz klucz API →" },
+  "btnSave": { "message": "Zapisz" },
+  "btnClear": { "message": "Wyczyść rozmowę" },
+  "btnReadPage": { "message": "Wczytaj stronę" },
+  "btnSettings": { "message": "Ustawienia" }
+}

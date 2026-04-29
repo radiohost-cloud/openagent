@@ -1,0 +1,34 @@
+{
+  "extensionName": {
+    "message": "Chromex",
+    "description": "Extension name shown in Chrome surfaces."
+  },
+  "extensionDescription": {
+    "message": "En OpenAgent-drevet browserassistent til sidekontekst, faner, stemme og billedredigering.",
+    "description": "Short extension description shown in Chrome and the Chrome Web Store."
+  },
+  "actionOpenSidePanel": {
+    "message": "Åbn Chromex",
+    "description": "Tooltip for the browser action button."
+  },
+  "commandOpenSidePanel": {
+    "message": "Åbn Chromex",
+    "description": "Keyboard shortcut description for opening the side panel."
+  },
+  "commandOpenPopup": {
+    "message": "Åbn Chromex-pop op-vindue",
+    "description": "Keyboard shortcut description for opening the popup workspace."
+  },
+  "contextAskPage": {
+    "message": "Spørg Chromex om denne side",
+    "description": "Context menu item for asking about the current page."
+  },
+  "contextEditImage": {
+    "message": "Rediger dette billede med Chromex",
+    "description": "Context menu item for editing an image with Chromex."
+  },
+  "contextSummarizeYoutube": {
+    "message": "Opsummer denne YouTube-video",
+    "description": "Context menu item for summarizing a YouTube video."
+  }
+}

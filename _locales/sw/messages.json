@@ -1,0 +1,34 @@
+{
+  "extensionName": {
+    "message": "Chromex",
+    "description": "Extension name shown in Chrome surfaces."
+  },
+  "extensionDescription": {
+    "message": "Msaidizi wa kivinjari unaoendeshwa na OpenAgent kwa muktadha wa ukurasa, vichupo, sauti na uhariri wa picha.",
+    "description": "Short extension description shown in Chrome and the Chrome Web Store."
+  },
+  "actionOpenSidePanel": {
+    "message": "Fungua Chromex",
+    "description": "Tooltip for the browser action button."
+  },
+  "commandOpenSidePanel": {
+    "message": "Fungua Chromex",
+    "description": "Keyboard shortcut description for opening the side panel."
+  },
+  "commandOpenPopup": {
+    "message": "Fungua dirisha ibukizi la Chromex",
+    "description": "Keyboard shortcut description for opening the popup workspace."
+  },
+  "contextAskPage": {
+    "message": "Uliza Chromex kuhusu ukurasa huu",
+    "description": "Context menu item for asking about the current page."
+  },
+  "contextEditImage": {
+    "message": "Hariri picha hii kwa Chromex",
+    "description": "Context menu item for editing an image with Chromex."
+  },
+  "contextSummarizeYoutube": {
+    "message": "Fupisha video hii ya YouTube",
+    "description": "Context menu item for summarizing a YouTube video."
+  }
+}

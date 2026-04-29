@@ -1,0 +1,56 @@
+{
+  "extensionName": {
+    "message": "OpenAgent",
+    "description": "Extension name."
+  },
+  "extensionDescription": {
+    "message": "OpenAgent-powered browser assistant. Chat about any webpage, automate actions.",
+    "description": "Extension description."
+  },
+  "actionOpenSidePanel": {
+    "message": "Open OpenAgent",
+    "description": "Browser action tooltip."
+  },
+  "commandOpenSidePanel": {
+    "message": "Open OpenAgent",
+    "description": "Keyboard shortcut description."
+  },
+  "msgLabelYou": { "message": "You" },
+  "msgLabelClaude": { "message": "OpenAgent" },
+  "inputPlaceholder": { "message": "Message OpenAgent..." },
+  "emptyStateText": { "message": "Ask OpenAgent anything about the current page." },
+  "statusProxyConnected": { "message": "Proxy connected" },
+  "statusProxyOffline": { "message": "Proxy offline — run: node proxy/server.js" },
+  "statusApiKeyNeeded": { "message": "Set API key in Settings" },
+  "statusModel": { "message": "Model:" },
+  "statusPageContextLoaded": { "message": "Page context loaded" },
+  "settingsTitle": { "message": "Settings" },
+  "settingsProvider": { "message": "Provider" },
+  "settingsApiKey": { "message": "API Key" },
+  "settingsApiKeyPlaceholder": { "message": "sk-or-..." },
+  "settingsModelSearch": { "message": "Model Search" },
+  "settingsModelSearchPlaceholder": { "message": "Filter models..." },
+  "settingsModel": { "message": "Model" },
+  "settingsSystemPrompt": { "message": "System Prompt" },
+  "settingsSystemPromptPlaceholder": { "message": "Optional instructions..." },
+  "settingsBaseTheme": { "message": "Base" },
+  "settingsPreset": { "message": "Preset" },
+  "settingsThemeDark": { "message": "Dark" },
+  "settingsThemeLight": { "message": "Light" },
+  "settingsLanguage": { "message": "Language" },
+  "langEnglish": { "message": "English" },
+  "langPolish": { "message": "Polski" },
+  "settingsSaved": { "message": "Saved" },
+  "settingsModelsHint": { "message": "models available" },
+  "settingsNoModels": { "message": "No models" },
+  "settingsEnterApiKey": { "message": "Enter API key in Settings" },
+  "settingsProxyOffline": { "message": "Proxy offline" },
+  "settingsStartProxy": { "message": "Start proxy: node proxy/server.js" },
+  "settingsLoading": { "message": "Loading..." },
+  "settingsNoModels": { "message": "No models" },
+  "linkOpenrouterKeys": { "message": "Get API key →" },
+  "btnSave": { "message": "Save" },
+  "btnClear": { "message": "Clear conversation" },
+  "btnReadPage": { "message": "Read this page" },
+  "btnSettings": { "message": "Settings" }
+}

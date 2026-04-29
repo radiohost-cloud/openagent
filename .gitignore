@@ -1,0 +1,17 @@
+# Git
+.DS_Store
+
+# Dependencies
+node_modules/
+proxy/node_modules/
+
+# Logs
+*.log
+
+# IDE
+.vscode/
+.idea/
+
+# Chrome extension build output
+*.crx
+*.pem

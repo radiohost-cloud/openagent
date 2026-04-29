@@ -1,0 +1,34 @@
+{
+  "extensionName": {
+    "message": "Chromex",
+    "description": "Extension name shown in Chrome surfaces."
+  },
+  "extensionDescription": {
+    "message": "Βοηθός προγράμματος περιήγησης με OpenAgent για περιεχόμενο σελίδας, καρτέλες, φωνή και επεξεργασία εικόνων.",
+    "description": "Short extension description shown in Chrome and the Chrome Web Store."
+  },
+  "actionOpenSidePanel": {
+    "message": "Άνοιγμα Chromex",
+    "description": "Tooltip for the browser action button."
+  },
+  "commandOpenSidePanel": {
+    "message": "Άνοιγμα Chromex",
+    "description": "Keyboard shortcut description for opening the side panel."
+  },
+  "commandOpenPopup": {
+    "message": "Άνοιγμα αναδυόμενου Chromex",
+    "description": "Keyboard shortcut description for opening the popup workspace."
+  },
+  "contextAskPage": {
+    "message": "Ρώτησε το Chromex για αυτήν τη σελίδα",
+    "description": "Context menu item for asking about the current page."
+  },
+  "contextEditImage": {
+    "message": "Επεξεργασία αυτής της εικόνας με το Chromex",
+    "description": "Context menu item for editing an image with Chromex."
+  },
+  "contextSummarizeYoutube": {
+    "message": "Σύνοψη αυτού του βίντεο YouTube",
+    "description": "Context menu item for summarizing a YouTube video."
+  }
+}

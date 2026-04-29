@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>OpenAgent</title>
+    <link rel="stylesheet" href="sidepanel.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <div id="app">
+
+      <!-- Header -->
+      <header class="header">
+        <div class="header-brand">
+          <svg class="brand-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2L2 7l10 5 10-5-10-5z" fill="currentColor" opacity="0.9"/>
+            <path d="M2 17l10 5 10-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M2 12l10 5 10-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.5"/>
+          </svg>
+          <span class="brand-name">OpenAgent</span>
+          <span id="modelBadge" class="model-badge">-</span>
+        </div>
+        <div class="header-actions">
+          <button id="collectBtn" class="header-btn" data-i18n-title="btnReadPage" title="Read this page">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+          </button>
+          <button id="clearBtn" class="header-btn" data-i18n-title="btnClear" title="Clear conversation">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+          </button>
+          <button id="settingsBtn" class="header-btn" data-i18n-title="btnSettings" title="Settings">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>
+          </button>
+        </div>
+      </header>
+
+      <!-- Messages -->
+      <div id="messages" class="messages"></div>
+
+      <!-- Status -->
+      <div id="status" class="status hidden"></div>
+
+      <!-- Input -->
+      <div class="input-area">
+        <div class="input-wrapper">
+          <textarea id="input" placeholder="Message OpenAgent..." rows="1" spellcheck="false"></textarea>
+          <button id="sendBtn" class="send-btn" title="Send">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="19" x2="12" y2="5"/>
+              <polyline points="5 12 12 5 19 12"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal hidden">
+      <div class="modal-content">
+        <div class="modal-header">
+          <span class="modal-title" data-i18n="settingsTitle">Settings</span>
+          <button id="closeSettings" class="header-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+
+          <!-- Theme + Language row -->
+          <div class="settings-row">
+            <div class="form-group form-group--sm">
+              <label data-i18n="settingsBaseTheme">Base</label>
+              <div class="toggle-group">
+                <button id="themeDark" class="toggle-btn active" data-i18n="settingsThemeDark">Dark</button>
+                <button id="themeLight" class="toggle-btn" data-i18n="settingsThemeLight">Light</button>
+              </div>
+            </div>
+            <div class="form-group form-group--sm">
+              <label data-i18n="settingsPreset">Preset</label>
+              <select id="themePreset" class="settings-select">
+                <option value="default">Default</option>
+                <option value="dracula">Dracula</option>
+                <option value="nord">Nord</option>
+                <option value="monokai">Monokai</option>
+                <option value="tokyo-night">Tokyo Night</option>
+                <option value="catppuccin-mocha">Catppuccin Mocha</option>
+                <option value="catppuccin-macchiato">Catppuccin Macchiato</option>
+                <option value="catppuccin-frappe">Catppuccin Frappé</option>
+                <option value="solarized-dark">Solarized Dark</option>
+                <option value="gruvbox-dark">Gruvbox Dark</option>
+                <option value="one-dark">One Dark</option>
+                <option value="papercolor-dark">Papercolor Dark</option>
+                <option value="papercolor-light">Papercolor Light</option>
+                <option value="everforest">Everforest</option>
+              </select>
+            </div>
+            <div class="form-group form-group--sm">
+              <label data-i18n="settingsLanguage">Language</label>
+              <select id="langSelect" class="settings-select">
+                <option value="en">English</option>
+                <option value="pl">Polski</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label data-i18n="settingsApiKey">API Key</label>
+            <input type="password" id="apiKeyInput" data-i18n-placeholder="settingsApiKeyPlaceholder" placeholder="sk-or-..." />
+            <div class="form-links">
+              <a href="https://openrouter.ai/keys" target="_blank" data-i18n="linkOpenrouterKeys">Get API key →</a>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label data-i18n="settingsModelSearch">Model Search</label>
+            <input type="text" id="modelSearch" data-i18n-placeholder="settingsModelSearchPlaceholder" placeholder="Filter models..." />
+          </div>
+
+          <div class="form-group">
+            <label data-i18n="settingsModel">Model</label>
+            <div id="modelList" class="model-list">
+              <div class="model-loading" data-i18n="settingsLoading">Loading...</div>
+            </div>
+            <div id="modelHint" class="model-hint"></div>
+          </div>
+
+          <div class="form-group">
+            <label data-i18n="settingsSystemPrompt">System Prompt</label>
+            <textarea id="systemPromptInput" data-i18n-placeholder="settingsSystemPromptPlaceholder" rows="3" placeholder="Optional instructions..."></textarea>
+          </div>
+
+          <div id="settingsStatus" class="settings-status"></div>
+        </div>
+        <div class="modal-footer">
+          <button id="saveSettings" class="btn-save" data-i18n="btnSave">Save</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="sidepanel.js"></script>
+  </body>
+</html>

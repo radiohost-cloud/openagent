@@ -1,0 +1,34 @@
+{
+  "extensionName": {
+    "message": "Chromex",
+    "description": "Extension name shown in Chrome surfaces."
+  },
+  "extensionDescription": {
+    "message": "பக்கச் சூழல், தாவல்கள், குரல் மற்றும் படத் திருத்தத்திற்கான OpenAgent இயக்கும் உலாவி உதவியாளர்.",
+    "description": "Short extension description shown in Chrome and the Chrome Web Store."
+  },
+  "actionOpenSidePanel": {
+    "message": "Chromex ஐத் திற",
+    "description": "Tooltip for the browser action button."
+  },
+  "commandOpenSidePanel": {
+    "message": "Chromex ஐத் திற",
+    "description": "Keyboard shortcut description for opening the side panel."
+  },
+  "commandOpenPopup": {
+    "message": "Chromex பாப்அப்பைத் திற",
+    "description": "Keyboard shortcut description for opening the popup workspace."
+  },
+  "contextAskPage": {
+    "message": "இந்தப் பக்கத்தைப் பற்றி Chromex-ஐக் கேள்",
+    "description": "Context menu item for asking about the current page."
+  },
+  "contextEditImage": {
+    "message": "இந்தப் படத்தை Chromex மூலம் திருத்து",
+    "description": "Context menu item for editing an image with Chromex."
+  },
+  "contextSummarizeYoutube": {
+    "message": "இந்த YouTube வீடியோவைச் சுருக்கவும்",
+    "description": "Context menu item for summarizing a YouTube video."
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "extensionName": {
+    "message": "Chromex",
+    "description": "Extension name shown in Chrome surfaces."
+  },
+  "extensionDescription": {
+    "message": "مساعد متصفح يعمل بـ OpenAgent لسياق الصفحة وعلامات التبويب والصوت وتحرير الصور.",
+    "description": "Short extension description shown in Chrome and the Chrome Web Store."
+  },
+  "actionOpenSidePanel": {
+    "message": "فتح Chromex",
+    "description": "Tooltip for the browser action button."
+  },
+  "commandOpenSidePanel": {
+    "message": "فتح Chromex",
+    "description": "Keyboard shortcut description for opening the side panel."
+  },
+  "commandOpenPopup": {
+    "message": "فتح نافذة Chromex المنبثقة",
+    "description": "Keyboard shortcut description for opening the popup workspace."
+  },
+  "contextAskPage": {
+    "message": "اسأل Chromex عن هذه الصفحة",
+    "description": "Context menu item for asking about the current page."
+  },
+  "contextEditImage": {
+    "message": "حرّر هذه الصورة باستخدام Chromex",
+    "description": "Context menu item for editing an image with Chromex."
+  },
+  "contextSummarizeYoutube": {
+    "message": "لخّص فيديو YouTube هذا",
+    "description": "Context menu item for summarizing a YouTube video."
+  }
+}

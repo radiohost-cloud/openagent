@@ -1,0 +1,34 @@
+{
+  "extensionName": {
+    "message": "Chromex",
+    "description": "Extension name shown in Chrome surfaces."
+  },
+  "extensionDescription": {
+    "message": "עוזר דפדפן מבוסס OpenAgent להקשר עמודים, כרטיסיות, קול ועריכת תמונות.",
+    "description": "Short extension description shown in Chrome and the Chrome Web Store."
+  },
+  "actionOpenSidePanel": {
+    "message": "פתח את Chromex",
+    "description": "Tooltip for the browser action button."
+  },
+  "commandOpenSidePanel": {
+    "message": "פתח את Chromex",
+    "description": "Keyboard shortcut description for opening the side panel."
+  },
+  "commandOpenPopup": {
+    "message": "פתח חלון קופץ של Chromex",
+    "description": "Keyboard shortcut description for opening the popup workspace."
+  },
+  "contextAskPage": {
+    "message": "שאל את Chromex על הדף הזה",
+    "description": "Context menu item for asking about the current page."
+  },
+  "contextEditImage": {
+    "message": "ערוך את התמונה הזו עם Chromex",
+    "description": "Context menu item for editing an image with Chromex."
+  },
+  "contextSummarizeYoutube": {
+    "message": "סכם את סרטון YouTube הזה",
+    "description": "Context menu item for summarizing a YouTube video."
+  }
+}

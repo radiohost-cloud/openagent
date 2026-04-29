@@ -119,16 +119,13 @@ app.get('/api/models', async (req, res) => {
 
 // ─── Vault (Obsidian) ─────────────────────────────────────────────────────────
 
-const VAULT_DIR = '.openagent';
-
 app.post('/api/vault/read', (req, res) => {
   const { vaultPath, query = '', limit = 20 } = req.body;
   if (!vaultPath) return res.status(400).json({ error: 'vaultPath is required' });
 
-  const vaultDir = path.join(vaultPath, VAULT_DIR);
   let files;
   try {
-    files = fs.readdirSync(vaultDir);
+    files = fs.readdirSync(vaultPath);
   } catch {
     return res.json({ notes: [], count: 0 });
   }
@@ -137,12 +134,12 @@ app.post('/api/vault/read', (req, res) => {
   const notes = files
     .filter((f) => f.endsWith('.md'))
     .map((f) => {
-      const filePath = path.join(vaultDir, f);
+      const filePath = path.join(vaultPath, f);
       const stat = fs.statSync(filePath);
       const content = fs.readFileSync(filePath, 'utf-8');
       return { filename: f, path: filePath, content, metadata: { created: stat.birthtime, modified: stat.mtime } };
     })
-    .filter((n) => !q || n.content.toLowerCase().includes(q))
+    .filter((n) => !q || n.filename.toLowerCase().includes(q) || n.content.toLowerCase().includes(q))
     .slice(0, limit);
 
   res.json({ notes, count: notes.length });
@@ -154,13 +151,13 @@ app.post('/api/vault/write', (req, res) => {
   if (!filename) return res.status(400).json({ error: 'filename is required' });
   if (!content) return res.status(400).json({ error: 'content is required' });
 
+  // Normalize path: replace escaped spaces and tildes with actual characters
+  const normalizedVaultPath = vaultPath.replace(/\\ /g, ' ').replace(/\\~/g, '~');
   const safe = filename.replace(/[^a-zA-Z0-9-_.]/g, '_');
   const finalName = safe.endsWith('.md') ? safe : safe + '.md';
-  const vaultDir = path.join(vaultPath, VAULT_DIR);
+  const filePath = path.join(normalizedVaultPath, finalName);
 
   try {
-    fs.mkdirSync(vaultDir, { recursive: true });
-    const filePath = path.join(vaultDir, finalName);
     fs.writeFileSync(filePath, content, 'utf-8');
     res.json({ ok: true, path: filePath });
   } catch (err) {

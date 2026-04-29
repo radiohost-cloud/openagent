@@ -104,6 +104,15 @@ html, body {
   color: var(--text);
 }
 
+.header-btn.active {
+  color: #9f7aea;
+  background: rgba(159, 122, 234, 0.12);
+}
+
+.header-btn.active svg path:first-child {
+  fill: currentColor;
+}
+
 .header-btn svg {
   stroke: currentColor;
 }
@@ -676,6 +685,10 @@ body[data-preset="tokyo-night"].light {
 body.light .toggle-btn.active {
   background: rgba(0, 0, 0, 0.08);
   color: var(--text);
+}
+body.light .header-btn.active {
+  color: #805ad5;
+  background: rgba(128, 90, 213, 0.12);
 }
 body.light .toggle-btn:not(.active):hover {
   background: rgba(0, 0, 0, 0.04);

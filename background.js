@@ -11,6 +11,7 @@ const STORAGE_KEYS = {
   PRESET: 'claude_preset',
   LANGUAGE: 'claude_language',
   VAULT_PATH: 'openagent_vault_path',
+  AUTO_VAULT: 'openagent_auto_vault',
 };
 
 // ─── Auto-inject content script on page load ───────────────────────────────────
@@ -115,6 +116,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     // --- Vault ---
     'vault.read': () => handleVaultRead(message),
     'vault.write': () => handleVaultWrite(message),
+
+    // --- Auto Vault ---
+    'autovault.load': () => loadAutoVault(),
+    'autovault.save': () => saveAutoVault(message.enabled),
   };
 
   const handler = handlers[message.type];
@@ -215,6 +220,7 @@ async function loadSettings() {
     STORAGE_KEYS.PRESET,
     STORAGE_KEYS.LANGUAGE,
     STORAGE_KEYS.VAULT_PATH,
+    STORAGE_KEYS.AUTO_VAULT,
   ]);
   return {
     apiKey: result[STORAGE_KEYS.API_KEY] || '',
@@ -225,6 +231,7 @@ async function loadSettings() {
     preset: result[STORAGE_KEYS.PRESET] || 'default',
     language: result[STORAGE_KEYS.LANGUAGE] || 'en',
     vaultPath: result[STORAGE_KEYS.VAULT_PATH] || '',
+    autoVault: result[STORAGE_KEYS.AUTO_VAULT] || false,
   };
 }
 
@@ -251,8 +258,8 @@ async function handlePromptSend(message, sendResponse) {
     return;
   }
 
-  const { conversationHistory, pageContext } = message;
-  const messages = buildMessages(conversationHistory, pageContext, settings.systemPrompt, settings.vaultPath);
+  const { conversationHistory, pageContext, autoVault } = message;
+  const messages = buildMessages(conversationHistory, pageContext, settings.systemPrompt, settings.vaultPath, autoVault);
 
   try {
     const response = await fetch(`${PROXY_URL}/api/chat`, {
@@ -294,7 +301,7 @@ function buildVaultInstructions(vaultPath) {
 IMPORTANT: Remove vault tool tags from your response after executing them. Always confirm when you save a note (e.g., "Saved to vault as .openagent/web-research-2026-04-29.md").`;
 }
 
-function buildMessages(history, pageContext, systemPrompt, vaultPath) {
+function buildMessages(history, pageContext, systemPrompt, vaultPath, autoVault) {
   const msgs = [];
   const vaultInstructions = vaultPath ? buildVaultInstructions(vaultPath) : '';
 
@@ -317,6 +324,19 @@ function buildMessages(history, pageContext, systemPrompt, vaultPath) {
   for (const msg of history) {
     msgs.push({ role: msg.role, content: msg.content });
   }
+
+  // Auto-vault: append instruction to last user message
+  if (autoVault && vaultPath) {
+    const autoVaultNote = `\n\n[NOTE: AUTO-VAULT ENABLED — After responding, proactively identify important information discussed in this conversation and save a concise summary note to the Obsidian vault using <vault_write filename="topic-date.md">...</vault_write>. Focus on key facts, decisions, URLs, code snippets, or anything the user would want to remember. Do not save trivial conversational filler.]`;
+    // Find the last user message and append the instruction
+    for (let i = msgs.length - 1; i >= 0; i--) {
+      if (msgs[i].role === 'user') {
+        msgs[i].content += autoVaultNote;
+        break;
+      }
+    }
+  }
+
   return msgs;
 }
 
@@ -329,8 +349,8 @@ async function startStream(message, sendResponse) {
     return;
   }
 
-  const { conversationHistory, pageContext } = message;
-  const messages = buildMessages(conversationHistory, pageContext, settings.systemPrompt, settings.vaultPath);
+  const { conversationHistory, pageContext, autoVault } = message;
+  const messages = buildMessages(conversationHistory, pageContext, settings.systemPrompt, settings.vaultPath, autoVault);
 
   try {
     const response = await fetch(`${PROXY_URL}/api/chat`, {
@@ -428,12 +448,28 @@ async function handleVaultWrite(message) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ vaultPath, filename: message.filename, content: message.content }),
     });
-    const data = await resp.json();
+    const text = await resp.text();
+    console.log('[BG] proxy raw response:', text);
+    const data = JSON.parse(text);
+    console.log('[BG] proxy JSON:', JSON.stringify(data));
     if (!resp.ok) return { error: data.error };
     return data;
   } catch (err) {
+    console.error('[BG] vault.write error:', err);
     return { error: `Cannot connect to proxy: ${err.message}` };
   }
+}
+
+// ─── Auto Vault ───────────────────────────────────────────────────────────────
+
+async function loadAutoVault() {
+  const result = await chrome.storage.local.get([STORAGE_KEYS.AUTO_VAULT]);
+  return { autoVault: result[STORAGE_KEYS.AUTO_VAULT] || false };
+}
+
+async function saveAutoVault(enabled) {
+  await chrome.storage.local.set({ [STORAGE_KEYS.AUTO_VAULT]: !!enabled });
+  return { ok: true };
 }
 
 // ─── Context Menus ────────────────────────────────────────────────────────────

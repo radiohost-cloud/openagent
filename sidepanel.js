@@ -6,6 +6,8 @@ const state = {
   pageContext: null,
   isLoading: false,
   allModels: [],
+  autoVault: false,
+  currentVaultFilename: null, // tracks the ongoing session note
 };
 
 const i18nStrings = {
@@ -43,6 +45,9 @@ const i18nStrings = {
     btnClear: 'Clear conversation',
     btnReadPage: 'Read this page',
     btnSettings: 'Settings',
+    btnVault: 'Auto-save to Obsidian',
+    btnVaultOn: 'Auto-save to Obsidian enabled (click to disable)',
+    btnVaultOff: 'Auto-save to Obsidian disabled (click to enable)',
     langEnglish: 'English',
     langPolish: 'Polski',
     linkOpenrouterKeys: 'Get API key →',
@@ -86,6 +91,9 @@ const i18nStrings = {
     btnClear: 'Wyczyść rozmowę',
     btnReadPage: 'Wczytaj stronę',
     btnSettings: 'Ustawienia',
+    btnVault: 'Automatyczny zapis do Obsidian',
+    btnVaultOn: 'Automatyczny zapis włączony (kliknij by wyłączyć)',
+    btnVaultOff: 'Automatyczny zapis wyłączony (kliknij by włączyć)',
     langEnglish: 'English',
     langPolish: 'Polski',
     linkOpenrouterKeys: 'Pobierz klucz API →',
@@ -105,6 +113,7 @@ const dom = {
   input: $('#input'),
   sendBtn: $('#sendBtn'),
   collectBtn: $('#collectBtn'),
+  vaultBtn: $('#vaultBtn'),
   clearBtn: $('#clearBtn'),
   settingsBtn: $('#settingsBtn'),
   settingsModal: $('#settingsModal'),
@@ -175,7 +184,32 @@ async function init() {
   checkProxyConnection();
   loadModels();
   updateModelBadge();
+  loadAutoVaultState();
   collectPageContext();
+}
+
+async function loadAutoVaultState() {
+  try {
+    const data = await sendBgMessage({ type: 'autovault.load' });
+    state.autoVault = data?.autoVault || false;
+    updateVaultBtn();
+  } catch {}
+}
+
+function updateVaultBtn() {
+  if (state.autoVault) {
+    dom.vaultBtn.classList.add('active');
+    dom.vaultBtn.title = i18n('btnVaultOn');
+  } else {
+    dom.vaultBtn.classList.remove('active');
+    dom.vaultBtn.title = i18n('btnVaultOff');
+  }
+}
+
+async function saveAutoVault() {
+  try {
+    await sendBgMessage({ type: 'autovault.save', enabled: state.autoVault });
+  } catch {}
 }
 
 // ─── Proxy ───────────────────────────────────────────────────────────────────
@@ -248,6 +282,12 @@ function bindEvents() {
 
   dom.collectBtn.addEventListener('click', collectPageContext);
   dom.clearBtn.addEventListener('click', clearConversation);
+
+  dom.vaultBtn.addEventListener('click', () => {
+    state.autoVault = !state.autoVault;
+    updateVaultBtn();
+    saveAutoVault();
+  });
 
   dom.modelSearch.addEventListener('input', () => {
     filterModels(dom.modelSearch.value);
@@ -498,6 +538,7 @@ async function handleSend() {
       type: 'prompt.send',
       conversationHistory: state.messages,
       pageContext: state.pageContext,
+      autoVault: state.autoVault,
     });
 
     removeTyping();
@@ -506,10 +547,16 @@ async function handleSend() {
       renderMessage('error', response.error);
     } else {
       const content = response.content || '';
-      const { readResults, writeResults } = await processVaultToolCalls(content);
+      const { readResults, writeResults, errors } = await processVaultToolCalls(content);
       let finalContent = content;
+      if (errors.length > 0) {
+        finalContent += '\n\n**Vault errors:**\n' + errors.join('\n');
+      }
       if (writeResults.length > 0) {
-        const confirmed = writeResults.map((p) => `✓ Saved: ${p.split('/.openagent/')[1]}`).join('\n');
+        const confirmed = writeResults.map((p) => {
+        const filename = p.split('/').pop();
+        return `✓ Saved: ${filename}`;
+      }).join('\n');
         finalContent = content.replace(/<vault_write[^>]*>[\s\S]*?<\/vault_write>/gi, '');
         finalContent += '\n\n' + confirmed;
       }
@@ -519,6 +566,11 @@ async function handleSend() {
       }
       state.messages.push({ role: 'assistant', content: finalContent });
       renderMessage('assistant', finalContent);
+
+      // Auto-vault: save conversation summary to Obsidian
+      if (state.autoVault && state.settings.vaultPath) {
+        saveAutoVaultNote().catch((err) => console.error('[SP] auto-vault error:', err));
+      }
     }
   } catch (err) {
     removeTyping();
@@ -574,6 +626,7 @@ function prependPageContext(metadata) {
 function clearConversation() {
   state.messages = [];
   state.pageContext = null;
+  state.currentVaultFilename = null;
   renderMessages();
 }
 
@@ -738,6 +791,7 @@ IMPORTANT: Remove vault tool tags from your response after executing them. Alway
 async function processVaultToolCalls(messageContent) {
   const readResults = [];
   const writeResults = [];
+  const errors = [];
 
   const readMatches = [...messageContent.matchAll(/<vault_read\s+query="([^"]*)"\s*\/>/gi)];
   const writeMatches = [...messageContent.matchAll(/<vault_write\s+filename="([^"]+\.md)"\s*>([\s\S]*?)<\/vault_write>/gi)];
@@ -748,8 +802,12 @@ async function processVaultToolCalls(messageContent) {
       const result = await sendBgMessage({ type: 'vault.read', query, limit: 20 });
       if (result && !result.error && result.notes) {
         readResults.push(...result.notes);
+      } else if (result?.error) {
+        errors.push(`Read error: ${result.error}`);
       }
-    } catch {}
+    } catch (err) {
+      errors.push(`Read error: ${err.message}`);
+    }
   }
 
   for (const match of writeMatches) {
@@ -759,11 +817,71 @@ async function processVaultToolCalls(messageContent) {
       const result = await sendBgMessage({ type: 'vault.write', filename, content });
       if (result && !result.error) {
         writeResults.push(result.path);
+      } else if (result?.error) {
+        errors.push(`Write error: ${result.error}`);
       }
-    } catch {}
+    } catch (err) {
+      errors.push(`Write error: ${err.message}`);
+    }
   }
 
-  return { readResults, writeResults };
+  return { readResults, writeResults, errors };
+}
+
+// ─── Auto Vault Note ───────────────────────────────────────────────────────────
+
+async function saveAutoVaultNote() {
+  const conversationText = buildConversationText();
+  if (!conversationText.trim()) return;
+
+  const date = new Date();
+  const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  const timeStr = `${String(date.getHours()).padStart(2, '0')}-${String(date.getMinutes()).padStart(2, '0')}`;
+
+  // Create filename once per session, reuse it
+  if (!state.currentVaultFilename) {
+    const pageTitle = state.pageContext?.metadata?.title || state.pageContext?.title || 'OpenAgent';
+    const safeTitle = pageTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').substring(0, 40);
+    state.currentVaultFilename = `openagent-${safeTitle}-${dateStr}-${timeStr}.md`;
+  }
+
+  const filename = state.currentVaultFilename;
+  const pageUrl = state.pageContext?.metadata?.url || state.pageContext?.url || '';
+
+  const content = `# Session — ${dateStr} ${timeStr}\n\n` +
+    (pageUrl ? `**URL:** ${pageUrl}\n` : '') +
+    `\n---\n\n` +
+    conversationText +
+    `\n\n---\n*OpenAgent Chrome Extension*`;
+
+  try {
+    const result = await sendBgMessage({ type: 'vault.write', filename, content });
+    if (result && !result.error) {
+      console.log('[SP] auto-vault saved:', result.path);
+    } else {
+      console.error('[SP] auto-vault failed:', result?.error);
+    }
+  } catch (err) {
+    console.error('[SP] auto-vault error:', err);
+  }
+}
+
+function buildConversationText() {
+  const lines = [];
+  for (const msg of state.messages) {
+    const role = msg.role === 'user' ? '**You**' : '**OpenAgent**';
+    // Strip vault tags and "From vault:" sections for cleaner notes
+    let content = msg.content || '';
+    content = content.replace(/<vault_write[^>]*>[\s\S]*?<\/vault_write>/gi, '');
+    content = content.replace(/<vault_read[^>]*\/>/gi, '');
+    content = content.replace(/\*\*From vault:\*\*[\s\S]*/gi, '');
+    content = content.replace(/^✓ Saved:.*$/gm, '');
+    content = content.trim();
+    if (content) {
+      lines.push(`${role}:\n${content}\n`);
+    }
+  }
+  return lines.join('\n');
 }
 
 // ─── Start ─────────────────────────────────────────────────────────────────────

@@ -30,6 +30,7 @@
   "settingsModelSearch": { "message": "Szukaj modelu" },
   "settingsModelSearchPlaceholder": { "message": "Filtruj modele..." },
   "settingsModel": { "message": "Model" },
+  "settingsCurrentModel": { "message": "Aktualny model" },
   "settingsSystemPrompt": { "message": "System Prompt" },
   "settingsSystemPromptPlaceholder": { "message": "Opcjonalne instrukcje..." },
   "settingsBaseTheme": { "message": "Baza" },

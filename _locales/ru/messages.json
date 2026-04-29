@@ -30,6 +30,7 @@
   "settingsModelSearch": { "message": "Поиск модели" },
   "settingsModelSearchPlaceholder": { "message": "Фильтровать модели..." },
   "settingsModel": { "message": "Модель" },
+  "settingsCurrentModel": { "message": "Текущая модель" },
   "settingsSystemPrompt": { "message": "Системный промпт" },
   "settingsSystemPromptPlaceholder": { "message": "Дополнительные инструкции..." },
   "settingsBaseTheme": { "message": "База" },

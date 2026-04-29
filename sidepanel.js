@@ -320,6 +320,7 @@ const dom = {
   closeSettings: $('#closeSettings'),
   saveSettings: $('#saveSettings'),
   apiKeyInput: $('#apiKeyInput'),
+  currentModelDisplay: $('#currentModelDisplay'),
   modelList: $('#modelList'),
   modelSearch: $('#modelSearch'),
   modelHint: $('#modelHint'),
@@ -599,6 +600,7 @@ async function loadSettings() {
     const data = await sendBgMessage({ type: 'settings.load' });
     state.settings = { ...state.settings, ...data };
     dom.apiKeyInput.value = state.settings.apiKey || '';
+    updateCurrentModelDisplay();
     dom.systemPromptInput.value = state.settings.systemPrompt || '';
 
     if (state.settings.vaultPath) {
@@ -710,6 +712,7 @@ function renderModelList(models) {
       state.settings.model = model.id;
       await sendBgMessage({ type: 'settings.save', data: { ...state.settings } });
       updateModelBadge();
+      updateCurrentModelDisplay();
       dom.modelHint.textContent = '✓ ' + name;
       setTimeout(() => {
         dom.modelHint.textContent = state.allModels.length + ' ' + i18n('settingsModelsHint');
@@ -1028,6 +1031,20 @@ function updateModelBadge() {
   if (model) {
     dom.status.textContent = i18n('statusModel') + ' ' + (model.includes('/') ? model.split('/')[1].replace(/-(?:2024|2025)[0-9]*$/, '') : model);
     dom.status.className = 'status';
+  }
+}
+
+function updateCurrentModelDisplay() {
+  const model = state.settings.model;
+  if (model) {
+    const displayName = model.includes('/') ? model.split('/')[1].replace(/-(?:2024|2025)[0-9]*$/, '') : model;
+    dom.currentModelDisplay.textContent = displayName;
+    dom.currentModelDisplay.className = 'model-display';
+  } else {
+    dom.currentModelDisplay.textContent = '—';
+    dom.currentModelDisplay.className = 'model-display empty';
+  }
+}
   }
 }
 

@@ -1045,8 +1045,6 @@ function updateCurrentModelDisplay() {
     dom.currentModelDisplay.className = 'model-display empty';
   }
 }
-  }
-}
 
 function toggleModal(open) {
   dom.settingsModal.classList.toggle('hidden', !open);

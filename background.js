@@ -48,7 +48,7 @@ async function injectIntoTab(tabId) {
       files: ['content.js'],
     });
   } catch (err) {
-    console.log('[OpenAgent] injectIntoTab: failed', tabId, err.message);
+    console.error('[OpenAgent] injectIntoTab: failed', tabId, err.message);
   }
 }
 
@@ -386,7 +386,7 @@ chrome.action.onClicked.addListener(async (tab) => {
   try {
     await chrome.sidePanel.open({ windowId: tab.windowId });
   } catch (err) {
-    console.log('[OpenAgent] sidePanel.open error:', err.message);
+    console.error('[OpenAgent] sidePanel.open error:', err.message);
     // Fallback: open side panel URL in current tab
     chrome.tabs.update(tab.id, { url: chrome.runtime.getURL('sidepanel.html') });
   }

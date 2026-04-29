@@ -1,6 +1,6 @@
 # OpenAgent — Chrome Extension
 
-Browser assistant powered by OpenRouter. Chat about any webpage, automate actions, navigate pages with natural language, and save notes directly to Obsidian.
+AI-powered browser assistant. Chat about any webpage, automate browser actions, and save notes directly to Obsidian — all without leaving your current tab.
 
 ## Screenshots
 
@@ -14,58 +14,57 @@ Browser assistant powered by OpenRouter. Chat about any webpage, automate action
 
 ## Features
 
-- **Chat with AI** about the current page context
-- **Browser automation** (click, type, scroll, navigate)
-- **Obsidian integration** — save notes directly to your vault using File System Access API
-  - The extension uses the File System Access API to write `.md` files directly to a folder
-  - **Obsidian desktop app must be installed** for full functionality — the extension only saves files, it does not manage your vault or provide Obsidian features like search, backlinks, or plugins
-  - Click the vault icon in the header to select your Obsidian vault folder
-  - Toggle auto-save to append entire conversation to a single note per session
-  - Manual notes created with `vault_write` get their own `.md` files
-  - Notes saved directly to vault root (no hidden folders)
-- **Side panel UI** with theme support (dark/light + 14 color presets)
-- **Multi-language** (English, Polish, Spanish, French, German, Russian)
-- **OpenRouter integration** for model selection
+- **Chat about any page** — AI understands the content of the current webpage
+- **Browser automation** — instruct the AI to click, type, scroll, or navigate
+- **Obsidian integration** — save notes to your vault using the File System Access API
+  - Toggle auto-save to append your entire conversation to a session note
+  - Notes saved as `.md` files directly to your vault root
+  - **Requires Obsidian desktop app installed** for full functionality (search, backlinks, graph view)
+- **Customizable UI** — 14 color presets, dark/light mode, adjustable font size
+- **Multi-language** — English, Polish, Spanish, French, German, Russian
+- **OpenRouter** — use any model from OpenRouter's model catalog
 
 ## Installation
 
-1. Download or clone this repo
+1. Download or clone this repository
 2. Open `chrome://extensions/`
-3. Enable **Developer mode** (top right)
+3. Enable **Developer mode** (top right corner)
 4. Click **Load unpacked**
 5. Select this directory
+6. (Optional) Set a keyboard shortcut in `chrome://extensions/shortcuts`
 
 ## Setup
 
-1. Open the extension (click the toolbar icon or use `Alt+Shift+O`)
-2. Go to **Settings**
+1. Click the extension icon in the toolbar, or use the keyboard shortcut
+2. Click **Settings** (gear icon)
 3. Paste your [OpenRouter API key](https://openrouter.ai/keys)
-4. Select a model and start chatting
+4. Pick a model from the dropdown and start chatting
 
-## Obsidian Vault
+## How It Works
 
-> **Note:** This extension saves `.md` files to a folder of your choice. Full Obsidian experience (search, backlinks, plugins, graph view) requires [Obsidian](https://obsidian.md) to be installed and running.
+The extension analyzes the current webpage and sends the page content to the AI along with your message. The AI can read page content, execute browser actions (click, type, scroll, navigate), and write notes to your Obsidian vault.
 
-1. Click the **vault icon** in the header (or go to Settings → Obsidian Vault)
-2. Click **"Select folder"** and choose your Obsidian vault directory
-3. The browser will remember your selection across sessions
-4. Toggle auto-save to automatically append conversation to a note
+### Vault & Notes
 
-## Keyboard Shortcut
+The vault uses the browser's File System Access API to write `.md` files directly to a folder you choose. The path is remembered across sessions. You need [Obsidian](https://obsidian.md) installed to use the notes with full features (search, backlinks, plugins, graph view).
 
-Default: `Alt+Shift+O` to open the side panel (configurable in `chrome://extensions/shortcuts`).
+To save a note manually, ask the AI to save something — it will write a `.md` file to your vault. Toggle auto-save in the header to append every conversation to a session file automatically.
+
+## Keyboard Shortcuts
+
+- **Open side panel** — configurable in `chrome://extensions/shortcuts`
 
 ## Project Structure
 
 ```
-├── manifest.json      # Chrome extension manifest
-├── background.js      # Service worker
-├── content.js         # Content script (FAB + page automation)
-├── sidepanel.*        # Side panel UI
-├── offscreen.*        # Offscreen document
-├── icons/             # Extension icons
-├── _locales/          # i18n strings (EN, PL, ES, FR, DE, RU)
-└── docs/              # Screenshots
+openagent/
+├── manifest.json      # Extension manifest
+├── background.js     # Service worker (API calls, routing)
+├── content.js       # Content script (FAB, page automation)
+├── sidepanel.*      # Side panel UI (chat, settings)
+├── icons/           # Extension icons
+├── docs/            # Screenshots
+└── _locales/        # i18n (EN, PL, ES, FR, DE, RU)
 ```
 
 ## License

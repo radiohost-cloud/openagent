@@ -1128,10 +1128,8 @@ async function saveAutoVaultNote() {
     `\n\n---\n*OpenAgent Chrome Extension*`;
 
   const result = await vaultWrite(filename, content, false);
-  if (result && !result.error) {
-    console.log('[SP] auto-vault saved:', result.path);
-  } else {
-    console.error('[SP] auto-vault failed:', result?.error);
+  if (result?.error) {
+    console.error('[SP] auto-vault failed:', result.error);
   }
 }
 

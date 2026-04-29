@@ -3,7 +3,6 @@
 
 # Dependencies
 node_modules/
-proxy/node_modules/
 
 # Logs
 *.log
@@ -15,3 +14,7 @@ proxy/node_modules/
 # Chrome extension build output
 *.crx
 *.pem
+
+# Distribution archives
+*.zip
+*.tar.gz

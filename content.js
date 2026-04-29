@@ -2,7 +2,6 @@
 // Collects page context and performs browser automation
 
 if (window.__openagentLoaded) {
-  console.log('[OpenAgent] content.js already loaded, skipping');
 } else {
   window.__openagentLoaded = true;
 
@@ -10,10 +9,10 @@ if (window.__openagentLoaded) {
 
 (function () {
   try {
-    if (document.getElementById('claude-assistant-fab')) return;
+    if (document.getElementById('openagent-fab')) return;
 
     const fab = document.createElement('div');
-    fab.id = 'claude-assistant-fab';
+    fab.id = 'openagent-fab';
     fab.innerHTML = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2z" fill="#3C3C3C"/><path d="M8 10.5c0-.276.224-.5.5-.5h7c.276 0 .5.224.5.5v1c0 .276-.224.5-.5.5h-7a.5.5 0 0 1-.5-.5v-1z" fill="white"/><path d="M8 13.5c0-.276.224-.5.5-.5h7c.276 0 .5.224.5.5v1c0 .276-.224.5-.5.5h-7a.5.5 0 0 1-.5-.5v-1z" fill="white"/></svg><span>OpenAgent</span>`;
 
     fab.addEventListener('click', () => {
@@ -33,10 +32,10 @@ if (window.__openagentLoaded) {
     });
 
     // Inject styles
-    if (!document.getElementById('claude-assistant-fab-style')) {
+    if (!document.getElementById('openagent-fab-style')) {
       const style = document.createElement('style');
-      style.id = 'claude-assistant-fab-style';
-      style.textContent = '#claude-assistant-fab{position:fixed;bottom:24px;right:24px;z-index:2147483647;display:flex;align-items:center;gap:8px;background:#7c6af7;color:white;border:none;border-radius:28px;padding:12px 18px;cursor:pointer;font-family:-apple-system,BlinkMacSystemFont,sans-serif;font-size:14px;font-weight:600;box-shadow:0 4px 20px rgba(60,60,60,.4);transition:transform .15s}#claude-assistant-fab:hover{transform:translateY(-2px);box-shadow:0 6px 24px rgba(60,60,60,.5)}#claude-assistant-fab:active{transform:scale(.97)}#claude-assistant-fab svg{width:20px;height:20px;flex-shrink:0}';
+      style.id = 'openagent-fab-style';
+      style.textContent = '#openagent-fab{position:fixed;bottom:24px;right:24px;z-index:2147483647;display:flex;align-items:center;gap:8px;background:#7c6af7;color:white;border:none;border-radius:28px;padding:12px 18px;cursor:pointer;font-family:-apple-system,BlinkMacSystemFont,sans-serif;font-size:14px;font-weight:600;box-shadow:0 4px 20px rgba(60,60,60,.4);transition:transform .15s}#openagent-fab:hover{transform:translateY(-2px);box-shadow:0 6px 24px rgba(60,60,60,.5)}#openagent-fab:active{transform:scale(.97)}#openagent-fab svg{width:20px;height:20px;flex-shrink:0}';
       (document.head || document.documentElement).appendChild(style);
     }
 
@@ -49,7 +48,6 @@ if (window.__openagentLoaded) {
 // ─── Message Listener ───────────────────────────────────────────────────────────
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  console.log('[OpenAgent content] received:', message.type);
   switch (message.type) {
     case 'page.collect':
       collectPageProbe()
@@ -89,8 +87,6 @@ function pageMetadata() {
 async function collectPageProbe() {
   const bodyText = collectBodyText();
   const images = collectPageImages().slice(0, 8);
-
-  console.log('[OpenAgent content] pageMetadata:', pageMetadata());
 
   return {
     rawCapture: {

@@ -300,9 +300,9 @@ function buildVaultInstructions(vaultPath) {
    When to use: user asks to save something, remember something, or you want to proactively persist key information.
    - Always wrap the full note content in the tag, including markdown headers.
    - Use descriptive filenames: lowercase with hyphens and a date suffix. Example: "web-research-2026-04-29.md"
-   - The vault directory is: ${vaultPath}/.openagent/
+   - The vault directory is: ${vaultPath}
 
-IMPORTANT: Remove vault tool tags from your response after executing them. Always confirm when you save a note (e.g., "Saved to vault as .openagent/web-research-2026-04-29.md").`;
+IMPORTANT: Remove vault tool tags from your response after executing them. Always confirm when you save a note (e.g., "Saved to vault as web-research-2026-04-29.md").`;
 }
 
 function buildMessages(history, pageContext, systemPrompt, vaultPath, autoVault) {

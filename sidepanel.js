@@ -54,7 +54,7 @@ const i18nStrings = {
     settingsVaultTitle: 'Obsidian Vault',
     settingsVaultPath: 'Vault Path',
     settingsVaultPathPlaceholder: '/Users/you/Documents/my-vault',
-    settingsVaultPathHint: 'Notes are saved to .openagent/ in your vault.',
+    settingsVaultPathHint: 'Notes are saved directly to your vault.',
   },
   pl: {
     msgLabelYou: 'Ty',
@@ -100,7 +100,7 @@ const i18nStrings = {
     settingsVaultTitle: 'Magazyn Obsidian',
     settingsVaultPath: 'Ścieżka do magazynu',
     settingsVaultPathPlaceholder: '/Użytkownik/ty/Dokumenty/moj-magazyn',
-    settingsVaultPathHint: 'Notatki są zapisywane w folderze .openagent w magazynie.',
+    settingsVaultPathHint: 'Notatki są zapisywane bezpośrednio w magazynie.',
   },
 };
 
@@ -821,9 +821,9 @@ function buildVaultInstructions() {
    When to use: user asks to save something, remember something, or you want to proactively persist key information.
    - Always wrap the full note content in the tag, including markdown headers.
    - Use descriptive filenames: lowercase with hyphens and a date suffix. Example: "web-research-2026-04-29.md"
-   - The vault directory is: ${vp}/.openagent/
+   - The vault directory is: ${vp}
 
-IMPORTANT: Remove vault tool tags from your response after executing them. Always confirm when you save a note (e.g., "Saved to vault as .openagent/web-research-2026-04-29.md").`;
+IMPORTANT: Remove vault tool tags from your response after executing them. Always confirm when you save a note (e.g., "Saved to vault as web-research-2026-04-29.md").`;
 }
 
 async function processVaultToolCalls(messageContent) {

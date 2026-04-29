@@ -10,6 +10,7 @@ const STORAGE_KEYS = {
   THEME: 'claude_theme',
   PRESET: 'claude_preset',
   LANGUAGE: 'claude_language',
+  VAULT_PATH: 'openagent_vault_path',
 };
 
 // ─── Auto-inject content script on page load ───────────────────────────────────
@@ -110,6 +111,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     // --- Streaming ---
     'stream.start': () => startStream(message, sendResponse),
+
+    // --- Vault ---
+    'vault.read': () => handleVaultRead(message),
+    'vault.write': () => handleVaultWrite(message),
   };
 
   const handler = handlers[message.type];
@@ -209,6 +214,7 @@ async function loadSettings() {
     STORAGE_KEYS.THEME,
     STORAGE_KEYS.PRESET,
     STORAGE_KEYS.LANGUAGE,
+    STORAGE_KEYS.VAULT_PATH,
   ]);
   return {
     apiKey: result[STORAGE_KEYS.API_KEY] || '',
@@ -218,6 +224,7 @@ async function loadSettings() {
     theme: result[STORAGE_KEYS.THEME] || 'dark',
     preset: result[STORAGE_KEYS.PRESET] || 'default',
     language: result[STORAGE_KEYS.LANGUAGE] || 'en',
+    vaultPath: result[STORAGE_KEYS.VAULT_PATH] || '',
   };
 }
 
@@ -230,6 +237,7 @@ async function saveSettings(data) {
     [STORAGE_KEYS.THEME]: data.theme || 'dark',
     [STORAGE_KEYS.PRESET]: data.preset || 'default',
     [STORAGE_KEYS.LANGUAGE]: data.language || 'en',
+    [STORAGE_KEYS.VAULT_PATH]: data.vaultPath || '',
   });
   return { ok: true };
 }
@@ -244,7 +252,7 @@ async function handlePromptSend(message, sendResponse) {
   }
 
   const { conversationHistory, pageContext } = message;
-  const messages = buildMessages(conversationHistory, pageContext, settings.systemPrompt);
+  const messages = buildMessages(conversationHistory, pageContext, settings.systemPrompt, settings.vaultPath);
 
   try {
     const response = await fetch(`${PROXY_URL}/api/chat`, {
@@ -271,11 +279,34 @@ async function handlePromptSend(message, sendResponse) {
   }
 }
 
-function buildMessages(history, pageContext, systemPrompt) {
-  const msgs = [];
+function buildVaultInstructions(vaultPath) {
+  return `VAULT TOOLS — You have two tools to persist and recall information across conversations:
 
-  if (systemPrompt) {
-    msgs.push({ role: 'system', content: systemPrompt });
+1. VAULT_READ: Use <vault_read query="optional search term" /> to read existing notes from the user's Obsidian vault.
+   When to use: user asks to recall something, check memories, see past notes, or refers to "my notes" / "what did we save".
+
+2. VAULT_WRITE: Use <vault_write filename="descriptive-name-YYYY-MM-DD.md">markdown content here</vault_write> to save important information to the vault.
+   When to use: user asks to save something, remember something, or you want to proactively persist key information.
+   - Always wrap the full note content in the tag, including markdown headers.
+   - Use descriptive filenames: lowercase with hyphens and a date suffix. Example: "web-research-2026-04-29.md"
+   - The vault directory is: ${vaultPath}/.openagent/
+
+IMPORTANT: Remove vault tool tags from your response after executing them. Always confirm when you save a note (e.g., "Saved to vault as .openagent/web-research-2026-04-29.md").`;
+}
+
+function buildMessages(history, pageContext, systemPrompt, vaultPath) {
+  const msgs = [];
+  const vaultInstructions = vaultPath ? buildVaultInstructions(vaultPath) : '';
+
+  const combinedSystem = (() => {
+    if (systemPrompt && vaultInstructions) return `${systemPrompt}\n\n${vaultInstructions}`;
+    if (systemPrompt) return systemPrompt;
+    if (vaultInstructions) return vaultInstructions;
+    return null;
+  })();
+
+  if (combinedSystem) {
+    msgs.push({ role: 'system', content: combinedSystem });
   }
   if (pageContext) {
     msgs.push({
@@ -299,7 +330,7 @@ async function startStream(message, sendResponse) {
   }
 
   const { conversationHistory, pageContext } = message;
-  const messages = buildMessages(conversationHistory, pageContext, settings.systemPrompt);
+  const messages = buildMessages(conversationHistory, pageContext, settings.systemPrompt, settings.vaultPath);
 
   try {
     const response = await fetch(`${PROXY_URL}/api/chat`, {
@@ -365,6 +396,44 @@ async function searchHistory(query) {
       })));
     });
   });
+}
+
+// ─── Vault ────────────────────────────────────────────────────────────────────
+
+async function handleVaultRead(message) {
+  const settings = await chrome.storage.local.get([STORAGE_KEYS.VAULT_PATH]);
+  const vaultPath = settings[STORAGE_KEYS.VAULT_PATH];
+  if (!vaultPath) return { error: 'Vault path not configured. Set it in Settings.' };
+  try {
+    const resp = await fetch(`${PROXY_URL}/api/vault/read`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ vaultPath, query: message.query || '', limit: message.limit || 20 }),
+    });
+    const data = await resp.json();
+    if (!resp.ok) return { error: data.error };
+    return data;
+  } catch (err) {
+    return { error: `Cannot connect to proxy: ${err.message}` };
+  }
+}
+
+async function handleVaultWrite(message) {
+  const settings = await chrome.storage.local.get([STORAGE_KEYS.VAULT_PATH]);
+  const vaultPath = settings[STORAGE_KEYS.VAULT_PATH];
+  if (!vaultPath) return { error: 'Vault path not configured. Set it in Settings.' };
+  try {
+    const resp = await fetch(`${PROXY_URL}/api/vault/write`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ vaultPath, filename: message.filename, content: message.content }),
+    });
+    const data = await resp.json();
+    if (!resp.ok) return { error: data.error };
+    return data;
+  } catch (err) {
+    return { error: `Cannot connect to proxy: ${err.message}` };
+  }
 }
 
 // ─── Context Menus ────────────────────────────────────────────────────────────

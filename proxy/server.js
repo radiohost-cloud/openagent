@@ -3,6 +3,8 @@
 
 const express = require('express');
 const cors = require('cors');
+const fs = require('fs');
+const path = require('path');
 
 const app = express();
 const PORT = 8787;
@@ -110,6 +112,57 @@ app.get('/api/models', async (req, res) => {
       });
 
     res.json({ models });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Vault (Obsidian) ─────────────────────────────────────────────────────────
+
+const VAULT_DIR = '.openagent';
+
+app.post('/api/vault/read', (req, res) => {
+  const { vaultPath, query = '', limit = 20 } = req.body;
+  if (!vaultPath) return res.status(400).json({ error: 'vaultPath is required' });
+
+  const vaultDir = path.join(vaultPath, VAULT_DIR);
+  let files;
+  try {
+    files = fs.readdirSync(vaultDir);
+  } catch {
+    return res.json({ notes: [], count: 0 });
+  }
+
+  const q = query.toLowerCase();
+  const notes = files
+    .filter((f) => f.endsWith('.md'))
+    .map((f) => {
+      const filePath = path.join(vaultDir, f);
+      const stat = fs.statSync(filePath);
+      const content = fs.readFileSync(filePath, 'utf-8');
+      return { filename: f, path: filePath, content, metadata: { created: stat.birthtime, modified: stat.mtime } };
+    })
+    .filter((n) => !q || n.content.toLowerCase().includes(q))
+    .slice(0, limit);
+
+  res.json({ notes, count: notes.length });
+});
+
+app.post('/api/vault/write', (req, res) => {
+  const { vaultPath, filename, content } = req.body;
+  if (!vaultPath) return res.status(400).json({ error: 'vaultPath is required' });
+  if (!filename) return res.status(400).json({ error: 'filename is required' });
+  if (!content) return res.status(400).json({ error: 'content is required' });
+
+  const safe = filename.replace(/[^a-zA-Z0-9-_.]/g, '_');
+  const finalName = safe.endsWith('.md') ? safe : safe + '.md';
+  const vaultDir = path.join(vaultPath, VAULT_DIR);
+
+  try {
+    fs.mkdirSync(vaultDir, { recursive: true });
+    const filePath = path.join(vaultDir, finalName);
+    fs.writeFileSync(filePath, content, 'utf-8');
+    res.json({ ok: true, path: filePath });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

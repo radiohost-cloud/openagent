@@ -1182,3 +1182,60 @@ body.light[data-preset="papercolor-light"] {
   background: var(--surface-2);
   color: var(--text);
 }
+
+/* ─── Vault Section ─────────────────────────────────────── */
+
+.vault-section {
+  margin-bottom: 16px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.vault-summary {
+  padding: 10px 12px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  background: var(--surface-2);
+  user-select: none;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.vault-summary::-webkit-details-marker { display: none; }
+
+.vault-summary::before {
+  content: "▶";
+  font-size: 9px;
+  transition: transform 0.15s;
+  display: inline-block;
+}
+
+details[open] .vault-summary::before {
+  transform: rotate(90deg);
+}
+
+.vault-body {
+  padding: 12px;
+  background: var(--surface-2);
+}
+
+.vault-body .form-group {
+  margin-bottom: 8px;
+}
+
+.vault-body .form-group:last-child {
+  margin-bottom: 0;
+}
+
+.form-hint {
+  margin-top: 5px;
+  font-size: 10px;
+  color: var(--muted);
+}

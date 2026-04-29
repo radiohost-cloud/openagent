@@ -51,5 +51,9 @@
   "btnSave": { "message": "Zapisz" },
   "btnClear": { "message": "Wyczyść rozmowę" },
   "btnReadPage": { "message": "Wczytaj stronę" },
-  "btnSettings": { "message": "Ustawienia" }
+  "btnSettings": { "message": "Ustawienia" },
+  "settingsVaultTitle": { "message": "Magazyn Obsidian" },
+  "settingsVaultPath": { "message": "Ścieżka do magazynu" },
+  "settingsVaultPathPlaceholder": { "message": "/Użytkownik/ty/Dokumenty/moj-magazyn" },
+  "settingsVaultPathHint": { "message": "Notatki są zapisywane w folderze .openagent w magazynie." }
 }

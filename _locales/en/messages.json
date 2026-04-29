@@ -52,5 +52,9 @@
   "btnSave": { "message": "Save" },
   "btnClear": { "message": "Clear conversation" },
   "btnReadPage": { "message": "Read this page" },
-  "btnSettings": { "message": "Settings" }
+  "btnSettings": { "message": "Settings" },
+  "settingsVaultTitle": { "message": "Obsidian Vault" },
+  "settingsVaultPath": { "message": "Vault Path" },
+  "settingsVaultPathPlaceholder": { "message": "/Users/you/Documents/my-vault" },
+  "settingsVaultPathHint": { "message": "Notes are saved to .openagent/ in your vault." }
 }

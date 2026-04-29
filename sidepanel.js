@@ -2,7 +2,7 @@
 
 const state = {
   messages: [],
-  settings: { apiKey: '', provider: 'openrouter', model: '', systemPrompt: '', theme: 'dark', preset: 'default', language: 'en' },
+  settings: { apiKey: '', provider: 'openrouter', model: '', systemPrompt: '', theme: 'dark', preset: 'default', language: 'en', vaultPath: '' },
   pageContext: null,
   isLoading: false,
   allModels: [],
@@ -46,6 +46,10 @@ const i18nStrings = {
     langEnglish: 'English',
     langPolish: 'Polski',
     linkOpenrouterKeys: 'Get API key →',
+    settingsVaultTitle: 'Obsidian Vault',
+    settingsVaultPath: 'Vault Path',
+    settingsVaultPathPlaceholder: '/Users/you/Documents/my-vault',
+    settingsVaultPathHint: 'Notes are saved to .openagent/ in your vault.',
   },
   pl: {
     msgLabelYou: 'Ty',
@@ -85,6 +89,10 @@ const i18nStrings = {
     langEnglish: 'English',
     langPolish: 'Polski',
     linkOpenrouterKeys: 'Pobierz klucz API →',
+    settingsVaultTitle: 'Magazyn Obsidian',
+    settingsVaultPath: 'Ścieżka do magazynu',
+    settingsVaultPathPlaceholder: '/Użytkownik/ty/Dokumenty/moj-magazyn',
+    settingsVaultPathHint: 'Notatki są zapisywane w folderze .openagent w magazynie.',
   },
 };
 
@@ -114,6 +122,7 @@ const dom = {
   themeLight: $('#themeLight'),
   themePreset: $('#themePreset'),
   langSelect: $('#langSelect'),
+  vaultPathInput: $('#vaultPathInput'),
 };
 
 // ─── i18n ────────────────────────────────────────────────────────────────────
@@ -253,6 +262,7 @@ async function loadSettings() {
     state.settings = { ...state.settings, ...data };
     dom.apiKeyInput.value = state.settings.apiKey || '';
     dom.systemPromptInput.value = state.settings.systemPrompt || '';
+    dom.vaultPathInput.value = state.settings.vaultPath || '';
   } catch (err) {
     console.error('Failed to load settings:', err);
   }
@@ -265,13 +275,14 @@ async function handleSaveSettings() {
   const theme = state.settings.theme;
   const preset = dom.themePreset.value;
   const language = state.settings.language;
+  const vaultPath = dom.vaultPathInput.value.trim();
 
   try {
     await sendBgMessage({
       type: 'settings.save',
-      data: { apiKey, provider: 'openrouter', model, systemPrompt, theme, preset, language },
+      data: { apiKey, provider: 'openrouter', model, systemPrompt, theme, preset, language, vaultPath },
     });
-    state.settings = { apiKey, provider: 'openrouter', model, systemPrompt, theme, preset, language };
+    state.settings = { apiKey, provider: 'openrouter', model, systemPrompt, theme, preset, language, vaultPath };
     dom.settingsStatus.textContent = i18n('settingsSaved');
     dom.settingsStatus.className = 'settings-status';
     toggleModal(false);
@@ -495,8 +506,19 @@ async function handleSend() {
       renderMessage('error', response.error);
     } else {
       const content = response.content || '';
-      state.messages.push({ role: 'assistant', content });
-      renderMessage('assistant', content);
+      const { readResults, writeResults } = await processVaultToolCalls(content);
+      let finalContent = content;
+      if (writeResults.length > 0) {
+        const confirmed = writeResults.map((p) => `✓ Saved: ${p.split('/.openagent/')[1]}`).join('\n');
+        finalContent = content.replace(/<vault_write[^>]*>[\s\S]*?<\/vault_write>/gi, '');
+        finalContent += '\n\n' + confirmed;
+      }
+      if (readResults.length > 0) {
+        const recalled = readResults.map((n) => `## ${n.filename}\n${n.content}`).join('\n\n---\n\n');
+        finalContent += '\n\n**From vault:**\n' + recalled;
+      }
+      state.messages.push({ role: 'assistant', content: finalContent });
+      renderMessage('assistant', finalContent);
     }
   } catch (err) {
     removeTyping();
@@ -692,6 +714,56 @@ function escapeHtml(str) {
   const div = document.createElement('div');
   div.textContent = str;
   return div.innerHTML;
+}
+
+// ─── Vault Tool Processing ─────────────────────────────────────────────────────
+
+function buildVaultInstructions() {
+  const vp = state.settings.vaultPath;
+  if (!vp) return '';
+  return `VAULT TOOLS — You have two tools to persist and recall information across conversations:
+
+1. VAULT_READ: Use <vault_read query="optional search term" /> to read existing notes from the user's Obsidian vault.
+   When to use: user asks to recall something, check memories, see past notes, or refers to "my notes" / "what did we save".
+
+2. VAULT_WRITE: Use <vault_write filename="descriptive-name-YYYY-MM-DD.md">markdown content here</vault_write> to save important information to the vault.
+   When to use: user asks to save something, remember something, or you want to proactively persist key information.
+   - Always wrap the full note content in the tag, including markdown headers.
+   - Use descriptive filenames: lowercase with hyphens and a date suffix. Example: "web-research-2026-04-29.md"
+   - The vault directory is: ${vp}/.openagent/
+
+IMPORTANT: Remove vault tool tags from your response after executing them. Always confirm when you save a note (e.g., "Saved to vault as .openagent/web-research-2026-04-29.md").`;
+}
+
+async function processVaultToolCalls(messageContent) {
+  const readResults = [];
+  const writeResults = [];
+
+  const readMatches = [...messageContent.matchAll(/<vault_read\s+query="([^"]*)"\s*\/>/gi)];
+  const writeMatches = [...messageContent.matchAll(/<vault_write\s+filename="([^"]+\.md)"\s*>([\s\S]*?)<\/vault_write>/gi)];
+
+  for (const match of readMatches) {
+    const query = match[1] || '';
+    try {
+      const result = await sendBgMessage({ type: 'vault.read', query, limit: 20 });
+      if (result && !result.error && result.notes) {
+        readResults.push(...result.notes);
+      }
+    } catch {}
+  }
+
+  for (const match of writeMatches) {
+    const filename = match[1];
+    const content = match[2].trim();
+    try {
+      const result = await sendBgMessage({ type: 'vault.write', filename, content });
+      if (result && !result.error) {
+        writeResults.push(result.path);
+      }
+    } catch {}
+  }
+
+  return { readResults, writeResults };
 }
 
 // ─── Start ─────────────────────────────────────────────────────────────────────

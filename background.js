@@ -375,3 +375,14 @@ chrome.contextMenus.onClicked.addListener((info) => {
 // ─── Side Panel ───────────────────────────────────────────────────────────────
 
 chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => {});
+
+// Open side panel when the toolbar icon is clicked
+chrome.action.onClicked.addListener(async (tab) => {
+  try {
+    await chrome.sidePanel.open({ windowId: tab.windowId });
+  } catch (err) {
+    console.log('[OpenAgent] sidePanel.open error:', err.message);
+    // Fallback: open side panel URL in current tab
+    chrome.tabs.update(tab.id, { url: chrome.runtime.getURL('sidepanel.html') });
+  }
+});

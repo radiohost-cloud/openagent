@@ -983,6 +983,18 @@ async function takeScreenshot() {
     }
     state.pageScreenshot = data.dataUrl;
     setStatus('Screenshot attached', 'success');
+
+    const empty = dom.messages.querySelector('.empty-state');
+    if (empty) empty.remove();
+
+    const div = document.createElement('div');
+    div.className = 'message user';
+    div.innerHTML = `
+      <div class="message-label">${i18n('msgLabelYou')}</div>
+      <div class="message-content"><img class="screenshot-thumb" src="${data.dataUrl}" /></div>
+    `;
+    dom.messages.appendChild(div);
+    scrollToBottom();
   } catch (err) {
     setStatus('Screenshot failed: ' + err.message, 'error');
   }

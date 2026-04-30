@@ -231,6 +231,14 @@ html, body {
   line-height: 1.5;
 }
 
+.screenshot-thumb {
+  max-width: 100%;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  display: block;
+  margin-top: 6px;
+}
+
 .message code {
   font-family: var(--font);
   background: var(--surface-2);

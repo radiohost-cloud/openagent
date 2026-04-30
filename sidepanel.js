@@ -14,6 +14,8 @@ const state = {
   vaultReady: false,
   conversations: [],
   historyOpen: false,
+  currentConversationId: null,
+  memoryContext: null,
 };
 
 const i18nStrings = {
@@ -472,6 +474,7 @@ async function pickVaultFolder() {
     state.vaultDirHandle = dirHandle;
     state.vaultReady = true;
     state.settings.vaultPath = dirHandle.name;
+    state.autoVault = true;
     dom.vaultPathInput.value = dirHandle.name;
     dom.vaultPathInput.title = 'Selected: ' + dirHandle.name;
     if (dom.vaultStatus) dom.vaultStatus.classList.add('ready', 'active');
@@ -479,6 +482,7 @@ async function pickVaultFolder() {
       type: 'settings.save',
       data: { ...state.settings },
     });
+    await sendBgMessage({ type: 'autovault.save', enabled: true });
     updateVaultBtn();
     setStatus(i18n('statusVaultReady'), 'success');
   } catch (err) {
@@ -569,6 +573,25 @@ async function init() {
   updateModelBadge();
   updateBadge();
   loadCachedContext();
+  await loadMemoryContext();
+}
+
+async function loadMemoryContext() {
+  if (!state.settings.apiKey) return;
+  const pageUrl = state.pageContext?.metadata?.url || '';
+  const domain = pageUrl ? extractDomain(pageUrl) : '';
+  const topics = extractTopicsFromMessages(state.messages);
+
+  const context = await sendBgMessage({
+    type: 'memory.load',
+    domain,
+    topics,
+    pageUrl,
+  });
+
+  if (context && (context.summaries?.length > 0 || context.memories?.length > 0)) {
+    state.memoryContext = context;
+  }
 }
 
 function updateVaultBtn() {
@@ -1024,6 +1047,7 @@ async function handleSend() {
       pageContext: state.pageContext,
       pageScreenshot: state.pageScreenshot,
       autoVault: state.autoVault,
+      memoryContext: state.memoryContext,
     });
 
     removeTyping();
@@ -1057,6 +1081,9 @@ async function handleSend() {
       if (state.autoVault && state.vaultDirHandle) {
         saveAutoVaultNote().catch((err) => console.error('[SP] auto-vault error:', err));
       }
+
+      // Process conversation end - extract memory
+      processConversationEnd().catch((err) => console.error('[SP] memory process error:', err));
     }
   } catch (err) {
     removeTyping();
@@ -1116,6 +1143,9 @@ async function loadCachedContext() {
   } catch {}
   // refresh in background
   collectPageContext();
+  await loadMemoryContext();
+}
+  collectPageContext();
 }
 
 function modelSupportsVision(modelId) {
@@ -1162,6 +1192,7 @@ async function takeScreenshot() {
     `;
     dom.messages.appendChild(div);
     scrollToBottom();
+    requestAnimationFrame(() => div.scrollIntoView({ behavior: 'smooth', block: 'start' }));
   } catch (err) {
     setStatus(i18n('statusScreenshotFailed') + ': ' + err.message, 'error');
   }
@@ -1185,10 +1216,13 @@ function prependPageContext(metadata) {
 function clearConversation() {
   if (state.messages.length > 0) {
     saveConversation();
+    processConversationEnd().catch((err) => console.error('[SP] memory process error:', err));
   }
   state.messages = [];
   state.pageContext = null;
+  state.currentConversationId = null;
   state.currentVaultFilename = null;
+  state.memoryContext = null;
   if (dom.headerCtx) dom.headerCtx.innerHTML = '';
   renderMessages();
   updateBadge();
@@ -1205,7 +1239,18 @@ function saveConversation() {
     bodyText: state.pageContext?.bodyText || '',
     images: state.pageContext?.images || [],
   };
+  if (state.currentConversationId !== null) {
+    // Update existing conversation in place
+    const idx = state.conversations.findIndex((c) => c.id === state.currentConversationId);
+    if (idx !== -1) {
+      conv.id = state.currentConversationId;
+      state.conversations[idx] = conv;
+      chrome.storage.local.set({ openagent_conversations: state.conversations });
+      return;
+    }
+  }
   state.conversations = [conv, ...state.conversations].slice(0, 50);
+  state.currentConversationId = conv.id;
   chrome.storage.local.set({ openagent_conversations: state.conversations });
 }
 
@@ -1274,6 +1319,8 @@ function deleteConversation(id) {
 function restoreConversation(id) {
   const conv = state.conversations.find((c) => c.id === id);
   if (!conv) return;
+
+  state.currentConversationId = id;
 
   // Append to current messages (continue conversation)
   state.messages.push(...conv.messages);
@@ -1441,7 +1488,7 @@ function formatContent(text) {
     let headerRow = null;
     for (let i = 0; i < tableRows.length; i++) {
       const cells = tableRows[i];
-      const isHeader = cells.every((c) => c.match(/^[\-\=]+$/) || cells.every((c) => c.match(/^[A-Z\s]+$/)));
+      const isHeader = cells.every((c) => c.match(/^[\-\=]+$/) || c.match(/^[A-Z\s]+$/));
       if (isHeader && i + 1 < tableRows.length) {
         headerRow = cells;
       } else {
@@ -1558,6 +1605,43 @@ function escapeHtml(str) {
   const div = document.createElement('div');
   div.textContent = str;
   return div.innerHTML;
+}
+
+function extractDomain(url) {
+  try {
+    const u = new URL(url);
+    return u.hostname.replace('www.', '');
+  } catch {
+    return '';
+  }
+}
+
+async function processConversationEnd() {
+  if (!state.settings.apiKey || state.messages.length < 2) return;
+
+  const pageUrl = state.pageContext?.metadata?.url || state.pageContext?.url || '';
+  const domain = extractDomain(pageUrl);
+  const topics = extractTopicsFromMessages(state.messages);
+
+  const result = await window.processConversationEnd(
+    state.messages,
+    pageUrl,
+    domain,
+    state.settings.apiKey,
+    state.settings.model
+  );
+
+  if (!result) return;
+
+  await sendBgMessage({
+    type: 'memory.save',
+    conversationId: state.currentConversationId || Date.now(),
+    pageUrl,
+    summary: result.summary,
+    topics: result.topics,
+    memEntries: result.memEntries,
+    conversation: state.messages,
+  });
 }
 
 // ─── Vault Tool Processing ─────────────────────────────────────────────────────

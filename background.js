@@ -146,6 +146,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     'autovault.load': () => loadAutoVault(),
     'autovault.save': () => saveAutoVault(message.enabled),
     'page.screenshot': () => capturePageScreenshot(),
+    'memory.load': () => handleMemoryLoad(message),
+    'memory.save': () => handleMemorySave(message),
   };
 
   const handler = handlers[message.type];
@@ -257,8 +259,8 @@ async function handlePromptSend(message, sendResponse) {
     return;
   }
 
-  const { conversationHistory, pageContext, pageScreenshot, autoVault } = message;
-  const msgs = buildMessages(conversationHistory, pageContext, pageScreenshot, settings.systemPrompt, autoVault);
+  const { conversationHistory, pageContext, pageScreenshot, autoVault, memoryContext } = message;
+  const msgs = buildMessages(conversationHistory, pageContext, pageScreenshot, settings.systemPrompt, autoVault, memoryContext);
 
   try {
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -290,13 +292,22 @@ async function handlePromptSend(message, sendResponse) {
   }
 }
 
-function buildMessages(history, pageContext, pageScreenshot, systemPrompt, autoVault) {
+function buildMessages(history, pageContext, pageScreenshot, systemPrompt, autoVault, memoryContext) {
   const msgs = [];
 
   const systemContent = systemPrompt || null;
 
   if (systemContent) {
     msgs.push({ role: 'system', content: systemContent });
+  }
+  if (memoryContext) {
+    const memText = buildMemoryContext(memoryContext.summaries || [], memoryContext.memories || []);
+    if (memText) {
+      msgs.push({
+        role: 'system',
+        content: `You have context from previous conversations with this user:\n\n${memText}\n\nUse this context to provide more personalized and continuity-aware responses.`,
+      });
+    }
   }
   if (pageContext) {
     msgs.push({
@@ -339,8 +350,8 @@ async function startStream(message, sendResponse) {
     return;
   }
 
-  const { conversationHistory, pageContext, pageScreenshot, autoVault } = message;
-  const msgs = buildMessages(conversationHistory, pageContext, pageScreenshot, settings.systemPrompt, autoVault);
+  const { conversationHistory, pageContext, pageScreenshot, autoVault, memoryContext } = message;
+  const msgs = buildMessages(conversationHistory, pageContext, pageScreenshot, settings.systemPrompt, autoVault, memoryContext);
 
   try {
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -469,3 +480,61 @@ chrome.action.onClicked.addListener(async (tab) => {
     chrome.tabs.update(tab.id, { url: chrome.runtime.getURL('sidepanel.html') });
   }
 });
+
+// ─── Memory (IndexedDB via db.js) ─────────────────────────────────────────────
+
+async function handleMemoryLoad(message) {
+  const { domain, topics } = message;
+  const { extractDomain, getRelevantContext } = await import('./db.js');
+  const resolvedDomain = domain || extractDomain(message.pageUrl || '');
+
+  try {
+    const context = await getRelevantContext(resolvedDomain, topics || [], 3);
+    return context;
+  } catch (err) {
+    return { summaries: [], memories: [] };
+  }
+}
+
+async function handleMemorySave(message) {
+  const { conversationId, pageUrl, summary, topics, memEntries, conversation } = message;
+  const { extractDomain, saveConversation, saveSummary, saveMemories } = await import('./db.js');
+
+  const domain = extractDomain(pageUrl || '');
+  const timestamp = Date.now();
+
+  try {
+    // Save full conversation
+    if (conversation) {
+      await saveConversation({
+        id: conversationId || timestamp,
+        domain,
+        pageUrl,
+        timestamp,
+        messages: conversation,
+      });
+    }
+
+    // Save summary
+    if (summary) {
+      await saveSummary({
+        id: conversationId || timestamp,
+        domain,
+        pageUrl,
+        summary,
+        topics: topics || [],
+        timestamp,
+      });
+    }
+
+    // Save memory entries
+    if (memEntries && memEntries.length > 0) {
+      const memsWithDomain = memEntries.map((m) => ({ ...m, domain }));
+      await saveMemories(memsWithDomain);
+    }
+
+    return { ok: true };
+  } catch (err) {
+    return { error: err.message };
+  }
+}

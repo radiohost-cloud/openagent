@@ -1135,10 +1135,12 @@ async function loadCachedContext() {
     const cached = stored.openagent_current_tab;
     if (cached?.url && cached.url.startsWith('http')) {
       state.pageContext = cached;
+      // Only use favicon if it's a real URL (chrome://favicon is blocked in side panel)
+      const faviconUrl = cached.favicon && !cached.favicon.startsWith('chrome://') ? cached.favicon : null;
       prependPageContext({
         url: cached.url,
         title: cached.title,
-        favicon: cached.favicon || `chrome://favicon/${cached.url}`,
+        favicon: faviconUrl,
       });
     }
   } catch {}
@@ -1202,8 +1204,9 @@ function prependPageContext(metadata) {
   if (existing) existing.remove();
 
   if (dom.headerCtx) {
-    const favicon = metadata.favicon || (metadata.url ? `chrome://favicon/${metadata.url}` : '');
-    const faviconHtml = favicon ? `<img class="ctx-favicon" src="${favicon}" width="14" height="14" />` : '';
+    // Only use favicon if it's a real URL (not chrome://favicon/ which is blocked in side panel)
+    const faviconUrl = metadata.favicon && !metadata.favicon.startsWith('chrome://') ? metadata.favicon : null;
+    const faviconHtml = faviconUrl ? `<img class="ctx-favicon" src="${faviconUrl}" width="14" height="14" />` : '';
     dom.headerCtx.innerHTML = `
       ${faviconHtml}
       <span class="ctx-dot"></span>
@@ -1329,11 +1332,10 @@ function restoreConversation(id) {
 
   if (conv.pageUrl) {
     // Restore page context from conversation
-    const favicon = `chrome://favicon/${conv.pageUrl}`;
     const metadata = {
       url: conv.pageUrl,
       title: conv.pageTitle || 'Untitled',
-      favicon,
+      favicon: null, // chrome://favicon blocked in side panel
       domain: new URL(conv.pageUrl).hostname,
     };
     // If current page matches, refresh context; otherwise use stored context

@@ -681,6 +681,13 @@ function bindEvents() {
     filterModels(dom.modelSearch.value);
   });
 
+  document.addEventListener('click', (e) => {
+    if (!state.historyOpen) return;
+    if (e.target === dom.historyBtn || dom.historyBtn.contains(e.target)) return;
+    if (dom.historyPanel.contains(e.target)) return;
+    toggleHistory();
+  });
+
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && state.historyOpen) toggleHistory();
   });

@@ -61,6 +61,7 @@ const i18nStrings = {
     settingsChangeFolder: 'Change folder',
     settingsFontSize: 'Font size',
     settingsCurrentModel: 'Current Model',
+    emptyStateSearch: 'Use /g query to search Google, /y query to search YouTube',
   },
   pl: {
     msgLabelYou: 'Ty',
@@ -111,6 +112,7 @@ const i18nStrings = {
     settingsChangeFolder: 'Zmień folder',
     settingsFontSize: 'Wielkość czcionki',
     settingsCurrentModel: 'Aktualny model',
+    emptyStateSearch: 'Użyj /g zapytanie by wyszukać w Google, /y zapytanie by wyszukać na YouTube',
   },
   es: {
     msgLabelYou: 'Tú',
@@ -160,6 +162,7 @@ const i18nStrings = {
     settingsChangeFolder: 'Cambiar carpeta',
     settingsFontSize: 'Tamaño de fuente',
     settingsCurrentModel: 'Modelo actual',
+    emptyStateSearch: 'Usa /g consulta para buscar en Google, /y consulta para buscar en YouTube',
   },
   fr: {
     msgLabelYou: 'Vous',
@@ -209,6 +212,7 @@ const i18nStrings = {
     settingsChangeFolder: 'Modifier le dossier',
     settingsFontSize: 'Taille de police',
     settingsCurrentModel: 'Modèle actuel',
+    emptyStateSearch: 'Utilisez /g requête pour chercher sur Google, /y requête pour chercher sur YouTube',
   },
   de: {
     msgLabelYou: 'Sie',
@@ -258,6 +262,7 @@ const i18nStrings = {
     settingsChangeFolder: 'Ordner ändern',
     settingsFontSize: 'Schriftgröße',
     settingsCurrentModel: 'Aktuelles Modell',
+    emptyStateSearch: 'Nutze /g Suchbegriff um bei Google zu suchen, /y Suchbegriff um bei YouTube zu suchen',
   },
   ru: {
     msgLabelYou: 'Вы',
@@ -307,6 +312,7 @@ const i18nStrings = {
     settingsChangeFolder: 'Изменить папку',
     settingsFontSize: 'Размер шрифта',
     settingsCurrentModel: 'Текущая модель',
+    emptyStateSearch: 'Используйте /g запрос для поиска в Google, /y запрос для поиска на YouTube',
   },
 };
 
@@ -803,6 +809,11 @@ const NAV_PATTERNS = [
   /^(?:https?:\/\/)?([a-z][a-z0-9-]*\.[a-z]{2,}(?:\/\S*)?)$/i,
 ];
 
+const SEARCH_PATTERNS = [
+  { prefix: /^\/g\s+/i, base: 'https://www.google.com/search?q=' },
+  { prefix: /^\/y\s+/i, base: 'https://www.youtube.com/results?search_query=' },
+];
+
 function extractNavigationIntent(text) {
   const trimmed = text.trim();
 
@@ -827,6 +838,18 @@ function extractNavigationIntent(text) {
   return null;
 }
 
+function extractSearchIntent(text) {
+  const trimmed = text.trim();
+  for (const p of SEARCH_PATTERNS) {
+    const match = trimmed.match(p.prefix);
+    if (match) {
+      const query = trimmed.slice(match[0].length).trim();
+      return { base: p.base, query };
+    }
+  }
+  return null;
+}
+
 async function handleSend() {
   const text = dom.input.value.trim();
   if (!text || state.isLoading) return;
@@ -840,6 +863,13 @@ async function handleSend() {
   const navUrl = extractNavigationIntent(text);
   if (navUrl) {
     await handleNavigation(navUrl, text);
+    return;
+  }
+
+  const search = extractSearchIntent(text);
+  if (search) {
+    const searchUrl = search.base + encodeURIComponent(search.query);
+    await handleNavigation(searchUrl, text);
     return;
   }
 
@@ -968,6 +998,7 @@ function renderEmptyState() {
         </svg>
       </div>
       <p>${i18n('emptyStateText')}</p>
+      <p class="empty-state-hint">${i18n('emptyStateSearch')}</p>
     </div>
   `;
 }

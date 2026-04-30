@@ -145,9 +145,10 @@ async function sendNavigateAction(url) {
   const tab = await getWebTab();
   if (!tab?.id) return { error: 'No active web page tab found' };
   try {
-    return await chrome.tabs.sendMessage(tab.id, { type: 'page.navigate', command: { kind: 'navigate', url } });
+    await chrome.tabs.update(tab.id, { url });
+    return { ok: true, message: `Navigated to ${url}` };
   } catch (err) {
-    return { error: `Cannot send to page: ${err.message}` };
+    return { error: `Cannot navigate: ${err.message}` };
   }
 }
 

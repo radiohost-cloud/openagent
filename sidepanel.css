@@ -276,6 +276,12 @@ html, body {
   max-width: 240px;
 }
 
+.empty-state-hint {
+  font-size: 11px !important;
+  color: var(--muted) !important;
+  margin-top: 4px !important;
+}
+
 /* Page context inline */
 .page-ctx {
   display: flex;

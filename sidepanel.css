@@ -883,6 +883,7 @@ body[data-preset="dracula"].light {
   --muted: #6272a4;
   --accent: #bd93f9;
   --accent-dim: rgba(189, 147, 249, 0.12);
+  --user-text: #282a36;
 }
 
 body[data-preset="nord"] {
@@ -905,6 +906,7 @@ body[data-preset="nord"].light {
   --text: #2e3440;
   --muted: #4c566a;
   --accent: #5e81ac;
+  --user-text: #2e3440;
 }
 
 body[data-preset="monokai"] {
@@ -927,6 +929,7 @@ body[data-preset="monokai"].light {
   --text: #272822;
   --muted: #75715e;
   --accent: #a6e22e;
+  --user-text: #272822;
 }
 
 body[data-preset="tokyo-night"] {
@@ -949,6 +952,7 @@ body[data-preset="tokyo-night"].light {
   --text: #1a1b26;
   --muted: #565f89;
   --accent: #7aa2f7;
+  --user-text: #1a1b26;
 }
 
 body.light .toggle-btn.active {
@@ -972,7 +976,7 @@ body.light .btn-save { background: rgba(0, 0, 0, 0.06); color: var(--text); bord
 body.light .send-btn { background: rgba(0, 0, 0, 0.06); color: var(--text); border: 1px solid rgba(0, 0, 0, 0.1); }
 
 /* Light variants for preset themes */
-body.light[data-preset="dracula"] { --accent: #bd93f9; --accent-dim: rgba(189, 147, 249, 0.12); --muted: #6272a4; }
+body.light[data-preset="dracula"] { --accent: #bd93f9; --accent-dim: rgba(189, 147, 249, 0.12); --muted: #6272a4; --text: #282a36; --user-text: #282a36; }
 body.light[data-preset="dracula"] .send-btn,
 body.light[data-preset="dracula"] .btn-save { background: rgba(189, 147, 249, 0.12); color: #282a36; }
 body.light[data-preset="dracula"] .message.user .message-label { color: #282a36; }
@@ -986,7 +990,7 @@ body.light[data-preset="nord"] .settings-status,
 body.light[data-preset="nord"] .status.success { color: #4c566a; }
 body.light[data-preset="nord"] .toggle-btn.active { background: rgba(94, 129, 172, 0.12); color: #2e3440; }
 
-body.light[data-preset="monokai"] { --accent: #a6e22e; --accent-dim: rgba(166, 226, 46, 0.12); }
+body.light[data-preset="monokai"] { --accent: #a6e22e; --accent-dim: rgba(166, 226, 46, 0.12); --text: #272822; --user-text: #272822; }
 body.light[data-preset="monokai"] .send-btn,
 body.light[data-preset="monokai"] .btn-save { background: rgba(166, 226, 46, 0.12); color: #272822; }
 body.light[data-preset="monokai"] .message.user .message-label { color: #272822; }
@@ -995,7 +999,7 @@ body.light[data-preset="monokai"] .settings-status,
 body.light[data-preset="monokai"] .status.success { color: #75715e; }
 body.light[data-preset="monokai"] .toggle-btn.active { background: rgba(166, 226, 46, 0.12); color: #272822; }
 
-body.light[data-preset="tokyo-night"] { --accent: #7aa2f7; --accent-dim: rgba(122, 162, 247, 0.12); }
+body.light[data-preset="tokyo-night"] { --accent: #7aa2f7; --accent-dim: rgba(122, 162, 247, 0.12); --text: #1a1b26; --user-text: #1a1b26; }
 body.light[data-preset="tokyo-night"] .send-btn,
 body.light[data-preset="tokyo-night"] .btn-save { background: rgba(122, 162, 247, 0.12); color: #1a1b26; }
 body.light[data-preset="tokyo-night"] .message.user .message-label { color: #1a1b26; }

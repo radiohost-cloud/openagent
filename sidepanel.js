@@ -906,6 +906,16 @@ async function handleSend() {
   dom.sendBtn.disabled = true;
 
   try {
+    if (state.pageScreenshot) {
+      if (!modelSupportsVision(state.settings.model)) {
+        state.pageScreenshot = null;
+        renderMessage('error', 'Screenshot skipped — current model does not support image input. Use a vision model (e.g. Claude 3.5 Sonnet, GPT-4o, Gemini) and take a new screenshot.');
+        state.isLoading = false;
+        dom.sendBtn.disabled = false;
+        return;
+      }
+    }
+
     const response = await sendBgMessage({
       type: 'prompt.send',
       conversationHistory: state.messages,
@@ -972,6 +982,15 @@ async function collectPageContext() {
   } catch (err) {
     setStatus('Error: ' + err.message, 'error');
   }
+}
+
+function modelSupportsVision(modelId) {
+  const visionModels = [
+    'claude', 'gpt-4o', 'gpt-4-turbo', 'gemini', 'mistral', 'llava',
+    'llama', 'qwen', 'perplexity', 'deepseek',
+  ];
+  const m = (modelId || '').toLowerCase();
+  return visionModels.some((v) => m.includes(v));
 }
 
 async function takeScreenshot() {

@@ -45,7 +45,39 @@ if (chrome.webNavigation && chrome.webNavigation.onCompleted) {
 }
 
 async function notifyContextRefresh(tabId) {
-  chrome.runtime.sendMessage({ type: 'context.refresh', tabId }).catch(() => {});
+  let tab;
+  try {
+    tab = await chrome.tabs.get(tabId);
+  } catch {
+    return;
+  }
+  if (!tab?.url || !tab.url.startsWith('http')) return;
+
+  try {
+    const data = await chrome.tabs.sendMessage(tabId, { type: 'page.collect' });
+    if (data?.rawCapture?.metadata) {
+      await chrome.storage.local.set({
+        openagent_current_tab: {
+          url: tab.url,
+          title: tab.title,
+          favicon: data.rawCapture.metadata.favicon || `chrome://favicon/${tab.url}`,
+          bodyText: data.rawCapture.bodyText,
+          images: data.rawCapture.images,
+          timestamp: Date.now(),
+        },
+      });
+    }
+  } catch (err) {
+    await chrome.storage.local.set({
+      openagent_current_tab: {
+        url: tab.url,
+        title: tab.title,
+        favicon: `chrome://favicon/${tab.url}`,
+        timestamp: Date.now(),
+      },
+    });
+  }
+  chrome.runtime.sendMessage({ type: 'context.refresh' }).catch(() => {});
 }
 
 chrome.tabs.query({ url: ['http://*/*', 'https://*/*'] }, async (tabs) => {
@@ -160,8 +192,8 @@ async function sendToContentScript(type, payload) {
 }
 
 async function sendNavigateAction(url) {
-  const tab = await getWebTab();
-  if (!tab?.id) return { error: 'No active web page tab found' };
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab?.id) return { error: 'No active tab found' };
   try {
     await chrome.tabs.update(tab.id, { url });
     return { ok: true, message: `Navigated to ${url}` };

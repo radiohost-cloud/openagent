@@ -150,7 +150,6 @@ html, body {
 
 .header-btn.active {
   color: #9f7aea;
-  background: rgba(159, 122, 234, 0.12);
 }
 
 .header-btn.active svg path:first-child {

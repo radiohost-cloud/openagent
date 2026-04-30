@@ -15,6 +15,8 @@ const state = {
   conversations: [],
   historyOpen: false,
   currentConversationId: null,
+  memoryContext: null,
+  contextDebounce: null,
 };
 
 const i18nStrings = {
@@ -571,7 +573,26 @@ async function init() {
   loadModels();
   updateModelBadge();
   updateBadge();
-  loadCachedContext();
+  await loadCachedContext();
+}
+
+async function loadMemoryContext() {
+  const pageUrl = state.pageContext?.metadata?.url || state.pageContext?.url || '';
+  const domain = pageUrl ? extractDomain(pageUrl) : '';
+  const topics = extractTopicsFromMessages(state.messages);
+
+  const context = await sendBgMessage({
+    type: 'memory.load',
+    domain,
+    topics,
+    pageUrl,
+  });
+
+  if (context && (context.summaries?.length > 0 || context.memories?.length > 0)) {
+    state.memoryContext = context;
+  } else {
+    state.memoryContext = null;
+  }
 }
 
 function updateVaultBtn() {
@@ -611,7 +632,10 @@ function bindEvents() {
   chrome.runtime.onMessage.addListener((message) => {
     if (message.type === 'context.refresh') {
       if (state.contextDebounce) clearTimeout(state.contextDebounce);
-      state.contextDebounce = setTimeout(() => collectPageContext(), 200);
+      state.contextDebounce = setTimeout(async () => {
+        await collectPageContext();
+        await loadMemoryContext();
+      }, 200);
     }
   });
 
@@ -1027,6 +1051,7 @@ async function handleSend() {
       pageContext: state.pageContext,
       pageScreenshot: state.pageScreenshot,
       autoVault: state.autoVault,
+      memoryContext: state.memoryContext,
     });
 
     removeTyping();
@@ -1060,6 +1085,9 @@ async function handleSend() {
       if (state.autoVault && state.vaultDirHandle) {
         saveAutoVaultNote().catch((err) => console.error('[SP] auto-vault error:', err));
       }
+
+      // Process conversation end - extract memory
+      processConversationEnd().catch((err) => console.error('[SP] memory process error:', err));
     }
   } catch (err) {
     removeTyping();
@@ -1086,21 +1114,18 @@ async function collectPageContext() {
       data = await sendBgMessage({ type: 'page.collect' });
     }
     if (data.error) {
-      setStatus(data.error, 'error');
       return;
     }
     if (!data.rawCapture) {
-      setStatus('No page data received', 'error');
       return;
     }
 
     state.pageContext = data.rawCapture;
     if (data.rawCapture?.metadata) {
       prependPageContext(data.rawCapture.metadata);
-      setStatus(i18n('statusPageContextLoaded'), 'success');
     }
   } catch (err) {
-    setStatus('Error: ' + err.message, 'error');
+    // Silently fail - tab might be loading
   }
 }
 
@@ -1119,6 +1144,7 @@ async function loadCachedContext() {
   } catch {}
   // refresh in background
   collectPageContext();
+  await loadMemoryContext();
 }
 
 function modelSupportsVision(modelId) {
@@ -1189,11 +1215,13 @@ function prependPageContext(metadata) {
 function clearConversation() {
   if (state.messages.length > 0) {
     saveConversation();
+    processConversationEnd().catch((err) => console.error('[SP] memory process error:', err));
   }
   state.messages = [];
   state.pageContext = null;
   state.currentConversationId = null;
   state.currentVaultFilename = null;
+  state.memoryContext = null;
   if (dom.headerCtx) dom.headerCtx.innerHTML = '';
   renderMessages();
   updateBadge();
@@ -1576,6 +1604,43 @@ function escapeHtml(str) {
   const div = document.createElement('div');
   div.textContent = str;
   return div.innerHTML;
+}
+
+function extractDomain(url) {
+  try {
+    const u = new URL(url);
+    return u.hostname.replace('www.', '');
+  } catch {
+    return '';
+  }
+}
+
+async function processConversationEnd() {
+  if (!state.settings.apiKey || state.messages.length < 2) return;
+
+  const pageUrl = state.pageContext?.metadata?.url || state.pageContext?.url || '';
+  const domain = extractDomain(pageUrl);
+  const topics = extractTopicsFromMessages(state.messages);
+
+  const result = await window.processConversationEnd(
+    state.messages,
+    pageUrl,
+    domain,
+    state.settings.apiKey,
+    state.settings.model
+  );
+
+  if (!result) return;
+
+  await sendBgMessage({
+    type: 'memory.save',
+    conversationId: state.currentConversationId || Date.now(),
+    pageUrl,
+    summary: result.summary,
+    topics: result.topics,
+    memEntries: result.memEntries,
+    conversation: state.messages,
+  });
 }
 
 // ─── Vault Tool Processing ─────────────────────────────────────────────────────

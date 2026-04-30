@@ -24,10 +24,18 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
   await notifyContextRefresh(activeInfo.tabId);
 });
 
+// Also listen for tab updates (catches same-tab navigations)
+chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+  if (changeInfo.status === 'complete' && tab.active && tab.url?.startsWith('http')) {
+    await notifyContextRefresh(tabId);
+  }
+});
+
 if (chrome.webNavigation && chrome.webNavigation.onCompleted) {
   chrome.webNavigation.onCompleted.addListener(async (details) => {
     if (!details.frameId) {
       await injectIntoTab(details.tabId);
+      await notifyContextRefresh(details.tabId);
     }
   }, { url: [{ schemes: ['http', 'https'] }] });
 
@@ -146,6 +154,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     'autovault.load': () => loadAutoVault(),
     'autovault.save': () => saveAutoVault(message.enabled),
     'page.screenshot': () => capturePageScreenshot(),
+    'memory.load': () => handleMemoryLoad(message),
+    'memory.save': () => handleMemorySave(message),
   };
 
   const handler = handlers[message.type];
@@ -257,8 +267,8 @@ async function handlePromptSend(message, sendResponse) {
     return;
   }
 
-  const { conversationHistory, pageContext, pageScreenshot, autoVault } = message;
-  const msgs = buildMessages(conversationHistory, pageContext, pageScreenshot, settings.systemPrompt, autoVault);
+  const { conversationHistory, pageContext, pageScreenshot, autoVault, memoryContext } = message;
+  const msgs = await buildMessages(conversationHistory, pageContext, pageScreenshot, settings.systemPrompt, autoVault, memoryContext);
 
   try {
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -290,13 +300,23 @@ async function handlePromptSend(message, sendResponse) {
   }
 }
 
-function buildMessages(history, pageContext, pageScreenshot, systemPrompt, autoVault) {
+async function buildMessages(history, pageContext, pageScreenshot, systemPrompt, autoVault, memoryContext) {
   const msgs = [];
 
   const systemContent = systemPrompt || null;
 
   if (systemContent) {
     msgs.push({ role: 'system', content: systemContent });
+  }
+  if (memoryContext) {
+    const mem = await getMemoryModule();
+    const memText = mem.buildMemoryContext(memoryContext.summaries || [], memoryContext.memories || []);
+    if (memText) {
+      msgs.push({
+        role: 'system',
+        content: `You have context from previous conversations with this user:\n\n${memText}\n\nUse this context to provide more personalized and continuity-aware responses.`,
+      });
+    }
   }
   if (pageContext) {
     msgs.push({
@@ -339,8 +359,8 @@ async function startStream(message, sendResponse) {
     return;
   }
 
-  const { conversationHistory, pageContext, pageScreenshot, autoVault } = message;
-  const msgs = buildMessages(conversationHistory, pageContext, pageScreenshot, settings.systemPrompt, autoVault);
+  const { conversationHistory, pageContext, pageScreenshot, autoVault, memoryContext } = message;
+  const msgs = await buildMessages(conversationHistory, pageContext, pageScreenshot, settings.systemPrompt, autoVault, memoryContext);
 
   try {
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -469,3 +489,72 @@ chrome.action.onClicked.addListener(async (tab) => {
     chrome.tabs.update(tab.id, { url: chrome.runtime.getURL('sidepanel.html') });
   }
 });
+
+let dbModule = null;
+let memoryModule = null;
+
+async function getDbModule() {
+  if (!dbModule) dbModule = await import('./db.js');
+  return dbModule;
+}
+
+async function getMemoryModule() {
+  if (!memoryModule) memoryModule = await import('./memory.js');
+  return memoryModule;
+}
+
+async function handleMemoryLoad(message) {
+  const { domain, topics } = message;
+  const db = await getDbModule();
+  const resolvedDomain = domain || db.extractDomain(message.pageUrl || '');
+
+  try {
+    const context = await db.getRelevantContext(resolvedDomain, topics || [], 3);
+    return context;
+  } catch (err) {
+    return { summaries: [], memories: [] };
+  }
+}
+
+async function handleMemorySave(message) {
+  const { conversationId, pageUrl, summary, topics, memEntries, conversation } = message;
+  const db = await getDbModule();
+
+  const domain = db.extractDomain(pageUrl || '');
+  const timestamp = Date.now();
+
+  try {
+    // Save full conversation
+    if (conversation) {
+      await db.saveConversation({
+        id: conversationId || timestamp,
+        domain,
+        pageUrl,
+        timestamp,
+        messages: conversation,
+      });
+    }
+
+    // Save summary
+    if (summary) {
+      await db.saveSummary({
+        id: conversationId || timestamp,
+        domain,
+        pageUrl,
+        summary,
+        topics: topics || [],
+        timestamp,
+      });
+    }
+
+    // Save memory entries
+    if (memEntries && memEntries.length > 0) {
+      const memsWithDomain = memEntries.map((m) => ({ ...m, domain }));
+      await db.saveMemories(memsWithDomain);
+    }
+
+    return { ok: true };
+  } catch (err) {
+    return { error: err.message };
+  }
+}

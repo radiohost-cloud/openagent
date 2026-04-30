@@ -681,11 +681,9 @@ function bindEvents() {
     filterModels(dom.modelSearch.value);
   });
 
-  // Close history panel on outside click
-  document.addEventListener('click', (e) => {
-    if (state.historyOpen && !dom.historyPanel.contains(e.target) && e.target !== dom.historyBtn) {
-      toggleHistory();
-    }
+  // Close history panel on click outside (in messages area)
+  dom.messages.addEventListener('click', () => {
+    if (state.historyOpen) toggleHistory();
   });
 }
 

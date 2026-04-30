@@ -576,8 +576,7 @@ async function init() {
 }
 
 async function loadMemoryContext() {
-  if (!state.settings.apiKey) return;
-  const pageUrl = state.pageContext?.metadata?.url || '';
+  const pageUrl = state.pageContext?.metadata?.url || state.pageContext?.url || '';
   const domain = pageUrl ? extractDomain(pageUrl) : '';
   const topics = extractTopicsFromMessages(state.messages);
 
@@ -590,6 +589,8 @@ async function loadMemoryContext() {
 
   if (context && (context.summaries?.length > 0 || context.memories?.length > 0)) {
     state.memoryContext = context;
+  } else {
+    state.memoryContext = null;
   }
 }
 
@@ -630,7 +631,10 @@ function bindEvents() {
   chrome.runtime.onMessage.addListener((message) => {
     if (message.type === 'context.refresh') {
       if (state.contextDebounce) clearTimeout(state.contextDebounce);
-      state.contextDebounce = setTimeout(() => collectPageContext(), 200);
+      state.contextDebounce = setTimeout(async () => {
+        await collectPageContext();
+        await loadMemoryContext();
+      }, 200);
     }
   });
 
@@ -1109,21 +1113,18 @@ async function collectPageContext() {
       data = await sendBgMessage({ type: 'page.collect' });
     }
     if (data.error) {
-      setStatus(data.error, 'error');
       return;
     }
     if (!data.rawCapture) {
-      setStatus('No page data received', 'error');
       return;
     }
 
     state.pageContext = data.rawCapture;
     if (data.rawCapture?.metadata) {
       prependPageContext(data.rawCapture.metadata);
-      setStatus(i18n('statusPageContextLoaded'), 'success');
     }
   } catch (err) {
-    setStatus('Error: ' + err.message, 'error');
+    // Silently fail - tab might be loading
   }
 }
 

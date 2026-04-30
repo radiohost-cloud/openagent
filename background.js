@@ -260,7 +260,7 @@ async function handlePromptSend(message, sendResponse) {
   }
 
   const { conversationHistory, pageContext, pageScreenshot, autoVault, memoryContext } = message;
-  const msgs = buildMessages(conversationHistory, pageContext, pageScreenshot, settings.systemPrompt, autoVault, memoryContext);
+  const msgs = await buildMessages(conversationHistory, pageContext, pageScreenshot, settings.systemPrompt, autoVault, memoryContext);
 
   try {
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -292,7 +292,7 @@ async function handlePromptSend(message, sendResponse) {
   }
 }
 
-function buildMessages(history, pageContext, pageScreenshot, systemPrompt, autoVault, memoryContext) {
+async function buildMessages(history, pageContext, pageScreenshot, systemPrompt, autoVault, memoryContext) {
   const msgs = [];
 
   const systemContent = systemPrompt || null;
@@ -301,7 +301,8 @@ function buildMessages(history, pageContext, pageScreenshot, systemPrompt, autoV
     msgs.push({ role: 'system', content: systemContent });
   }
   if (memoryContext) {
-    const memText = buildMemoryContext(memoryContext.summaries || [], memoryContext.memories || []);
+    const mem = await getMemoryModule();
+    const memText = mem.buildMemoryContext(memoryContext.summaries || [], memoryContext.memories || []);
     if (memText) {
       msgs.push({
         role: 'system',
@@ -351,7 +352,7 @@ async function startStream(message, sendResponse) {
   }
 
   const { conversationHistory, pageContext, pageScreenshot, autoVault, memoryContext } = message;
-  const msgs = buildMessages(conversationHistory, pageContext, pageScreenshot, settings.systemPrompt, autoVault, memoryContext);
+  const msgs = await buildMessages(conversationHistory, pageContext, pageScreenshot, settings.systemPrompt, autoVault, memoryContext);
 
   try {
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -481,15 +482,26 @@ chrome.action.onClicked.addListener(async (tab) => {
   }
 });
 
-// ─── Memory (IndexedDB via db.js) ─────────────────────────────────────────────
+let dbModule = null;
+let memoryModule = null;
+
+async function getDbModule() {
+  if (!dbModule) dbModule = await import('./db.js');
+  return dbModule;
+}
+
+async function getMemoryModule() {
+  if (!memoryModule) memoryModule = await import('./memory.js');
+  return memoryModule;
+}
 
 async function handleMemoryLoad(message) {
   const { domain, topics } = message;
-  const { extractDomain, getRelevantContext } = await import('./db.js');
-  const resolvedDomain = domain || extractDomain(message.pageUrl || '');
+  const db = await getDbModule();
+  const resolvedDomain = domain || db.extractDomain(message.pageUrl || '');
 
   try {
-    const context = await getRelevantContext(resolvedDomain, topics || [], 3);
+    const context = await db.getRelevantContext(resolvedDomain, topics || [], 3);
     return context;
   } catch (err) {
     return { summaries: [], memories: [] };
@@ -498,15 +510,15 @@ async function handleMemoryLoad(message) {
 
 async function handleMemorySave(message) {
   const { conversationId, pageUrl, summary, topics, memEntries, conversation } = message;
-  const { extractDomain, saveConversation, saveSummary, saveMemories } = await import('./db.js');
+  const db = await getDbModule();
 
-  const domain = extractDomain(pageUrl || '');
+  const domain = db.extractDomain(pageUrl || '');
   const timestamp = Date.now();
 
   try {
     // Save full conversation
     if (conversation) {
-      await saveConversation({
+      await db.saveConversation({
         id: conversationId || timestamp,
         domain,
         pageUrl,
@@ -517,7 +529,7 @@ async function handleMemorySave(message) {
 
     // Save summary
     if (summary) {
-      await saveSummary({
+      await db.saveSummary({
         id: conversationId || timestamp,
         domain,
         pageUrl,
@@ -530,7 +542,7 @@ async function handleMemorySave(message) {
     // Save memory entries
     if (memEntries && memEntries.length > 0) {
       const memsWithDomain = memEntries.map((m) => ({ ...m, domain }));
-      await saveMemories(memsWithDomain);
+      await db.saveMemories(memsWithDomain);
     }
 
     return { ok: true };

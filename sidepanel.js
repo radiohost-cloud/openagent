@@ -1334,7 +1334,7 @@ function formatContent(text) {
     let headerRow = null;
     for (let i = 0; i < tableRows.length; i++) {
       const cells = tableRows[i];
-      const isHeader = cells.every((c) => c.match(/^[\-\=]+$/) || cells.every((c) => c.match(/^[A-Z\s]+$/));
+      const isHeader = cells.every((c) => c.match(/^[\-\=]+$/) || cells.every((c) => c.match(/^[A-Z\s]+$/)));
       if (isHeader && i + 1 < tableRows.length) {
         headerRow = cells;
       } else {

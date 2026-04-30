@@ -5,6 +5,7 @@ const state = {
   settings: { apiKey: '', provider: 'openrouter', model: '', systemPrompt: '', theme: 'dark', preset: 'default', language: 'en', vaultPath: '', fontSize: 'medium' },
   pageContext: null,
   pageScreenshot: null,
+  visionModels: [],
   isLoading: false,
   allModels: [],
   autoVault: false,
@@ -661,6 +662,13 @@ async function loadSettings() {
     updateCurrentModelDisplay();
     dom.systemPromptInput.value = state.settings.systemPrompt || '';
 
+    chrome.storage.local.get(['openagent_vision_models'], (res) => {
+      if (res.openagent_vision_models) {
+        state.visionModels = res.openagent_vision_models;
+      }
+      loadModels();
+    });
+
     if (state.settings.vaultPath) {
       dom.vaultPathInput.value = state.settings.vaultPath;
       dom.vaultPathInput.title = 'Selected: ' + state.settings.vaultPath;
@@ -731,6 +739,9 @@ async function loadModels() {
     }
 
     state.allModels = data.data || [];
+    const visionModels = extractVisionModels(data.data || []);
+    state.visionModels = visionModels;
+    chrome.storage.local.set({ openagent_vision_models: visionModels });
     renderModelList(state.allModels);
 
     const saved = state.settings.model;
@@ -1016,12 +1027,26 @@ async function collectPageContext() {
 }
 
 function modelSupportsVision(modelId) {
-  const visionModels = [
-    'claude', 'gpt-4o', 'gpt-4-turbo', 'gemini', 'mistral', 'llava',
-    'llama', 'qwen', 'perplexity', 'deepseek',
-  ];
-  const m = (modelId || '').toLowerCase();
-  return visionModels.some((v) => m.includes(v));
+  if (!modelId) return false;
+  const m = modelId.toLowerCase();
+  if (state.visionModels.length > 0) {
+    return state.visionModels.includes(modelId) || state.visionModels.includes(modelId.toLowerCase());
+  }
+  const visionHints = ['claude', 'gpt-4o', 'gpt-4-turbo', 'gemini', 'mistral', 'llava', 'llama', 'qwen', 'perplexity', 'deepseek', 'vision'];
+  return visionHints.some((v) => m.includes(v));
+}
+
+function extractVisionModels(models) {
+  const vision = [];
+  for (const model of models) {
+    const arch = model.architecture || {};
+    const modality = arch.modality || '';
+    const inputModalities = arch.input_modalities || [];
+    if (modality.includes('image') || inputModalities.includes('image')) {
+      vision.push(model.id);
+    }
+  }
+  return vision;
 }
 
 async function takeScreenshot() {

@@ -935,6 +935,7 @@ async function handleSend() {
       state.pageScreenshot = null;
     } else if (state.pageScreenshot && !modelSupportsVision(model)) {
       state.pageScreenshot = null;
+      removeTyping();
       renderMessage('error', i18n('msgScreenshotSkippedModel'));
       state.isLoading = false;
       dom.sendBtn.disabled = false;

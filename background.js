@@ -21,6 +21,7 @@ const injectedTabs = new Set();
 
 chrome.tabs.onActivated.addListener(async (activeInfo) => {
   await injectIntoTab(activeInfo.tabId);
+  await notifyContextRefresh(activeInfo.tabId);
 });
 
 if (chrome.webNavigation && chrome.webNavigation.onCompleted) {

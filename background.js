@@ -24,10 +24,18 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
   await notifyContextRefresh(activeInfo.tabId);
 });
 
+// Also listen for tab updates (catches same-tab navigations)
+chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+  if (changeInfo.status === 'complete' && tab.active && tab.url?.startsWith('http')) {
+    await notifyContextRefresh(tabId);
+  }
+});
+
 if (chrome.webNavigation && chrome.webNavigation.onCompleted) {
   chrome.webNavigation.onCompleted.addListener(async (details) => {
     if (!details.frameId) {
       await injectIntoTab(details.tabId);
+      await notifyContextRefresh(details.tabId);
     }
   }, { url: [{ schemes: ['http', 'https'] }] });
 

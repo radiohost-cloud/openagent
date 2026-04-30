@@ -14,6 +14,7 @@ const state = {
   vaultReady: false,
   conversations: [],
   historyOpen: false,
+  currentConversationId: null,
 };
 
 const i18nStrings = {
@@ -1190,6 +1191,7 @@ function clearConversation() {
   }
   state.messages = [];
   state.pageContext = null;
+  state.currentConversationId = null;
   state.currentVaultFilename = null;
   if (dom.headerCtx) dom.headerCtx.innerHTML = '';
   renderMessages();
@@ -1207,7 +1209,18 @@ function saveConversation() {
     bodyText: state.pageContext?.bodyText || '',
     images: state.pageContext?.images || [],
   };
+  if (state.currentConversationId !== null) {
+    // Update existing conversation in place
+    const idx = state.conversations.findIndex((c) => c.id === state.currentConversationId);
+    if (idx !== -1) {
+      conv.id = state.currentConversationId;
+      state.conversations[idx] = conv;
+      chrome.storage.local.set({ openagent_conversations: state.conversations });
+      return;
+    }
+  }
   state.conversations = [conv, ...state.conversations].slice(0, 50);
+  state.currentConversationId = conv.id;
   chrome.storage.local.set({ openagent_conversations: state.conversations });
 }
 
@@ -1276,6 +1289,8 @@ function deleteConversation(id) {
 function restoreConversation(id) {
   const conv = state.conversations.find((c) => c.id === id);
   if (!conv) return;
+
+  state.currentConversationId = id;
 
   // Append to current messages (continue conversation)
   state.messages.push(...conv.messages);

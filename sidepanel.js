@@ -681,13 +681,6 @@ function bindEvents() {
     filterModels(dom.modelSearch.value);
   });
 
-  document.addEventListener('click', (e) => {
-    if (!state.historyOpen) return;
-    if (e.target === dom.historyBtn) return;
-    if (dom.historyPanel.contains(e.target)) return;
-    toggleHistory();
-  });
-
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && state.historyOpen) toggleHistory();
   });
@@ -1175,46 +1168,41 @@ function toggleHistory() {
     renderHistoryPanel();
     dom.historyPanel.classList.remove('hidden');
     dom.historyBtn.classList.add('active');
-    return; // don't close on same click that opened
+  } else {
+    dom.historyPanel.classList.add('hidden');
+    dom.historyBtn.classList.remove('active');
   }
-  dom.historyPanel.classList.add('hidden');
-  dom.historyBtn.classList.remove('active');
 }
 
 function renderHistoryPanel() {
-  if (state.conversations.length === 0) {
-    dom.historyPanel.innerHTML = `
-      <div class="history-header">
-        <span>${i18n('historyTitle')}</span>
-        <button class="history-close" id="historyCloseBtn">&times;</button>
-      </div>
-      <div class="history-empty">${i18n('historyEmpty')}</div>
-    `;
-    return;
-  }
-  const html = state.conversations.map((conv) => {
-    const date = new Date(conv.timestamp);
-    const dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const title = conv.pageTitle || conv.pageUrl || 'Untitled';
-    return `
-      <div class="history-item" data-id="${conv.id}">
-        <div class="history-title">${escapeHtml(title.slice(0, 50))}</div>
-        <div class="history-meta">${dateStr} · ${conv.messages.length} msg</div>
-      </div>
-    `;
-  }).join('');
   dom.historyPanel.innerHTML = `
     <div class="history-header">
       <span>${i18n('historyTitle')}</span>
       <button class="history-close" id="historyCloseBtn">&times;</button>
     </div>
-    <div class="history-list">${html}</div>
+    ${state.conversations.length === 0
+      ? `<div class="history-empty">${i18n('historyEmpty')}</div>`
+      : `<div class="history-list">${state.conversations.map((conv) => {
+          const date = new Date(conv.timestamp);
+          const dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          const title = conv.pageTitle || conv.pageUrl || 'Untitled';
+          return `<div class="history-item" data-id="${conv.id}">
+            <div class="history-title">${escapeHtml(title.slice(0, 50))}</div>
+            <div class="history-meta">${dateStr} · ${conv.messages.length} msg</div>
+          </div>`;
+        }).join('')}</div>`
+    }
   `;
-  dom.historyPanel.querySelectorAll('.history-item').forEach((el) => {
-    el.addEventListener('click', () => restoreConversation(parseInt(el.dataset.id)));
+  dom.historyPanel.querySelector('.history-close').addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleHistory();
   });
-  const closeBtn = dom.historyPanel.querySelector('#historyCloseBtn');
-  if (closeBtn) closeBtn.addEventListener('click', toggleHistory);
+  dom.historyPanel.querySelectorAll('.history-item').forEach((el) => {
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      restoreConversation(parseInt(el.dataset.id));
+    });
+  });
 }
 
 function restoreConversation(id) {

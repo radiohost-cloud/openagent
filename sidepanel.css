@@ -150,6 +150,8 @@ html, body {
 
 .header-btn.active {
   color: #9f7aea;
+  background: transparent;
+  box-shadow: none;
 }
 
 .header-btn.active svg path:first-child {
@@ -761,7 +763,8 @@ body.light .toggle-btn.active {
 }
 body.light .header-btn.active {
   color: #805ad5;
-  background: rgba(128, 90, 213, 0.12);
+  background: transparent;
+  box-shadow: none;
 }
 body.light .toggle-btn:not(.active):hover {
   background: rgba(0, 0, 0, 0.04);

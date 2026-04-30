@@ -572,8 +572,7 @@ async function init() {
   loadModels();
   updateModelBadge();
   updateBadge();
-  loadCachedContext();
-  await loadMemoryContext();
+  await loadCachedContext();
 }
 
 async function loadMemoryContext() {

@@ -264,6 +264,10 @@ html, body {
   background: var(--surface-2);
 }
 
+.copy-msg-btn.copied {
+  color: #6fcf97;
+}
+
 .copy-code-btn {
   position: absolute;
   top: 8px;

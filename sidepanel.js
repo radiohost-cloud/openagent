@@ -680,6 +680,13 @@ function bindEvents() {
   dom.modelSearch.addEventListener('input', () => {
     filterModels(dom.modelSearch.value);
   });
+
+  // Close history panel on outside click
+  document.addEventListener('click', (e) => {
+    if (state.historyOpen && !dom.historyPanel.contains(e.target) && e.target !== dom.historyBtn) {
+      toggleHistory();
+    }
+  });
 }
 
 // ─── Settings ─────────────────────────────────────────────────────────────────
@@ -1171,6 +1178,10 @@ function toggleHistory() {
 function renderHistoryPanel() {
   if (state.conversations.length === 0) {
     dom.historyPanel.innerHTML = `
+      <div class="history-header">
+        <span>${i18n('historyTitle')}</span>
+        <button class="history-close" id="historyCloseBtn">&times;</button>
+      </div>
       <div class="history-empty">${i18n('historyEmpty')}</div>
     `;
     return;
@@ -1252,7 +1263,9 @@ function renderMessage(role, content) {
   div.className = `message ${role}`;
   const label = role === 'user' ? i18n('msgLabelYou') : i18n('msgLabelClaude');
   const formatted = formatContent(content);
-  const copyBtn = role === 'assistant' ? `<button class="copy-msg-btn" title="${i18n('btnCopy')}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>` : '';
+  const copyIcon = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
+  const checkIcon = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+  const copyBtn = role === 'assistant' ? `<button class="copy-msg-btn" title="${i18n('btnCopy')}">${copyIcon}</button>` : '';
 
   div.innerHTML = `
     <div class="message-label">${label}</div>
@@ -1260,8 +1273,17 @@ function renderMessage(role, content) {
     <div class="message-content">${formatted}</div>
   `;
   dom.messages.appendChild(div);
-  div.querySelector('.copy-msg-btn')?.addEventListener('click', () => {
-    navigator.clipboard.writeText(content).then(() => setStatus(i18n('btnCopy'), 'success'));
+  div.querySelector('.copy-msg-btn')?.addEventListener('click', (e) => {
+    const btn = e.currentTarget;
+    navigator.clipboard.writeText(content).then(() => {
+      btn.innerHTML = checkIcon;
+      btn.classList.add('copied');
+      setStatus(i18n('btnCopy'), 'success');
+      setTimeout(() => {
+        btn.innerHTML = copyIcon;
+        btn.classList.remove('copied');
+      }, 1500);
+    });
   });
   div.querySelectorAll('.copy-code-btn').forEach((btn) => {
     btn.addEventListener('click', () => {

@@ -16,6 +16,7 @@ const state = {
   historyOpen: false,
   currentConversationId: null,
   memoryContext: null,
+  contextDebounce: null,
 };
 
 const i18nStrings = {

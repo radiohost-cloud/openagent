@@ -1145,8 +1145,6 @@ async function loadCachedContext() {
   collectPageContext();
   await loadMemoryContext();
 }
-  collectPageContext();
-}
 
 function modelSupportsVision(modelId) {
   if (!modelId) return false;

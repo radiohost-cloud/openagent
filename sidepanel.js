@@ -681,11 +681,14 @@ function bindEvents() {
     filterModels(dom.modelSearch.value);
   });
 
-  document.addEventListener('click', (e) => {
-    if (!state.historyOpen) return;
-    if (dom.historyPanel.contains(e.target)) return;
-    if (e.target === dom.historyBtn) return;
-    toggleHistory();
+  // Close history panel on outside click
+  document.addEventListener('click', () => {
+    if (state.historyOpen) toggleHistory();
+  });
+
+  // Toggle history on Escape
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && state.historyOpen) toggleHistory();
   });
 }
 

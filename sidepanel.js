@@ -1161,6 +1161,8 @@ function saveConversation() {
     pageTitle: state.pageContext?.metadata?.title || document.title,
     timestamp: Date.now(),
     messages: state.messages,
+    bodyText: state.pageContext?.bodyText || '',
+    images: state.pageContext?.images || [],
   };
   state.conversations = [conv, ...state.conversations].slice(0, 50);
   chrome.storage.local.set({ openagent_conversations: state.conversations });
@@ -1211,13 +1213,37 @@ function renderHistoryPanel() {
 function restoreConversation(id) {
   const conv = state.conversations.find((c) => c.id === id);
   if (!conv) return;
-  state.messages = conv.messages;
+
+  // Append to current messages (continue conversation)
+  state.messages.push(...conv.messages);
+
   state.historyOpen = false;
   document.getElementById('historyPanel').classList.add('hidden');
-  if (conv.pageTitle && conv.pageUrl) {
-    state.pageContext = { metadata: { url: conv.pageUrl, title: conv.pageTitle, favicon: conv.pageUrl ? `chrome://favicon/${conv.pageUrl}` : '' } };
-    prependPageContext(state.pageContext.metadata);
+
+  if (conv.pageUrl) {
+    // Restore page context from conversation
+    const favicon = `chrome://favicon/${conv.pageUrl}`;
+    const metadata = {
+      url: conv.pageUrl,
+      title: conv.pageTitle || 'Untitled',
+      favicon,
+      domain: new URL(conv.pageUrl).hostname,
+    };
+    // If current page matches, refresh context; otherwise use stored context
+    if (state.pageContext?.metadata?.url === conv.pageUrl) {
+      // Already on same page, refresh context
+      collectPageContext();
+    } else {
+      state.pageContext = {
+        metadata,
+        bodyText: conv.bodyText || '',
+        images: conv.images || [],
+        selectedText: '',
+      };
+      prependPageContext(metadata);
+    }
   }
+
   renderMessages();
   updateBadge();
 }

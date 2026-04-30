@@ -432,6 +432,7 @@ async function pickVaultFolder() {
     state.vaultDirHandle = dirHandle;
     state.vaultReady = true;
     state.settings.vaultPath = dirHandle.name;
+    state.autoVault = true;
     dom.vaultPathInput.value = dirHandle.name;
     dom.vaultPathInput.title = 'Selected: ' + dirHandle.name;
     if (dom.vaultStatus) dom.vaultStatus.classList.add('ready', 'active');
@@ -439,6 +440,7 @@ async function pickVaultFolder() {
       type: 'settings.save',
       data: { ...state.settings },
     });
+    await sendBgMessage({ type: 'autovault.save', enabled: true });
     updateVaultBtn();
     setStatus(i18n('statusVaultReady'), 'success');
   } catch (err) {

@@ -906,14 +906,15 @@ async function handleSend() {
   dom.sendBtn.disabled = true;
 
   try {
-    if (state.pageScreenshot) {
-      if (!modelSupportsVision(state.settings.model)) {
-        state.pageScreenshot = null;
-        renderMessage('error', 'Screenshot skipped — current model does not support image input. Use a vision model (e.g. Claude 3.5 Sonnet, GPT-4o, Gemini) and take a new screenshot.');
-        state.isLoading = false;
-        dom.sendBtn.disabled = false;
-        return;
-      }
+    const model = state.settings.model;
+    if (state.pageScreenshot && !model) {
+      state.pageScreenshot = null;
+    } else if (state.pageScreenshot && !modelSupportsVision(model)) {
+      state.pageScreenshot = null;
+      renderMessage('error', 'Screenshot skipped — current model does not support image input. Use a vision-capable model (Claude, GPT-4o, Gemini, etc.) and take a new screenshot.');
+      state.isLoading = false;
+      dom.sendBtn.disabled = false;
+      return;
     }
 
     const response = await sendBgMessage({
@@ -927,7 +928,12 @@ async function handleSend() {
     removeTyping();
 
     if (response.error) {
-      renderMessage('error', response.error);
+      if (response.error.includes('image') || response.error.includes('vision') || response.error.includes('endpoint')) {
+        state.pageScreenshot = null;
+        renderMessage('error', 'Screenshot skipped — model does not support image input. Switch to a vision model and take a new screenshot.');
+      } else {
+        renderMessage('error', response.error);
+      }
     } else {
       const content = response.content || '';
       const { readResults, writeResults, errors } = await processVaultToolCalls(content);

@@ -4,6 +4,7 @@ const state = {
   messages: [],
   settings: { apiKey: '', provider: 'openrouter', model: '', systemPrompt: '', theme: 'dark', preset: 'default', language: 'en', vaultPath: '', fontSize: 'medium' },
   pageContext: null,
+  pageScreenshot: null,
   isLoading: false,
   allModels: [],
   autoVault: false,
@@ -50,6 +51,7 @@ const i18nStrings = {
     btnVaultOff: 'Vault off — click to enable',
     btnVaultNotSet: 'No vault selected — click to select',
     btnVaultReauth: 'Vault saved — click to re-authorize',
+    btnScreenshot: 'Take screenshot',
     langEnglish: 'English',
     langPolish: 'Polski',
     linkOpenrouterKeys: 'Get API key →',
@@ -101,6 +103,7 @@ const i18nStrings = {
     btnVaultOff: 'Magazyn wyłączony — kliknij by włączyć',
     btnVaultNotSet: 'Nie wybrano magazynu — kliknij by wybrać',
     btnVaultReauth: 'Magazyn zapisany — kliknij by autoryzować ponownie',
+    btnScreenshot: 'Zrób zrzut ekranu',
     langEnglish: 'English',
     langPolish: 'Polski',
     linkOpenrouterKeys: 'Pobierz klucz API →',
@@ -151,6 +154,7 @@ const i18nStrings = {
     btnVaultOff: 'Almacén desactivado — clic para activar',
     btnVaultNotSet: 'Ningún almacén seleccionado — clic para seleccionar',
     btnVaultReauth: 'Almacén guardado — clic para reautorizar',
+    btnScreenshot: 'Tomar captura de pantalla',
     langEnglish: 'English',
     langPolish: 'Polski',
     linkOpenrouterKeys: 'Obtener clave API →',
@@ -201,6 +205,7 @@ const i18nStrings = {
     btnVaultOff: 'Coffre désactivé — clic pour activer',
     btnVaultNotSet: 'Aucun coffre sélectionné — clic pour sélectionner',
     btnVaultReauth: 'Coffre enregistré — clic pour réautoriser',
+    btnScreenshot: 'Faire une capture d\'écran',
     langEnglish: 'English',
     langPolish: 'Polski',
     linkOpenrouterKeys: 'Obtenir une clé API →',
@@ -251,6 +256,7 @@ const i18nStrings = {
     btnVaultOff: 'Tresor deaktiviert — klicken zum Aktivieren',
     btnVaultNotSet: 'Kein Tresor ausgewählt — klicken zum Auswählen',
     btnVaultReauth: 'Tresor gespeichert — klicken zum Erneut autorisieren',
+    btnScreenshot: 'Screenshot erstellen',
     langEnglish: 'English',
     langPolish: 'Polski',
     linkOpenrouterKeys: 'API-Schlüssel erhalten →',
@@ -301,6 +307,7 @@ const i18nStrings = {
     btnVaultOff: 'Хранилище выключено — нажмите для включения',
     btnVaultNotSet: 'Хранилище не выбрано — нажмите для выбора',
     btnVaultReauth: 'Хранилище сохранено — нажмите для повторной авторизации',
+    btnScreenshot: 'Сделать скриншот',
     langEnglish: 'English',
     langPolish: 'Polski',
     linkOpenrouterKeys: 'Получить API-ключ →',
@@ -325,6 +332,7 @@ const dom = {
   input: $('#input'),
   sendBtn: $('#sendBtn'),
   collectBtn: $('#collectBtn'),
+  screenshotBtn: $('#screenshotBtn'),
   vaultBtn: $('#vaultBtn'),
   clearBtn: $('#clearBtn'),
   settingsBtn: $('#settingsBtn'),
@@ -530,6 +538,12 @@ async function saveAutoVault() {
 // ─── Events ──────────────────────────────────────────────────────────────────
 
 function bindEvents() {
+  chrome.runtime.onMessage.addListener((message) => {
+    if (message.type === 'context.refresh') {
+      collectPageContext();
+    }
+  });
+
   dom.sendBtn.addEventListener('click', handleSend);
   dom.input.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -590,6 +604,7 @@ function bindEvents() {
   });
 
   dom.collectBtn.addEventListener('click', collectPageContext);
+  dom.screenshotBtn.addEventListener('click', takeScreenshot);
   dom.clearBtn.addEventListener('click', clearConversation);
 
   dom.vaultBtn.addEventListener('click', () => {
@@ -895,6 +910,7 @@ async function handleSend() {
       type: 'prompt.send',
       conversationHistory: state.messages,
       pageContext: state.pageContext,
+      pageScreenshot: state.pageScreenshot,
       autoVault: state.autoVault,
     });
 
@@ -955,6 +971,20 @@ async function collectPageContext() {
     }
   } catch (err) {
     setStatus('Error: ' + err.message, 'error');
+  }
+}
+
+async function takeScreenshot() {
+  try {
+    const data = await sendBgMessage({ type: 'page.screenshot' });
+    if (data.error) {
+      setStatus(data.error, 'error');
+      return;
+    }
+    state.pageScreenshot = data.dataUrl;
+    setStatus('Screenshot attached', 'success');
+  } catch (err) {
+    setStatus('Screenshot failed: ' + err.message, 'error');
   }
 }
 

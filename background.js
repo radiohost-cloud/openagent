@@ -29,6 +29,22 @@ if (chrome.webNavigation && chrome.webNavigation.onCompleted) {
       await injectIntoTab(details.tabId);
     }
   }, { url: [{ schemes: ['http', 'https'] }] });
+
+  chrome.webNavigation.onHistoryStateUpdated.addListener(async (details) => {
+    if (!details.frameId) {
+      await notifyContextRefresh(details.tabId);
+    }
+  });
+
+  chrome.webNavigation.onReferenceFragmentUpdated.addListener(async (details) => {
+    if (!details.frameId) {
+      await notifyContextRefresh(details.tabId);
+    }
+  });
+}
+
+async function notifyContextRefresh(tabId) {
+  chrome.runtime.sendMessage({ type: 'context.refresh', tabId }).catch(() => {});
 }
 
 chrome.tabs.query({ url: ['http://*/*', 'https://*/*'] }, async (tabs) => {
@@ -96,6 +112,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     'vault.pick': () => pickVaultDirectory(),
     'autovault.load': () => loadAutoVault(),
     'autovault.save': () => saveAutoVault(message.enabled),
+    'page.screenshot': () => capturePageScreenshot(),
   };
 
   const handler = handlers[message.type];
@@ -152,6 +169,19 @@ async function sendNavigateAction(url) {
   }
 }
 
+// ─── Screenshot ────────────────────────────────────────────────────────────────
+
+async function capturePageScreenshot() {
+  const tab = await getWebTab();
+  if (!tab?.id) return { error: 'No active web page tab found' };
+  try {
+    const dataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, { format: 'jpeg', quality: 70 });
+    return { ok: true, dataUrl };
+  } catch (err) {
+    return { error: `Screenshot failed: ${err.message}` };
+  }
+}
+
 // ─── Settings ─────────────────────────────────────────────────────────────────
 
 async function loadSettings() {
@@ -194,8 +224,8 @@ async function handlePromptSend(message, sendResponse) {
     return;
   }
 
-  const { conversationHistory, pageContext, autoVault } = message;
-  const msgs = buildMessages(conversationHistory, pageContext, settings.systemPrompt, autoVault);
+  const { conversationHistory, pageContext, pageScreenshot, autoVault } = message;
+  const msgs = buildMessages(conversationHistory, pageContext, pageScreenshot, settings.systemPrompt, autoVault);
 
   try {
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -227,7 +257,7 @@ async function handlePromptSend(message, sendResponse) {
   }
 }
 
-function buildMessages(history, pageContext, systemPrompt, autoVault) {
+function buildMessages(history, pageContext, pageScreenshot, systemPrompt, autoVault) {
   const msgs = [];
 
   const systemContent = systemPrompt || null;
@@ -239,6 +269,15 @@ function buildMessages(history, pageContext, systemPrompt, autoVault) {
     msgs.push({
       role: 'user',
       content: `Current page context:\nURL: ${pageContext.url}\nTitle: ${pageContext.title}\n\nContent:\n${pageContext.bodyText}${pageContext.selectedText ? `\n\nSelected text: ${pageContext.selectedText}` : ''}`,
+    });
+  }
+  if (pageScreenshot) {
+    msgs.push({
+      role: 'user',
+      content: [
+        { type: 'text', text: 'Current page screenshot:' },
+        { type: 'image_url', image_url: { url: pageScreenshot } },
+      ],
     });
   }
   for (const msg of history) {
@@ -267,8 +306,8 @@ async function startStream(message, sendResponse) {
     return;
   }
 
-  const { conversationHistory, pageContext, autoVault } = message;
-  const msgs = buildMessages(conversationHistory, pageContext, settings.systemPrompt, autoVault);
+  const { conversationHistory, pageContext, pageScreenshot, autoVault } = message;
+  const msgs = buildMessages(conversationHistory, pageContext, pageScreenshot, settings.systemPrompt, autoVault);
 
   try {
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {

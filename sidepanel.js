@@ -1215,7 +1215,7 @@ function restoreConversation(id) {
   state.historyOpen = false;
   document.getElementById('historyPanel').classList.add('hidden');
   if (conv.pageTitle && conv.pageUrl) {
-    state.pageContext = { metadata: { url: conv.pageUrl, title: conv.pageTitle } };
+    state.pageContext = { metadata: { url: conv.pageUrl, title: conv.pageTitle, favicon: conv.pageUrl ? `chrome://favicon/${conv.pageUrl}` : '' } };
     prependPageContext(state.pageContext.metadata);
   }
   renderMessages();

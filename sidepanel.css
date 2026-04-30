@@ -506,7 +506,15 @@ body.light .copy-code-btn {
 .history-drawer-item:last-child { border-bottom: none; }
 .history-drawer-item:hover { background: var(--surface-2); }
 
+.history-drawer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
 .history-drawer-title {
+  flex: 1;
   font-size: 12px;
   font-weight: 500;
   color: var(--text);
@@ -520,6 +528,26 @@ body.light .copy-code-btn {
   font-size: 10px;
   color: var(--muted);
   font-family: var(--font);
+}
+
+.history-delete-btn {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s;
+}
+
+.history-drawer-item:hover .history-delete-btn {
+  opacity: 1;
+}
+
+.history-delete-btn:hover {
+  color: #cc6666;
 }
 
 /* ─── Input Area ─────────────────────────────────────────── */

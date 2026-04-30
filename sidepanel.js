@@ -75,6 +75,7 @@ const i18nStrings = {
     historyEmpty: 'No saved conversations',
     btnHistory: 'Chat history',
     btnCopy: 'Copy',
+    btnDelete: 'Delete',
   },
   pl: {
     msgLabelYou: 'Ty',
@@ -135,6 +136,7 @@ const i18nStrings = {
     historyEmpty: 'Brak zapisanych rozmów',
     btnHistory: 'Historia rozmów',
     btnCopy: 'Kopiuj',
+    btnDelete: 'Usuń',
   },
   es: {
     msgLabelYou: 'Tú',
@@ -194,6 +196,7 @@ const i18nStrings = {
     historyEmpty: 'Sin conversaciones guardadas',
     btnHistory: 'Historial de chat',
     btnCopy: 'Copiar',
+    btnDelete: 'Eliminar',
   },
   fr: {
     msgLabelYou: 'Vous',
@@ -252,6 +255,7 @@ const i18nStrings = {
     historyTitle: 'Historique du chat',
     historyEmpty: 'Aucune conversation sauvegardée',
     btnHistory: 'Historique du chat',
+    btnDelete: 'Supprimer',
   },
   de: {
     msgLabelYou: 'Sie',
@@ -311,6 +315,7 @@ const i18nStrings = {
     historyEmpty: 'Keine gespeicherten Gespräche',
     btnHistory: 'Chat-Verlauf',
     btnCopy: 'Kopieren',
+    btnDelete: 'Löschen',
   },
   ru: {
     msgLabelYou: 'Вы',
@@ -370,6 +375,7 @@ const i18nStrings = {
     historyEmpty: 'Нет сохранённых разговоров',
     btnHistory: 'История чата',
     btnCopy: 'Копировать',
+    btnDelete: 'Удалить',
   },
 };
 
@@ -1200,14 +1206,34 @@ function renderHistoryPanel() {
       const dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       const title = conv.pageTitle || conv.pageUrl || 'Untitled';
       return `<div class="history-drawer-item" data-id="${conv.id}">
-        <div class="history-drawer-title">${escapeHtml(title.slice(0, 50))}</div>
+        <div class="history-drawer-row">
+          <div class="history-drawer-title">${escapeHtml(title.slice(0, 50))}</div>
+          <button class="history-delete-btn" data-delete="${conv.id}" title="${i18n('btnDelete')}">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+          </button>
+        </div>
         <div class="history-drawer-meta">${dateStr} · ${conv.messages.length} msg</div>
       </div>`;
     }).join('');
   }
   dom.historyDrawerList.querySelectorAll('.history-drawer-item').forEach((el) => {
-    el.addEventListener('click', () => restoreConversation(parseInt(el.dataset.id)));
+    el.addEventListener('click', (e) => {
+      if (e.target.closest('.history-delete-btn')) return;
+      restoreConversation(parseInt(el.dataset.id));
+    });
   });
+  dom.historyDrawerList.querySelectorAll('.history-delete-btn').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      deleteConversation(parseInt(btn.dataset.delete));
+    });
+  });
+}
+
+function deleteConversation(id) {
+  state.conversations = state.conversations.filter((c) => c.id !== id);
+  chrome.storage.local.set({ openagent_conversations: state.conversations });
+  renderHistoryPanel();
 }
 
 function restoreConversation(id) {

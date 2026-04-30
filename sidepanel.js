@@ -680,6 +680,13 @@ function bindEvents() {
   dom.modelSearch.addEventListener('input', () => {
     filterModels(dom.modelSearch.value);
   });
+
+  document.addEventListener('click', (e) => {
+    if (!state.historyOpen) return;
+    if (dom.historyPanel.contains(e.target)) return;
+    if (e.target === dom.historyBtn) return;
+    toggleHistory();
+  });
 }
 
 // ─── Settings ─────────────────────────────────────────────────────────────────
@@ -1163,16 +1170,11 @@ function toggleHistory() {
   if (state.historyOpen) {
     renderHistoryPanel();
     dom.historyPanel.classList.remove('hidden');
-    dom.messages.addEventListener('click', closeHistoryOnClickOutside, true);
+    dom.historyBtn.classList.add('active');
   } else {
     dom.historyPanel.classList.add('hidden');
-    dom.messages.removeEventListener('click', closeHistoryOnClickOutside, true);
+    dom.historyBtn.classList.remove('active');
   }
-}
-
-function closeHistoryOnClickOutside(e) {
-  if (dom.historyPanel.contains(e.target)) return;
-  toggleHistory();
 }
 
 function renderHistoryPanel() {

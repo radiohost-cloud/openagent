@@ -680,11 +680,6 @@ function bindEvents() {
   dom.modelSearch.addEventListener('input', () => {
     filterModels(dom.modelSearch.value);
   });
-
-  // Close history panel on click outside (in messages area)
-  dom.messages.addEventListener('click', () => {
-    if (state.historyOpen) toggleHistory();
-  });
 }
 
 // ─── Settings ─────────────────────────────────────────────────────────────────
@@ -1168,9 +1163,16 @@ function toggleHistory() {
   if (state.historyOpen) {
     renderHistoryPanel();
     dom.historyPanel.classList.remove('hidden');
+    dom.messages.addEventListener('click', closeHistoryOnClickOutside, true);
   } else {
     dom.historyPanel.classList.add('hidden');
+    dom.messages.removeEventListener('click', closeHistoryOnClickOutside, true);
   }
+}
+
+function closeHistoryOnClickOutside(e) {
+  if (dom.historyPanel.contains(e.target)) return;
+  toggleHistory();
 }
 
 function renderHistoryPanel() {

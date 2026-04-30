@@ -288,7 +288,8 @@ html, body {
 }
 
 body.light .copy-code-btn {
-  background: var(--surface-1);
+  background: var(--surface);
+  color: var(--text);
 }
 
 /* Markdown inside messages */
@@ -601,9 +602,9 @@ body.light .copy-code-btn {
   justify-content: center;
   width: 28px;
   height: 28px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.08);
-  color: #ffffff;
+  border: 1px solid var(--border);
+  background: var(--accent-dim);
+  color: var(--text);
   border-radius: 6px;
   cursor: pointer;
   transition: opacity 0.1s, transform 0.1s;
@@ -830,9 +831,9 @@ body.light .copy-code-btn {
 .settings-status.error { color: #cc6666; }
 
 .btn-save {
-  background: rgba(255, 255, 255, 0.08);
-  color: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--accent-dim);
+  color: var(--text);
+  border: 1px solid var(--border);
   padding: 7px 20px;
   border-radius: 6px;
   font-family: var(--font);
@@ -1431,8 +1432,8 @@ body.light[data-preset="papercolor-light"] {
 }
 
 .toggle-btn.active {
-  background: rgba(255, 255, 255, 0.08);
-  color: #ffffff;
+  background: var(--accent-dim);
+  color: var(--text);
 }
 
 .toggle-btn:not(.active):hover {

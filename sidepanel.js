@@ -12,6 +12,8 @@ const state = {
   currentVaultFilename: null,
   vaultDirHandle: null,
   vaultReady: false,
+  conversations: [],
+  historyOpen: false,
 };
 
 const i18nStrings = {
@@ -64,11 +66,15 @@ const i18nStrings = {
     settingsChangeFolder: 'Change folder',
     settingsFontSize: 'Font size',
     settingsCurrentModel: 'Current Model',
-    emptyStateSearch: '/g search Google · /y search YouTube · /x search X.com',
+    emptyStateSearch: '/g Google · /y YouTube · /x X.com · /w Wiki · /r Reddit · /gh GitHub · /d DuckDuckGo',
     statusScreenshotAttached: 'Screenshot attached',
     statusScreenshotFailed: 'Screenshot failed',
     statusScreenshotSkipped: 'Screenshot skipped',
     msgScreenshotSkippedModel: 'Model does not support image input. Switch to a vision model and take a new screenshot.',
+    historyTitle: 'Chat History',
+    historyEmpty: 'No saved conversations',
+    btnHistory: 'Chat history',
+    btnCopy: 'Copy',
   },
   pl: {
     msgLabelYou: 'Ty',
@@ -120,11 +126,15 @@ const i18nStrings = {
     settingsChangeFolder: 'Zmień folder',
     settingsFontSize: 'Wielkość czcionki',
     settingsCurrentModel: 'Aktualny model',
-    emptyStateSearch: '/g szukaj w Google · /y szukaj na YouTube · /x szukaj na X.com',
+    emptyStateSearch: '/g Google · /y YouTube · /x X.com · /w Wiki · /r Reddit · /gh GitHub · /d DuckDuckGo',
     statusScreenshotAttached: 'Zrzut ekranu załączony',
     statusScreenshotFailed: 'Zrzut ekranu nieudany',
     statusScreenshotSkipped: 'Zrzut ekranu pominięty',
     msgScreenshotSkippedModel: 'Model nie obsługuje obrazów. Przełącz na model z vision i zrób nowy zrzut.',
+    historyTitle: 'Historia rozmów',
+    historyEmpty: 'Brak zapisanych rozmów',
+    btnHistory: 'Historia rozmów',
+    btnCopy: 'Kopiuj',
   },
   es: {
     msgLabelYou: 'Tú',
@@ -175,11 +185,15 @@ const i18nStrings = {
     settingsChangeFolder: 'Cambiar carpeta',
     settingsFontSize: 'Tamaño de fuente',
     settingsCurrentModel: 'Modelo actual',
-    emptyStateSearch: '/g buscar en Google · /y buscar en YouTube · /x buscar en X.com',
+    emptyStateSearch: '/g Google · /y YouTube · /x X.com · /w Wiki · /r Reddit · /gh GitHub · /d DuckDuckGo',
     statusScreenshotAttached: 'Captura adjunta',
     statusScreenshotFailed: 'Captura fallida',
     statusScreenshotSkipped: 'Captura omitida',
     msgScreenshotSkippedModel: 'El modelo no soporta imágenes. Cambia a un modelo vision y toma una nueva captura.',
+    historyTitle: 'Historial de chat',
+    historyEmpty: 'Sin conversaciones guardadas',
+    btnHistory: 'Historial de chat',
+    btnCopy: 'Copiar',
   },
   fr: {
     msgLabelYou: 'Vous',
@@ -230,11 +244,14 @@ const i18nStrings = {
     settingsChangeFolder: 'Modifier le dossier',
     settingsFontSize: 'Taille de police',
     settingsCurrentModel: 'Modèle actuel',
-    emptyStateSearch: '/g rechercher sur Google · /y rechercher sur YouTube · /x rechercher sur X.com',
+    emptyStateSearch: '/g Google · /y YouTube · /x X.com · /w Wiki · /r Reddit · /gh GitHub · /d DuckDuckGo',
     statusScreenshotAttached: 'Capture jointe',
     statusScreenshotFailed: 'Capture échouée',
     statusScreenshotSkipped: 'Capture omise',
     msgScreenshotSkippedModel: 'Le modèle ne supporte pas les images. Passez à un modèle vision et prenez une nouvelle capture.',
+    historyTitle: 'Historique du chat',
+    historyEmpty: 'Aucune conversation sauvegardée',
+    btnHistory: 'Historique du chat',
   },
   de: {
     msgLabelYou: 'Sie',
@@ -285,11 +302,15 @@ const i18nStrings = {
     settingsChangeFolder: 'Ordner ändern',
     settingsFontSize: 'Schriftgröße',
     settingsCurrentModel: 'Aktuelles Modell',
-    emptyStateSearch: '/g Google · /y YouTube · /x X.com',
+    emptyStateSearch: '/g Google · /y YouTube · /x X.com · /w Wiki · /r Reddit · /gh GitHub · /d DuckDuckGo',
     statusScreenshotAttached: 'Screenshot angehängt',
     statusScreenshotFailed: 'Screenshot fehlgeschlagen',
     statusScreenshotSkipped: 'Screenshot übersprungen',
     msgScreenshotSkippedModel: 'Modell unterstützt keine Bilder. Wechsle zu einem Vision-Modell und mach einen neuen Screenshot.',
+    historyTitle: 'Chat-Verlauf',
+    historyEmpty: 'Keine gespeicherten Gespräche',
+    btnHistory: 'Chat-Verlauf',
+    btnCopy: 'Kopieren',
   },
   ru: {
     msgLabelYou: 'Вы',
@@ -340,11 +361,15 @@ const i18nStrings = {
     settingsChangeFolder: 'Изменить папку',
     settingsFontSize: 'Размер шрифта',
     settingsCurrentModel: 'Текущая модель',
-    emptyStateSearch: '/g Google · /y YouTube · /x X.com',
+    emptyStateSearch: '/g Google · /y YouTube · /x X.com · /w Wiki · /r Reddit · /gh GitHub · /d DuckDuckGo',
     statusScreenshotAttached: 'Скриншот прикреплён',
     statusScreenshotFailed: 'Скриншот не удался',
     statusScreenshotSkipped: 'Скриншот пропущен',
     msgScreenshotSkippedModel: 'Модель не поддерживает изображения. Переключитесь на vision-модель и сделайте новый скриншот.',
+    historyTitle: 'История чата',
+    historyEmpty: 'Нет сохранённых разговоров',
+    btnHistory: 'История чата',
+    btnCopy: 'Копировать',
   },
 };
 
@@ -358,6 +383,7 @@ const dom = {
   sendBtn: $('#sendBtn'),
   collectBtn: $('#collectBtn'),
   screenshotBtn: $('#screenshotBtn'),
+  historyBtn: $('#historyBtn'),
   vaultBtn: $('#vaultBtn'),
   clearBtn: $('#clearBtn'),
   settingsBtn: $('#settingsBtn'),
@@ -370,6 +396,7 @@ const dom = {
   modelSearch: $('#modelSearch'),
   modelHint: $('#modelHint'),
   headerCtx: $('#headerCtx'),
+  historyPanel: $('#historyPanel'),
   systemPromptInput: $('#systemPromptInput'),
   settingsStatus: $('#settingsStatus'),
   status: $('#status'),
@@ -516,6 +543,7 @@ async function vaultReadFiles(query = '', limit = 20) {
 
 async function init() {
   await loadSettings();
+  await loadConversations();
   applyI18n();
   applyTheme(state.settings.theme, state.settings.preset);
   dom.langSelect.value = state.settings.language;
@@ -526,6 +554,7 @@ async function init() {
   bindEvents();
   loadModels();
   updateModelBadge();
+  updateBadge();
   collectPageContext();
 }
 
@@ -630,6 +659,7 @@ function bindEvents() {
 
   dom.collectBtn.addEventListener('click', collectPageContext);
   dom.screenshotBtn.addEventListener('click', takeScreenshot);
+  dom.historyBtn.addEventListener('click', toggleHistory);
   dom.clearBtn.addEventListener('click', clearConversation);
 
   dom.vaultBtn.addEventListener('click', () => {
@@ -870,6 +900,10 @@ const SEARCH_PATTERNS = [
   { prefix: /^\/g\s+/i, base: 'https://www.google.com/search?q=' },
   { prefix: /^\/y\s+/i, base: 'https://www.youtube.com/results?search_query=' },
   { prefix: /^\/x\s+/i, base: 'https://x.com/search?q=' },
+  { prefix: /^\/w\s+/i, base: 'https://en.wikipedia.org/w/index.php?search=' },
+  { prefix: /^\/r\s+/i, base: 'https://www.reddit.com/search/?q=' },
+  { prefix: /^\/gh\s+/i, base: 'https://github.com/search?q=' },
+  { prefix: /^\/d\s+/i, base: 'https://duckduckgo.com/?q=' },
 ];
 
 function extractNavigationIntent(text) {
@@ -1091,11 +1125,93 @@ function prependPageContext(metadata) {
 }
 
 function clearConversation() {
+  if (state.messages.length > 0) {
+    saveConversation();
+  }
   state.messages = [];
   state.pageContext = null;
   state.currentVaultFilename = null;
   if (dom.headerCtx) dom.headerCtx.innerHTML = '';
   renderMessages();
+  updateBadge();
+}
+
+function saveConversation() {
+  if (state.messages.length === 0) return;
+  const conv = {
+    id: Date.now(),
+    pageUrl: state.pageContext?.metadata?.url || '',
+    pageTitle: state.pageContext?.metadata?.title || document.title,
+    timestamp: Date.now(),
+    messages: state.messages,
+  };
+  state.conversations = [conv, ...state.conversations].slice(0, 50);
+  chrome.storage.local.set({ openagent_conversations: state.conversations });
+}
+
+async function loadConversations() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(['openagent_conversations'], (res) => {
+      state.conversations = res.openagent_conversations || [];
+      resolve();
+    });
+  });
+}
+
+function toggleHistory() {
+  state.historyOpen = !state.historyOpen;
+  if (state.historyOpen) {
+    renderHistoryPanel();
+    dom.historyPanel.classList.remove('hidden');
+  } else {
+    dom.historyPanel.classList.add('hidden');
+  }
+}
+
+function renderHistoryPanel() {
+  if (state.conversations.length === 0) {
+    dom.historyPanel.innerHTML = `
+      <div class="history-empty">${i18n('historyEmpty')}</div>
+    `;
+    return;
+  }
+  const html = state.conversations.map((conv) => {
+    const date = new Date(conv.timestamp);
+    const dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const title = conv.pageTitle || conv.pageUrl || 'Untitled';
+    return `
+      <div class="history-item" data-id="${conv.id}">
+        <div class="history-title">${escapeHtml(title.slice(0, 50))}</div>
+        <div class="history-meta">${dateStr} · ${conv.messages.length} msg</div>
+      </div>
+    `;
+  }).join('');
+  dom.historyPanel.innerHTML = `
+    <div class="history-header">
+      <span>${i18n('historyTitle')}</span>
+      <button class="history-close" id="historyCloseBtn">&times;</button>
+    </div>
+    <div class="history-list">${html}</div>
+  `;
+  dom.historyPanel.querySelectorAll('.history-item').forEach((el) => {
+    el.addEventListener('click', () => restoreConversation(parseInt(el.dataset.id)));
+  });
+  const closeBtn = dom.historyPanel.querySelector('#historyCloseBtn');
+  if (closeBtn) closeBtn.addEventListener('click', toggleHistory);
+}
+
+function restoreConversation(id) {
+  const conv = state.conversations.find((c) => c.id === id);
+  if (!conv) return;
+  state.messages = conv.messages;
+  state.historyOpen = false;
+  dom.historyPanel.classList.add('hidden');
+  if (conv.pageTitle && conv.pageUrl) {
+    state.pageContext = { metadata: { url: conv.pageUrl, title: conv.pageTitle } };
+    prependPageContext(state.pageContext.metadata);
+  }
+  renderMessages();
+  updateBadge();
 }
 
 // ─── Rendering ────────────────────────────────────────────────────────────────
@@ -1136,23 +1252,109 @@ function renderMessage(role, content) {
   div.className = `message ${role}`;
   const label = role === 'user' ? i18n('msgLabelYou') : i18n('msgLabelClaude');
   const formatted = formatContent(content);
+  const copyBtn = role === 'assistant' ? `<button class="copy-msg-btn" title="${i18n('btnCopy')}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>` : '';
 
   div.innerHTML = `
     <div class="message-label">${label}</div>
+    ${copyBtn}
     <div class="message-content">${formatted}</div>
   `;
   dom.messages.appendChild(div);
+  div.querySelector('.copy-msg-btn')?.addEventListener('click', () => {
+    navigator.clipboard.writeText(content).then(() => setStatus(i18n('btnCopy'), 'success'));
+  });
+  div.querySelectorAll('.copy-code-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const code = btn.parentElement.querySelector('code').textContent;
+      navigator.clipboard.writeText(code).then(() => setStatus(i18n('btnCopy'), 'success'));
+    });
+  });
   scrollToBottom();
+  updateBadge();
 }
 
 function formatContent(text) {
   if (!text) return '';
-  let escaped = escapeHtml(text);
-  escaped = escaped.replace(/```(\w*)\n?([\s\S]*?)```/g, '<pre><code>$2</code></pre>');
-  escaped = escaped.replace(/`([^`]+)`/g, '<code>$1</code>');
-  escaped = escaped.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-  escaped = escaped.replace(/\n/g, '<br>');
-  return escaped;
+  // Protect code blocks from markdown processing
+  const codeBlocks = [];
+  let processed = text.replace(/```(\w*)\n?([\s\S]*?)```/g, (match) => {
+    const idx = codeBlocks.length;
+    const lang = match.match(/```(\w*)/)?.[1] || '';
+    codeBlocks.push(`<pre class="code-block" data-lang="${lang}"><code>${escapeHtml(match.replace(/```\w*\n?/g, '').replace(/```$/g, '').trim())}</code><button class="copy-code-btn" data-idx="${idx}">${i18n('btnCopy')}</button></pre>`);
+    return `__CODEBLOCK_${idx}__`;
+  });
+  // Protect inline code
+  const inlineCodes = [];
+  processed = processed.replace(/`([^`]+)`/g, (match, code) => {
+    const idx = inlineCodes.length;
+    inlineCodes.push(`<code>${escapeHtml(code)}</code>`);
+    return `__INLINECODE_${idx}__`;
+  });
+  // Headings
+  processed = processed.replace(/^### (.+)$/gm, '<h4>$1</h4>');
+  processed = processed.replace(/^## (.+)$/gm, '<h3>$1</h3>');
+  processed = processed.replace(/^# (.+)$/gm, '<h2>$1</h2>');
+  // Bold and italic
+  processed = processed.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
+  processed = processed.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  processed = processed.replace(/\*(.+?)\*/g, '<em>$1</em>');
+  processed = processed.replace(/___(.+?)___/g, '<strong><em>$1</em></strong>');
+  processed = processed.replace(/__(.+?)__/g, '<strong>$1</strong>');
+  processed = processed.replace(/_(.+?)_/g, '<em>$1</em>');
+  // Blockquotes
+  processed = processed.replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>');
+  // Unordered lists
+  processed = processed.replace(/^[\-\*] (.+)$/gm, '<li>$1</li>');
+  // Ordered lists
+  processed = processed.replace(/^\d+\. (.+)$/gm, '<li>$1</li>');
+  // Wrap consecutive list items
+  processed = processed.replace(/(<li>[\s\S]*?<\/li>)(?=\s*(?!<li>))/g, '<ul>$1</ul>');
+  // Tables
+  processed = processed.replace(/^\|(.+)\|$/gm, (match, row) => {
+    const cells = row.split('|').map((c) => c.trim());
+    return `__TABLE_ROW__${JSON.stringify(cells)}__`;
+  });
+  const tableRows = [];
+  processed = processed.replace(/__TABLE_ROW__(\[.*?\])__/g, (match, rowJson) => {
+    const idx = tableRows.length;
+    tableRows.push(JSON.parse(rowJson));
+    return `__TROW_${idx}__`;
+  });
+  // Restore code blocks
+  for (let i = 0; i < codeBlocks.length; i++) {
+    processed = processed.replace(`__CODEBLOCK_${i}__`, codeBlocks[i]);
+  }
+  // Restore inline code
+  for (let i = 0; i < inlineCodes.length; i++) {
+    processed = processed.replace(`__INLINECODE_${i}__`, inlineCodes[i]);
+  }
+  // Restore table rows
+  if (tableRows.length > 0) {
+    let tableHtml = '<div class="table-wrapper"><table>';
+    let headerRow = null;
+    for (let i = 0; i < tableRows.length; i++) {
+      const cells = tableRows[i];
+      const isHeader = cells.every((c) => c.match(/^[\-\=]+$/) || cells.every((c) => c.match(/^[A-Z\s]+$/));
+      if (isHeader && i + 1 < tableRows.length) {
+        headerRow = cells;
+      } else {
+        const tag = headerRow ? 'th' : 'td';
+        const cellHtml = cells.map((c) => `<${tag}>${c}</${tag}>`).join('');
+        tableHtml += `<tr>${cellHtml}</tr>`;
+        if (headerRow) headerRow = null;
+      }
+    }
+    tableHtml += '</table></div>';
+    processed = processed.replace(/__TROW_(\d+)__/g, () => '');
+    // Find the first placeholder and replace entire block with table
+    processed = processed.replace(/__TROW_0__[\s\S]*?(?=__TROW_|$)/, tableHtml);
+  }
+  // Line breaks
+  processed = processed.replace(/\n/g, '<br>');
+  // Clean up br tags around block elements
+  processed = processed.replace(/<br><(h[234]|blockquote|ul|pre|div)/g, '<$1');
+  processed = processed.replace(/<\/(h[234]|blockquote|ul|pre|div)><br>/g, '</$1>');
+  return processed;
 }
 
 // ─── Browser Actions ────────────────────────────────────────────────────────────
@@ -1209,6 +1411,16 @@ function updateCurrentModelDisplay() {
   } else {
     dom.currentModelDisplay.textContent = '—';
     dom.currentModelDisplay.className = 'model-display empty';
+  }
+}
+
+function updateBadge() {
+  const count = state.messages.length;
+  if (count === 0) {
+    chrome.action.setBadgeText({ text: '' });
+  } else {
+    chrome.action.setBadgeText({ text: String(count) });
+    chrome.action.setBadgeBackgroundColor({ color: '#9f7aea' });
   }
 }
 

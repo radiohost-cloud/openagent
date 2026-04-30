@@ -662,6 +662,16 @@ function bindEvents() {
   dom.historyBtn.addEventListener('click', toggleHistory);
   dom.clearBtn.addEventListener('click', clearConversation);
 
+  // Click on messages area closes history (only if not the same click that opened it)
+  dom.messages.addEventListener('mousedown', (e) => {
+    if (state.historyOpen) {
+      e.stopPropagation();
+    }
+  });
+  dom.messages.addEventListener('click', () => {
+    if (state.historyOpen) toggleHistory();
+  });
+
   dom.vaultBtn.addEventListener('click', () => {
     if (state.vaultDirHandle) {
       toggleVaultOnBtn();
@@ -679,13 +689,6 @@ function bindEvents() {
 
   dom.modelSearch.addEventListener('input', () => {
     filterModels(dom.modelSearch.value);
-  });
-
-  document.addEventListener('click', (e) => {
-    if (!state.historyOpen) return;
-    if (e.target === dom.historyBtn || dom.historyBtn.contains(e.target)) return;
-    if (dom.historyPanel.contains(e.target)) return;
-    toggleHistory();
   });
 
   document.addEventListener('keydown', (e) => {

@@ -75,10 +75,12 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 // ─── Page Metadata ─────────────────────────────────────────────────────────────
 
 function pageMetadata() {
+  const faviconEl = document.querySelector('link[rel="icon"]') || document.querySelector('link[rel="shortcut icon"]');
   return {
     url: window.location.href,
     title: document.title,
     domain: window.location.hostname,
+    favicon: faviconEl?.href || '',
   };
 }
 

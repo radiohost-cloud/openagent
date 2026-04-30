@@ -925,7 +925,10 @@ function prependPageContext(metadata) {
   if (existing) existing.remove();
 
   if (dom.headerCtx) {
+    const favicon = metadata.favicon || (metadata.url ? `chrome://favicon/${metadata.url}` : '');
+    const faviconHtml = favicon ? `<img class="ctx-favicon" src="${favicon}" width="14" height="14" />` : '';
     dom.headerCtx.innerHTML = `
+      ${faviconHtml}
       <span class="ctx-dot"></span>
       <span class="ctx-title">${escapeHtml(metadata.title || 'Untitled')}</span>
     `;

@@ -79,6 +79,14 @@ html, body {
   flex-shrink: 0;
 }
 
+.header-ctx .ctx-favicon {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  border-radius: 2px;
+  vertical-align: middle;
+}
+
 .header-ctx .ctx-title {
   white-space: nowrap;
   overflow: hidden;

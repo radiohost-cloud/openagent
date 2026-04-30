@@ -2,7 +2,7 @@
 
 const state = {
   messages: [],
-  settings: { apiKey: '', provider: 'openrouter', ollamaUrl: '', model: '', systemPrompt: '', theme: 'dark', preset: 'default', language: 'en', vaultPath: '', fontSize: 'medium' },
+  settings: { apiKey: '', provider: 'openrouter', model: '', systemPrompt: '', theme: 'dark', preset: 'default', language: 'en', vaultPath: '', fontSize: 'medium' },
   pageContext: null,
   isLoading: false,
   allModels: [],
@@ -61,9 +61,6 @@ const i18nStrings = {
     settingsChangeFolder: 'Change folder',
     settingsFontSize: 'Font size',
     settingsCurrentModel: 'Current Model',
-    settingsProvider: 'Provider',
-    settingsOllamaUrl: 'Ollama URL',
-    settingsOllamaUrlHint: 'Leave empty for default (localhost:11434)',
   },
   pl: {
     msgLabelYou: 'Ty',
@@ -114,9 +111,6 @@ const i18nStrings = {
     settingsChangeFolder: 'Zmień folder',
     settingsFontSize: 'Wielkość czcionki',
     settingsCurrentModel: 'Aktualny model',
-    settingsProvider: 'Dostawca',
-    settingsOllamaUrl: 'URL Ollama',
-    settingsOllamaUrlHint: 'Zostaw puste dla domyślnego (localhost:11434)',
   },
   es: {
     msgLabelYou: 'Tú',
@@ -166,9 +160,6 @@ const i18nStrings = {
     settingsChangeFolder: 'Cambiar carpeta',
     settingsFontSize: 'Tamaño de fuente',
     settingsCurrentModel: 'Modelo actual',
-    settingsProvider: 'Proveedor',
-    settingsOllamaUrl: 'URL de Ollama',
-    settingsOllamaUrlHint: 'Dejar vacío para el valor predeterminado (localhost:11434)',
   },
   fr: {
     msgLabelYou: 'Vous',
@@ -218,9 +209,6 @@ const i18nStrings = {
     settingsChangeFolder: 'Modifier le dossier',
     settingsFontSize: 'Taille de police',
     settingsCurrentModel: 'Modèle actuel',
-    settingsProvider: 'Fournisseur',
-    settingsOllamaUrl: 'URL Ollama',
-    settingsOllamaUrlHint: 'Laisser vide pour la valeur par défaut (localhost:11434)',
   },
   de: {
     msgLabelYou: 'Sie',
@@ -270,9 +258,6 @@ const i18nStrings = {
     settingsChangeFolder: 'Ordner ändern',
     settingsFontSize: 'Schriftgröße',
     settingsCurrentModel: 'Aktuelles Modell',
-    settingsProvider: 'Anbieter',
-    settingsOllamaUrl: 'Ollama URL',
-    settingsOllamaUrlHint: 'Leer lassen für Standard (localhost:11434)',
   },
   ru: {
     msgLabelYou: 'Вы',
@@ -322,9 +307,6 @@ const i18nStrings = {
     settingsChangeFolder: 'Изменить папку',
     settingsFontSize: 'Размер шрифта',
     settingsCurrentModel: 'Текущая модель',
-    settingsProvider: 'Провайдер',
-    settingsOllamaUrl: 'URL Ollama',
-    settingsOllamaUrlHint: 'Оставьте пустым для значения по умолчанию (localhost:11434)',
   },
 };
 
@@ -343,10 +325,6 @@ const dom = {
   settingsModal: $('#settingsModal'),
   closeSettings: $('#closeSettings'),
   saveSettings: $('#saveSettings'),
-  providerSelect: $('#providerSelect'),
-  ollamaUrlInput: $('#ollamaUrlInput'),
-  ollamaUrlGroup: $('#ollamaUrlGroup'),
-  apiKeyGroup: $('#apiKeyGroup'),
   apiKeyInput: $('#apiKeyInput'),
   currentModelDisplay: $('#currentModelDisplay'),
   modelList: $('#modelList'),
@@ -619,22 +597,6 @@ function bindEvents() {
   dom.modelSearch.addEventListener('input', () => {
     filterModels(dom.modelSearch.value);
   });
-
-  dom.providerSelect.addEventListener('change', async () => {
-    state.settings.provider = dom.providerSelect.value;
-    updateProviderUi();
-    loadModels();
-  });
-
-  dom.ollamaUrlInput.addEventListener('change', () => {
-    state.settings.ollamaUrl = dom.ollamaUrlInput.value.trim();
-  });
-}
-
-function updateProviderUi() {
-  const isOllama = state.settings.provider === 'ollama';
-  dom.ollamaUrlGroup.classList.toggle('hidden', !isOllama);
-  dom.apiKeyGroup.classList.toggle('hidden', isOllama);
 }
 
 // ─── Settings ─────────────────────────────────────────────────────────────────
@@ -643,10 +605,7 @@ async function loadSettings() {
   try {
     const data = await sendBgMessage({ type: 'settings.load' });
     state.settings = { ...state.settings, ...data };
-    dom.providerSelect.value = state.settings.provider || 'openrouter';
-    dom.ollamaUrlInput.value = state.settings.ollamaUrl || '';
     dom.apiKeyInput.value = state.settings.apiKey || '';
-    updateProviderUi();
     updateCurrentModelDisplay();
     dom.systemPromptInput.value = state.settings.systemPrompt || '';
 
@@ -678,13 +637,11 @@ async function handleSaveSettings() {
   const fontSize = dom.fontSizeSelect.value;
 
   try {
-    const provider = dom.providerSelect.value;
-    const ollamaUrl = dom.ollamaUrlInput.value.trim();
     await sendBgMessage({
       type: 'settings.save',
-      data: { apiKey, provider, ollamaUrl, model, systemPrompt, theme, preset, language, vaultPath, fontSize },
+      data: { apiKey, provider: 'openrouter', model, systemPrompt, theme, preset, language, vaultPath },
     });
-    state.settings = { apiKey, provider, ollamaUrl, model, systemPrompt, theme, preset, language, vaultPath, fontSize };
+    state.settings = { apiKey, provider: 'openrouter', model, systemPrompt, theme, preset, language, vaultPath };
     dom.settingsStatus.textContent = i18n('settingsSaved');
     dom.settingsStatus.className = 'settings-status';
     toggleModal(false);
@@ -699,40 +656,10 @@ async function handleSaveSettings() {
 // ─── Model Loading ────────────────────────────────────────────────────────────
 
 async function loadModels() {
-  const provider = dom.providerSelect.value;
+  const apiKey = dom.apiKeyInput.value.trim() || state.settings.apiKey;
 
   dom.modelList.innerHTML = `<div class="model-loading">${i18n('settingsLoading')}</div>`;
 
-  if (provider === 'ollama') {
-    const url = dom.ollamaUrlInput.value.trim();
-    try {
-      const resp = await sendBgMessage({ type: 'models.ollama', url });
-      if (resp.error) {
-        dom.modelList.innerHTML = `<div class="model-loading">${escapeHtml(resp.error)}</div>`;
-        dom.modelHint.textContent = resp.error;
-        return;
-      }
-      state.allModels = resp.models || [];
-      renderModelList(state.allModels);
-      const saved = state.settings.model;
-      if (saved && state.allModels.find((m) => m.id === saved)) {
-        selectModelItem(saved);
-      } else if (state.allModels.length > 0) {
-        state.settings.model = state.allModels[0].id;
-        selectModelItem(state.allModels[0].id);
-        await sendBgMessage({ type: 'settings.save', data: { ...state.settings } });
-      }
-      dom.modelHint.textContent = state.allModels.length + ' ' + i18n('settingsModelsHint');
-      updateModelBadge();
-    } catch (err) {
-      dom.modelList.innerHTML = `<div class="model-loading">${escapeHtml(err.message)}</div>`;
-      dom.modelHint.textContent = err.message;
-    }
-    return;
-  }
-
-  // OpenRouter
-  const apiKey = dom.apiKeyInput.value.trim() || state.settings.apiKey;
   if (!apiKey) {
     dom.modelList.innerHTML = `<div class="model-loading">${i18n('settingsEnterApiKey')}</div>`;
     dom.modelHint.textContent = '';

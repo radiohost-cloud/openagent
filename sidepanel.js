@@ -1062,6 +1062,7 @@ async function handleSend() {
 // ─── Page Context ──────────────────────────────────────────────────────────────
 
 async function collectPageContext() {
+  state.pageContext = null; // clear stale context before fetch
   try {
     const data = await sendBgMessage({ type: 'page.collect' });
     if (data.error) {

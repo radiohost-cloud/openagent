@@ -45,7 +45,27 @@ if (chrome.webNavigation && chrome.webNavigation.onCompleted) {
 }
 
 async function notifyContextRefresh(tabId) {
-  chrome.runtime.sendMessage({ type: 'context.refresh', tabId }).catch(() => {});
+  try {
+    const tab = await chrome.tabs.get(tabId);
+    if (!tab.url || !tab.url.startsWith('http')) return;
+    const data = await chrome.tabs.sendMessage(tabId, { type: 'page.collect' });
+    if (data?.rawCapture?.metadata) {
+      await chrome.storage.local.set({
+        openagent_current_tab: {
+          url: tab.url,
+          title: tab.title,
+          favicon: data.rawCapture.metadata.favicon || `chrome://favicon/${tab.url}`,
+          bodyText: data.rawCapture.bodyText,
+          images: data.rawCapture.images,
+        },
+      });
+    }
+  } catch (err) {
+    await chrome.storage.local.set({
+      openagent_current_tab: { url: tab?.url || '', title: tab?.title || '' },
+    });
+  }
+  chrome.runtime.sendMessage({ type: 'context.refresh' }).catch(() => {});
 }
 
 chrome.tabs.query({ url: ['http://*/*', 'https://*/*'] }, async (tabs) => {

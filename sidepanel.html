@@ -51,8 +51,14 @@
       <!-- Messages -->
       <div id="messages" class="messages"></div>
 
-      <!-- History panel -->
-      <div id="historyPanel" class="history-panel hidden"></div>
+      <!-- History panel (drawer) -->
+      <div id="historyPanel" class="history-drawer hidden">
+        <div class="history-drawer-header">
+          <span data-i18n="historyTitle">Chat History</span>
+          <button class="history-drawer-close" id="historyDrawerClose">&times;</button>
+        </div>
+        <div id="historyDrawerList" class="history-drawer-list"></div>
+      </div>
 
       <!-- Status -->
       <div id="status" class="status hidden"></div>

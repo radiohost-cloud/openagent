@@ -396,7 +396,8 @@ const dom = {
   modelSearch: $('#modelSearch'),
   modelHint: $('#modelHint'),
   headerCtx: $('#headerCtx'),
-  historyPanel: $('#historyPanel'),
+  historyDrawerList: $('#historyDrawerList'),
+  historyDrawerClose: $('#historyDrawerClose'),
   systemPromptInput: $('#systemPromptInput'),
   settingsStatus: $('#settingsStatus'),
   status: $('#status'),
@@ -671,6 +672,8 @@ function bindEvents() {
   dom.messages.addEventListener('click', () => {
     if (state.historyOpen) toggleHistory();
   });
+
+  dom.historyDrawerClose.addEventListener('click', toggleHistory);
 
   dom.vaultBtn.addEventListener('click', () => {
     if (state.vaultDirHandle) {
@@ -1174,44 +1177,34 @@ async function loadConversations() {
 
 function toggleHistory() {
   state.historyOpen = !state.historyOpen;
+  const drawer = document.getElementById('historyPanel');
   if (state.historyOpen) {
     renderHistoryPanel();
-    dom.historyPanel.classList.remove('hidden');
+    drawer.classList.remove('hidden');
     dom.historyBtn.classList.add('active');
   } else {
-    dom.historyPanel.classList.add('hidden');
+    drawer.classList.add('hidden');
     dom.historyBtn.classList.remove('active');
   }
 }
 
 function renderHistoryPanel() {
-  dom.historyPanel.innerHTML = `
-    <div class="history-header">
-      <span>${i18n('historyTitle')}</span>
-      <button class="history-close" id="historyCloseBtn">&times;</button>
-    </div>
-    ${state.conversations.length === 0
-      ? `<div class="history-empty">${i18n('historyEmpty')}</div>`
-      : `<div class="history-list">${state.conversations.map((conv) => {
-          const date = new Date(conv.timestamp);
-          const dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-          const title = conv.pageTitle || conv.pageUrl || 'Untitled';
-          return `<div class="history-item" data-id="${conv.id}">
-            <div class="history-title">${escapeHtml(title.slice(0, 50))}</div>
-            <div class="history-meta">${dateStr} · ${conv.messages.length} msg</div>
-          </div>`;
-        }).join('')}</div>`
-    }
-  `;
-  dom.historyPanel.querySelector('.history-close').addEventListener('click', (e) => {
-    e.stopPropagation();
-    toggleHistory();
-  });
-  dom.historyPanel.querySelectorAll('.history-item').forEach((el) => {
-    el.addEventListener('click', (e) => {
-      e.stopPropagation();
-      restoreConversation(parseInt(el.dataset.id));
-    });
+  dom.historyDrawerClose.textContent = '×';
+  if (state.conversations.length === 0) {
+    dom.historyDrawerList.innerHTML = `<div class="history-drawer-empty">${i18n('historyEmpty')}</div>`;
+  } else {
+    dom.historyDrawerList.innerHTML = state.conversations.map((conv) => {
+      const date = new Date(conv.timestamp);
+      const dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const title = conv.pageTitle || conv.pageUrl || 'Untitled';
+      return `<div class="history-drawer-item" data-id="${conv.id}">
+        <div class="history-drawer-title">${escapeHtml(title.slice(0, 50))}</div>
+        <div class="history-drawer-meta">${dateStr} · ${conv.messages.length} msg</div>
+      </div>`;
+    }).join('');
+  }
+  dom.historyDrawerList.querySelectorAll('.history-drawer-item').forEach((el) => {
+    el.addEventListener('click', () => restoreConversation(parseInt(el.dataset.id)));
   });
 }
 
@@ -1220,7 +1213,7 @@ function restoreConversation(id) {
   if (!conv) return;
   state.messages = conv.messages;
   state.historyOpen = false;
-  dom.historyPanel.classList.add('hidden');
+  document.getElementById('historyPanel').classList.add('hidden');
   if (conv.pageTitle && conv.pageUrl) {
     state.pageContext = { metadata: { url: conv.pageUrl, title: conv.pageTitle } };
     prependPageContext(state.pageContext.metadata);

@@ -15,7 +15,10 @@ AI-powered browser assistant. Chat about any webpage, automate browser actions, 
 ## Features
 
 - **Chat about any page** — AI understands the content of the current webpage
+- **Screenshot capture** — take a screenshot and send it to vision-capable models (Claude, GPT-4o, Gemini, etc.) for visual analysis; model support auto-detected from OpenRouter API
+- **Quick search** — `/g query` Google · `/y query` YouTube · `/x query` X.com (Twitter)
 - **Browser automation** — instruct the AI to click, type, scroll, or navigate
+- **Auto-refresh context** — page context updates automatically when you switch tabs or navigate
 - **Obsidian integration** — save notes to your vault using the File System Access API
   - Toggle auto-save to append your entire conversation to a session note
   - Notes saved as `.md` files directly to your vault root
@@ -43,6 +46,10 @@ AI-powered browser assistant. Chat about any webpage, automate browser actions, 
 ## How It Works
 
 The extension analyzes the current webpage and sends the page content to the AI along with your message. The AI can read page content, execute browser actions (click, type, scroll, navigate), and write notes to your Obsidian vault.
+
+### Screenshot
+
+Click the camera icon in the toolbar to capture the current page. The image is sent to the AI as a vision input. If the selected model doesn't support image input, you'll see a clear message — switch to a vision-capable model (Claude, GPT-4o, Gemini, etc.) to use screenshots. Vision support is automatically detected from the OpenRouter API based on each model's `architecture.modality` field.
 
 ### Vault & Notes
 

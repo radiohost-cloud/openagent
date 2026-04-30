@@ -14,11 +14,13 @@ AI-powered browser assistant. Chat about any webpage, automate browser actions, 
 
 ## Features
 
+- **Chat history** — save and resume conversations; delete threads or continue them and append messages to the current conversation
 - **Chat about any page** — AI understands the content of the current webpage
+- **Universal address input** — type any URL or domain name directly in the chat field to navigate; works on blank/new tab pages and start pages (Tabiss, etc.)
 - **Screenshot capture** — take a screenshot and send it to vision-capable models (Claude, GPT-4o, Gemini, etc.) for visual analysis; model support auto-detected from OpenRouter API
-- **Quick search** — `/g query` Google · `/y query` YouTube · `/x query` X.com (Twitter)
+- **Quick search** — `/g query` Google · `/y query` YouTube · `/x query` X.com · `/w query` Wikipedia · `/r query` Reddit · `/gh query` GitHub · `/d query` DuckDuckGo
 - **Browser automation** — instruct the AI to click, type, scroll, or navigate
-- **Auto-refresh context** — page context updates automatically when you switch tabs or navigate
+- **Auto-refresh context** — page context updates automatically when you switch tabs or navigate; cached data shown instantly, refreshed in background
 - **Obsidian integration** — save notes to your vault using the File System Access API
   - Toggle auto-save to append your entire conversation to a session note
   - Notes saved as `.md` files directly to your vault root
@@ -55,7 +57,7 @@ Click the camera icon in the toolbar to capture the current page. The image is s
 
 The vault uses the browser's File System Access API to write `.md` files directly to a folder you choose. The path is remembered across sessions. You need [Obsidian](https://obsidian.md) installed to use the notes with full features (search, backlinks, plugins, graph view).
 
-To save a note manually, ask the AI to save something — it will write a `.md` file to your vault. Toggle auto-save in the header to append every conversation to a session file automatically.
+To save a note manually, ask the AI to save something — it will write a `.md` file to your vault. Toggle auto-save in the header to append every conversation to a session file automatically. Saved conversations also store the page URL and content, so you can pick up from where you left off.
 
 ## Keyboard Shortcuts
 

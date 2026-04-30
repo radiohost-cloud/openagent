@@ -680,16 +680,6 @@ function bindEvents() {
   dom.modelSearch.addEventListener('input', () => {
     filterModels(dom.modelSearch.value);
   });
-
-  // Close history panel on outside click
-  document.addEventListener('click', () => {
-    if (state.historyOpen) toggleHistory();
-  });
-
-  // Toggle history on Escape
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && state.historyOpen) toggleHistory();
-  });
 }
 
 // ─── Settings ─────────────────────────────────────────────────────────────────
@@ -1174,10 +1164,10 @@ function toggleHistory() {
     renderHistoryPanel();
     dom.historyPanel.classList.remove('hidden');
     dom.historyBtn.classList.add('active');
-  } else {
-    dom.historyPanel.classList.add('hidden');
-    dom.historyBtn.classList.remove('active');
+    return; // don't close on same click that opened
   }
+  dom.historyPanel.classList.add('hidden');
+  dom.historyBtn.classList.remove('active');
 }
 
 function renderHistoryPanel() {

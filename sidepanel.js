@@ -1165,7 +1165,7 @@ async function takeScreenshot() {
     `;
     dom.messages.appendChild(div);
     scrollToBottom();
-    div.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    requestAnimationFrame(() => div.scrollIntoView({ behavior: 'smooth', block: 'start' }));
   } catch (err) {
     setStatus(i18n('statusScreenshotFailed') + ': ' + err.message, 'error');
   }

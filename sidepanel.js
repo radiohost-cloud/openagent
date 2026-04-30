@@ -61,7 +61,7 @@ const i18nStrings = {
     settingsChangeFolder: 'Change folder',
     settingsFontSize: 'Font size',
     settingsCurrentModel: 'Current Model',
-    emptyStateSearch: 'Use /g query to search Google, /y query to search YouTube',
+    emptyStateSearch: '/g search Google · /y search YouTube · /x search X.com',
   },
   pl: {
     msgLabelYou: 'Ty',
@@ -112,7 +112,7 @@ const i18nStrings = {
     settingsChangeFolder: 'Zmień folder',
     settingsFontSize: 'Wielkość czcionki',
     settingsCurrentModel: 'Aktualny model',
-    emptyStateSearch: 'Użyj /g zapytanie by wyszukać w Google, /y zapytanie by wyszukać na YouTube',
+    emptyStateSearch: '/g szukaj w Google · /y szukaj na YouTube · /x szukaj na X.com',
   },
   es: {
     msgLabelYou: 'Tú',
@@ -162,7 +162,7 @@ const i18nStrings = {
     settingsChangeFolder: 'Cambiar carpeta',
     settingsFontSize: 'Tamaño de fuente',
     settingsCurrentModel: 'Modelo actual',
-    emptyStateSearch: 'Usa /g consulta para buscar en Google, /y consulta para buscar en YouTube',
+    emptyStateSearch: '/g buscar en Google · /y buscar en YouTube · /x buscar en X.com',
   },
   fr: {
     msgLabelYou: 'Vous',
@@ -212,7 +212,7 @@ const i18nStrings = {
     settingsChangeFolder: 'Modifier le dossier',
     settingsFontSize: 'Taille de police',
     settingsCurrentModel: 'Modèle actuel',
-    emptyStateSearch: 'Utilisez /g requête pour chercher sur Google, /y requête pour chercher sur YouTube',
+    emptyStateSearch: '/g rechercher sur Google · /y rechercher sur YouTube · /x rechercher sur X.com',
   },
   de: {
     msgLabelYou: 'Sie',
@@ -262,7 +262,7 @@ const i18nStrings = {
     settingsChangeFolder: 'Ordner ändern',
     settingsFontSize: 'Schriftgröße',
     settingsCurrentModel: 'Aktuelles Modell',
-    emptyStateSearch: 'Nutze /g Suchbegriff um bei Google zu suchen, /y Suchbegriff um bei YouTube zu suchen',
+    emptyStateSearch: '/g Google · /y YouTube · /x X.com',
   },
   ru: {
     msgLabelYou: 'Вы',
@@ -312,7 +312,7 @@ const i18nStrings = {
     settingsChangeFolder: 'Изменить папку',
     settingsFontSize: 'Размер шрифта',
     settingsCurrentModel: 'Текущая модель',
-    emptyStateSearch: 'Используйте /g запрос для поиска в Google, /y запрос для поиска на YouTube',
+    emptyStateSearch: '/g Google · /y YouTube · /x X.com',
   },
 };
 
@@ -369,6 +369,13 @@ function applyI18n() {
   dom.input.placeholder = i18n('inputPlaceholder');
   if (dom.themeDark) dom.themeDark.textContent = i18n('settingsThemeDark');
   if (dom.themeLight) dom.themeLight.textContent = i18n('settingsThemeLight');
+  const emptyState = dom.messages.querySelector('.empty-state');
+  if (emptyState) {
+    const p = emptyState.querySelector('p:not(.empty-state-hint)');
+    if (p) p.textContent = i18n('emptyStateText');
+    const hint = emptyState.querySelector('.empty-state-hint');
+    if (hint) hint.textContent = i18n('emptyStateSearch');
+  }
 }
 
 // ─── Theme ───────────────────────────────────────────────────────────────────
@@ -812,6 +819,7 @@ const NAV_PATTERNS = [
 const SEARCH_PATTERNS = [
   { prefix: /^\/g\s+/i, base: 'https://www.google.com/search?q=' },
   { prefix: /^\/y\s+/i, base: 'https://www.youtube.com/results?search_query=' },
+  { prefix: /^\/x\s+/i, base: 'https://x.com/search?q=' },
 ];
 
 function extractNavigationIntent(text) {

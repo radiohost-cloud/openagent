@@ -76,6 +76,7 @@ const i18nStrings = {
     btnHistory: 'Chat history',
     btnCopy: 'Copy',
     btnDelete: 'Delete',
+    emptyStateUrl: 'or just type a URL to open it',
   },
   pl: {
     msgLabelYou: 'Ty',
@@ -137,6 +138,7 @@ const i18nStrings = {
     btnHistory: 'Historia rozmów',
     btnCopy: 'Kopiuj',
     btnDelete: 'Usuń',
+    emptyStateUrl: 'lub wpisz adres URL, aby go otworzyć',
   },
   es: {
     msgLabelYou: 'Tú',
@@ -197,6 +199,7 @@ const i18nStrings = {
     btnHistory: 'Historial de chat',
     btnCopy: 'Copiar',
     btnDelete: 'Eliminar',
+    emptyStateUrl: 'o escribe una URL para abrirla',
   },
   fr: {
     msgLabelYou: 'Vous',
@@ -256,6 +259,7 @@ const i18nStrings = {
     historyEmpty: 'Aucune conversation sauvegardée',
     btnHistory: 'Historique du chat',
     btnDelete: 'Supprimer',
+    emptyStateUrl: "ou tapez une URL pour l'ouvrir",
   },
   de: {
     msgLabelYou: 'Sie',
@@ -316,6 +320,7 @@ const i18nStrings = {
     btnHistory: 'Chat-Verlauf',
     btnCopy: 'Kopieren',
     btnDelete: 'Löschen',
+    emptyStateUrl: 'oder URL eingeben zum Öffnen',
   },
   ru: {
     msgLabelYou: 'Вы',
@@ -376,6 +381,7 @@ const i18nStrings = {
     btnHistory: 'История чата',
     btnCopy: 'Копировать',
     btnDelete: 'Удалить',
+    emptyStateUrl: 'или введите URL для открытия',
   },
 };
 
@@ -916,7 +922,8 @@ async function handleNavigation(url, originalText) {
 
 const NAV_PATTERNS = [
   /^(?:otw[oó]?rz|we?jd?[ií]?z?\s*(?:na|do)|przejd[źz]?\s*(?:do|na)|nawiguj?\s*(?:do|na)|id?[źz]?\s*(?:na|do|pod)|wyszukaj|search|go\s*to|navigate\s*to|open|visit)\s+(?:stron[ęy]?\s+)?(.+)/i,
-  /^(?:https?:\/\/)?([a-z][a-z0-9-]*\.[a-z]{2,}(?:\/\S*)?)$/i,
+  /^((?:https?:\/\/)?(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z]{2,})+(?:\/\S*)?))$/i,
+  /^([a-z][a-z0-9-]+(?:\.[a-z]{2,})?)$/i,
 ];
 
 const SEARCH_PATTERNS = [
@@ -1301,6 +1308,7 @@ function renderEmptyState() {
       </div>
       <p>${i18n('emptyStateText')}</p>
       <p class="empty-state-hint">${i18n('emptyStateSearch')}</p>
+      <p class="empty-state-url-hint">${i18n('emptyStateUrl')}</p>
     </div>
   `;
 }

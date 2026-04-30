@@ -64,6 +64,10 @@ const i18nStrings = {
     settingsFontSize: 'Font size',
     settingsCurrentModel: 'Current Model',
     emptyStateSearch: '/g search Google · /y search YouTube · /x search X.com',
+    statusScreenshotAttached: 'Screenshot attached',
+    statusScreenshotFailed: 'Screenshot failed',
+    statusScreenshotSkipped: 'Screenshot skipped',
+    msgScreenshotSkippedModel: 'Model does not support image input. Switch to a vision model and take a new screenshot.',
   },
   pl: {
     msgLabelYou: 'Ty',
@@ -116,6 +120,10 @@ const i18nStrings = {
     settingsFontSize: 'Wielkość czcionki',
     settingsCurrentModel: 'Aktualny model',
     emptyStateSearch: '/g szukaj w Google · /y szukaj na YouTube · /x szukaj na X.com',
+    statusScreenshotAttached: 'Zrzut ekranu załączony',
+    statusScreenshotFailed: 'Zrzut ekranu nieudany',
+    statusScreenshotSkipped: 'Zrzut ekranu pominięty',
+    msgScreenshotSkippedModel: 'Model nie obsługuje obrazów. Przełącz na model z vision i zrób nowy zrzut.',
   },
   es: {
     msgLabelYou: 'Tú',
@@ -167,6 +175,10 @@ const i18nStrings = {
     settingsFontSize: 'Tamaño de fuente',
     settingsCurrentModel: 'Modelo actual',
     emptyStateSearch: '/g buscar en Google · /y buscar en YouTube · /x buscar en X.com',
+    statusScreenshotAttached: 'Captura adjunta',
+    statusScreenshotFailed: 'Captura fallida',
+    statusScreenshotSkipped: 'Captura omitida',
+    msgScreenshotSkippedModel: 'El modelo no soporta imágenes. Cambia a un modelo vision y toma una nueva captura.',
   },
   fr: {
     msgLabelYou: 'Vous',
@@ -218,6 +230,10 @@ const i18nStrings = {
     settingsFontSize: 'Taille de police',
     settingsCurrentModel: 'Modèle actuel',
     emptyStateSearch: '/g rechercher sur Google · /y rechercher sur YouTube · /x rechercher sur X.com',
+    statusScreenshotAttached: 'Capture jointe',
+    statusScreenshotFailed: 'Capture échouée',
+    statusScreenshotSkipped: 'Capture omise',
+    msgScreenshotSkippedModel: 'Le modèle ne supporte pas les images. Passez à un modèle vision et prenez une nouvelle capture.',
   },
   de: {
     msgLabelYou: 'Sie',
@@ -269,6 +285,10 @@ const i18nStrings = {
     settingsFontSize: 'Schriftgröße',
     settingsCurrentModel: 'Aktuelles Modell',
     emptyStateSearch: '/g Google · /y YouTube · /x X.com',
+    statusScreenshotAttached: 'Screenshot angehängt',
+    statusScreenshotFailed: 'Screenshot fehlgeschlagen',
+    statusScreenshotSkipped: 'Screenshot übersprungen',
+    msgScreenshotSkippedModel: 'Modell unterstützt keine Bilder. Wechsle zu einem Vision-Modell und mach einen neuen Screenshot.',
   },
   ru: {
     msgLabelYou: 'Вы',
@@ -320,6 +340,10 @@ const i18nStrings = {
     settingsFontSize: 'Размер шрифта',
     settingsCurrentModel: 'Текущая модель',
     emptyStateSearch: '/g Google · /y YouTube · /x X.com',
+    statusScreenshotAttached: 'Скриншот прикреплён',
+    statusScreenshotFailed: 'Скриншот не удался',
+    statusScreenshotSkipped: 'Скриншот пропущен',
+    msgScreenshotSkippedModel: 'Модель не поддерживает изображения. Переключитесь на vision-модель и сделайте новый скриншот.',
   },
 };
 
@@ -911,7 +935,7 @@ async function handleSend() {
       state.pageScreenshot = null;
     } else if (state.pageScreenshot && !modelSupportsVision(model)) {
       state.pageScreenshot = null;
-      renderMessage('error', 'Screenshot skipped — current model does not support image input. Use a vision-capable model (Claude, GPT-4o, Gemini, etc.) and take a new screenshot.');
+      renderMessage('error', i18n('msgScreenshotSkippedModel'));
       state.isLoading = false;
       dom.sendBtn.disabled = false;
       return;
@@ -930,7 +954,7 @@ async function handleSend() {
     if (response.error) {
       if (response.error.includes('image') || response.error.includes('vision') || response.error.includes('endpoint')) {
         state.pageScreenshot = null;
-        renderMessage('error', 'Screenshot skipped — model does not support image input. Switch to a vision model and take a new screenshot.');
+        renderMessage('error', i18n('msgScreenshotSkippedModel'));
       } else {
         renderMessage('error', response.error);
       }
@@ -1007,7 +1031,7 @@ async function takeScreenshot() {
       return;
     }
     state.pageScreenshot = data.dataUrl;
-    setStatus('Screenshot attached', 'success');
+    setStatus(i18n('statusScreenshotAttached'), 'success');
 
     const empty = dom.messages.querySelector('.empty-state');
     if (empty) empty.remove();
@@ -1021,7 +1045,7 @@ async function takeScreenshot() {
     dom.messages.appendChild(div);
     scrollToBottom();
   } catch (err) {
-    setStatus('Screenshot failed: ' + err.message, 'error');
+    setStatus(i18n('statusScreenshotFailed') + ': ' + err.message, 'error');
   }
 }
 

@@ -45,9 +45,15 @@ if (chrome.webNavigation && chrome.webNavigation.onCompleted) {
 }
 
 async function notifyContextRefresh(tabId) {
+  let tab;
   try {
-    const tab = await chrome.tabs.get(tabId);
-    if (!tab.url || !tab.url.startsWith('http')) return;
+    tab = await chrome.tabs.get(tabId);
+  } catch {
+    return;
+  }
+  if (!tab?.url || !tab.url.startsWith('http')) return;
+
+  try {
     const data = await chrome.tabs.sendMessage(tabId, { type: 'page.collect' });
     if (data?.rawCapture?.metadata) {
       await chrome.storage.local.set({
@@ -57,12 +63,18 @@ async function notifyContextRefresh(tabId) {
           favicon: data.rawCapture.metadata.favicon || `chrome://favicon/${tab.url}`,
           bodyText: data.rawCapture.bodyText,
           images: data.rawCapture.images,
+          timestamp: Date.now(),
         },
       });
     }
   } catch (err) {
     await chrome.storage.local.set({
-      openagent_current_tab: { url: tab?.url || '', title: tab?.title || '' },
+      openagent_current_tab: {
+        url: tab.url,
+        title: tab.title,
+        favicon: `chrome://favicon/${tab.url}`,
+        timestamp: Date.now(),
+      },
     });
   }
   chrome.runtime.sendMessage({ type: 'context.refresh' }).catch(() => {});

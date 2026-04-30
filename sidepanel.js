@@ -568,7 +568,7 @@ async function init() {
   loadModels();
   updateModelBadge();
   updateBadge();
-  collectPageContext();
+  loadCachedContext();
 }
 
 function updateVaultBtn() {
@@ -607,7 +607,8 @@ async function saveAutoVault() {
 function bindEvents() {
   chrome.runtime.onMessage.addListener((message) => {
     if (message.type === 'context.refresh') {
-      collectPageContext();
+      if (state.contextDebounce) clearTimeout(state.contextDebounce);
+      state.contextDebounce = setTimeout(() => collectPageContext(), 200);
     }
   });
 
@@ -1069,9 +1070,18 @@ async function handleSend() {
 // ─── Page Context ──────────────────────────────────────────────────────────────
 
 async function collectPageContext() {
-  state.pageContext = null; // clear stale context before fetch
+  state.pageContext = null;
+  dom.pageCtxDiv?.remove();
+  dom.pageCtxDiv = null;
+
   try {
-    const data = await sendBgMessage({ type: 'page.collect' });
+    let data = await sendBgMessage({ type: 'page.collect' });
+    if (data.error || !data.rawCapture) {
+      // content script not injected — force inject and retry
+      await sendBgMessage({ type: 'inject.content' });
+      await new Promise((r) => setTimeout(r, 500));
+      data = await sendBgMessage({ type: 'page.collect' });
+    }
     if (data.error) {
       setStatus(data.error, 'error');
       return;
@@ -1089,6 +1099,23 @@ async function collectPageContext() {
   } catch (err) {
     setStatus('Error: ' + err.message, 'error');
   }
+}
+
+async function loadCachedContext() {
+  try {
+    const stored = await chrome.storage.local.get(['openagent_current_tab']);
+    const cached = stored.openagent_current_tab;
+    if (cached?.url && cached.url.startsWith('http')) {
+      state.pageContext = cached;
+      prependPageContext({
+        url: cached.url,
+        title: cached.title,
+        favicon: cached.favicon || `chrome://favicon/${cached.url}`,
+      });
+    }
+  } catch {}
+  // refresh in background
+  collectPageContext();
 }
 
 function modelSupportsVision(modelId) {

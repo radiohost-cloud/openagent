@@ -180,8 +180,8 @@ async function sendToContentScript(type, payload) {
 }
 
 async function sendNavigateAction(url) {
-  const tab = await getWebTab();
-  if (!tab?.id) return { error: 'No active web page tab found' };
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab?.id) return { error: 'No active tab found' };
   try {
     await chrome.tabs.update(tab.id, { url });
     return { ok: true, message: `Navigated to ${url}` };

@@ -321,9 +321,13 @@ async function buildMessages(history, pageContext, pageScreenshot, systemPrompt,
     }
   }
   if (pageContext) {
+    const url = pageContext.metadata?.url || pageContext.url || '';
+    const title = pageContext.metadata?.title || pageContext.title || '';
+    const bodyText = pageContext.bodyText || '';
+    const selectedText = pageContext.selectedText || '';
     msgs.push({
       role: 'user',
-      content: `Current page context:\nURL: ${pageContext.url}\nTitle: ${pageContext.title}\n\nContent:\n${pageContext.bodyText}${pageContext.selectedText ? `\n\nSelected text: ${pageContext.selectedText}` : ''}`,
+      content: `Current page context:\nURL: ${url}\nTitle: ${title}\n\nContent:\n${bodyText}${selectedText ? `\n\nSelected text: ${selectedText}` : ''}`,
     });
   }
   if (pageScreenshot) {

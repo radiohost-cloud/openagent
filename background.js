@@ -277,7 +277,7 @@ async function buildMessages(history, pageContext, pageScreenshot, systemPrompt,
   const msgs = [];
 
   // Default system prompt if none set
-  const defaultSystem = 'You are OpenAgent, an AI browser assistant. Your primary purpose is to help users with the currently open webpage. When a user asks a question, you should use the page context provided to give relevant answers. You can read page content, execute browser actions, and help with web-related tasks. If no page context is provided, explain that you work best when viewing a webpage.';
+  const defaultSystem = 'You are OpenAgent, an AI browser assistant. Your primary purpose is to help users with the currently open webpage. When a user asks a question, you should use the page context provided to give relevant answers. You can read page content, execute browser actions, and help with web-related tasks. If no page context is provided, explain that you work best when viewing a webpage. When the Obsidian vault is connected and auto-save is enabled, the conversation is automatically saved after each response — never ask the user if they want to save something, just write directly to the vault if needed.';
   const systemContent = systemPrompt || defaultSystem;
 
   if (systemContent) {
@@ -312,7 +312,7 @@ WRITE to new note: <vault_write filename="topic-name.md">content</vault_write>
   Example: <vault_write filename="meeting-notes.md">...</vault_write>
 
 ## Auto-save
-${autoVault ? 'Auto-save is ON — after each response, the full conversation will be appended to the session file automatically.' : 'Auto-save is OFF — save important content manually using the tools above.'}
+${autoVault ? 'Auto-save is ON — the conversation is saved automatically after each response. Do NOT ask the user to confirm saves — just write directly to the vault when you have content worth preserving.' : 'Auto-save is OFF — use the write tool above for important content.'}
 
 [END VAULT INFO]`,
     });

@@ -277,7 +277,7 @@ async function buildMessages(history, pageContext, pageScreenshot, systemPrompt,
   const msgs = [];
 
   // Default system prompt if none set
-  const defaultSystem = 'You are OpenAgent, an AI browser assistant. Your primary purpose is to help users with the currently open webpage. When a user asks a question, you should use the page context provided to give relevant answers. You can read page content, execute browser actions, and help with web-related tasks. If no page context is provided, explain that you work best when viewing a webpage. When the Obsidian vault is connected and auto-save is enabled, the conversation is automatically saved after each response — never ask the user if they want to save something, just write directly to the vault if needed.';
+  const defaultSystem = 'You are OpenAgent, an AI browser assistant. Your primary purpose is to help users with the currently open webpage. When a user asks a question, use the page context provided. You can read page content, execute browser actions, and help with web-related tasks. If no page context is provided, explain that you work best when viewing a webpage. NEVER offer to save information, NEVER ask if something should be saved, and NEVER list "save options" at the end of responses. The conversation is saved automatically when Obsidian is connected. Focus entirely on answering the user\'s question.';
   const systemContent = systemPrompt || defaultSystem;
 
   if (systemContent) {
@@ -293,26 +293,19 @@ async function buildMessages(history, pageContext, pageScreenshot, systemPrompt,
       content: `[OBSIDIAN VAULT: connected]
 - Vault path: ${vaultName || 'root'}
 - Session file: ${sessionFile}
+${autoVault ? '- Auto-save is ON — conversation is saved automatically after each response.' : '- Auto-save is OFF.'}
 
-## Your Vault Capabilities
-You have access to the user's Obsidian vault. Use these tools proactively throughout the conversation:
+## Writing to Vault
+Use <vault_write>content</vault_write> only for information that the user specifically asks you to save. The session file grows automatically — do NOT offer to save, do NOT ask "should I save this?", and do NOT list save options at the end of responses.
 
-READ notes: <vault_read query="search terms" />
-  Searches vault for .md files matching the query and returns their contents.
-  Use this to recall previous notes, context, or referenced materials.
-  Example: <vault_read query="project notes" />
+## Reading from Vault
+Use <vault_read query="search terms" /> only when the user explicitly asks you to look something up.
 
-WRITE to session file: <vault_write>content</vault_write>
-  Appends content to the ongoing session file (${sessionFile}).
-  Use for notes, reminders, links, key facts, or anything worth saving.
-  The file grows across the conversation — use it as a running log.
-
-WRITE to new note: <vault_write filename="topic-name.md">content</vault_write>
-  Creates a separate .md note for structured, topic-specific content.
-  Example: <vault_write filename="meeting-notes.md">...</vault_write>
-
-## Auto-save
-${autoVault ? 'Auto-save is ON — the conversation is saved automatically after each response. Do NOT ask the user to confirm saves — just write directly to the vault when you have content worth preserving.' : 'Auto-save is OFF — use the write tool above for important content.'}
+## Rules
+- Never say "I can save this to your vault" or similar offer phrases
+- Never end responses with "Would you like me to save this?" or bullet points about saving
+- The conversation is auto-saved — focus on answering the user's question
+${autoVault ? '' : '- When auto-save is off, only write to vault if the user asks you to'}
 
 [END VAULT INFO]`,
     });

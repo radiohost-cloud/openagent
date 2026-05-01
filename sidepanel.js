@@ -855,10 +855,11 @@ function bindEvents() {
   dom.historyDrawerClose.addEventListener('click', toggleHistory);
 
   dom.vaultBtn.addEventListener('click', () => {
-    if (state.vaultDirHandle) {
+    if (vaultMode() === 'api') {
+      toggleVaultOnBtn();
+    } else if (state.vaultDirHandle) {
       toggleVaultOnBtn();
     } else if (state.settings.vaultPath) {
-      // Vault path was saved but handle expired — re-authorize
       pickVaultFolder();
     } else {
       pickVaultFolder();
@@ -870,26 +871,41 @@ function bindEvents() {
   }
 
   if (dom.vaultCardLocal) {
-    dom.vaultCardLocal.addEventListener('click', () => {
+    dom.vaultCardLocal.addEventListener('click', async () => {
       state.settings.vaultMode = 'local';
       dom.vaultCardLocal.classList.add('selected');
       dom.vaultCardApi.classList.remove('selected');
-      dom.vaultApiPanel.classList.add('hidden');
+      if (dom.vaultApiPanel) dom.vaultApiPanel.classList.add('hidden');
       if (dom.vaultLocalPanel) dom.vaultLocalPanel.classList.remove('hidden');
+      if (dom.vaultCardApiStatus) dom.vaultCardApiStatus.textContent = '';
+      state.vaultApiConnected = false;
+      await sendBgMessage({ type: 'settings.save', data: { vaultMode: 'local' } }).catch(() => {});
       updateVaultBtn();
-      sendBgMessage({ type: 'settings.save', data: { ...state.settings } }).catch(() => {});
     });
   }
 
   if (dom.vaultCardApi) {
-    dom.vaultCardApi.addEventListener('click', () => {
+    dom.vaultCardApi.addEventListener('click', async () => {
       state.settings.vaultMode = 'api';
       dom.vaultCardApi.classList.add('selected');
       dom.vaultCardLocal.classList.remove('selected');
-      dom.vaultApiPanel.classList.remove('hidden');
+      if (dom.vaultApiPanel) dom.vaultApiPanel.classList.remove('hidden');
       if (dom.vaultLocalPanel) dom.vaultLocalPanel.classList.add('hidden');
+      if (dom.vaultCardLocalStatus) dom.vaultCardLocalStatus.textContent = '';
+      await sendBgMessage({ type: 'settings.save', data: { vaultMode: 'api' } }).catch(() => {});
+      // Auto-connect if credentials are configured
+      if (state.settings.vaultApiUrl && state.settings.vaultApiToken) {
+        state.autoVault = true;
+        const result = await vaultApiTest();
+        state.vaultApiConnected = !result.error;
+        if (dom.vaultCardApiStatus) {
+          dom.vaultCardApiStatus.textContent = state.vaultApiConnected ? i18n('statusConnected') : '';
+        }
+        if (!result.error) {
+          saveAutoVault();
+        }
+      }
       updateVaultBtn();
-      sendBgMessage({ type: 'settings.save', data: { ...state.settings } }).catch(() => {});
     });
   }
 

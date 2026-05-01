@@ -1239,15 +1239,6 @@ async function collectPageContext() {
     if (data.rawCapture?.metadata) {
       prependPageContext(data.rawCapture.metadata);
     }
-    // Regenerate vault filename for new page domain if vault is active
-    if (state.autoVault && state.vaultConnected && state.currentVaultFilename) {
-      const newFilename = getOrCreateSessionFilename();
-      if (newFilename !== state.currentVaultFilename) {
-        state.currentVaultFilename = null;
-        state.currentVaultFilename = newFilename;
-        updateVaultNoteIndicator();
-      }
-    }
   } catch (err) {
     // Silently fail - tab might be loading
   }
@@ -1267,16 +1258,6 @@ async function loadCachedContext() {
         title: cached.title,
         favicon: faviconUrl,
       });
-      // Update vault filename when URL domain changes
-      if (state.autoVault && state.vaultConnected && state.currentVaultFilename && prevUrl) {
-        const prevDomain = (() => { try { return new URL(prevUrl).hostname; } catch { return ''; } })();
-        const newDomain = (() => { try { return new URL(cached.url).hostname; } catch { return ''; } })();
-        if (prevDomain !== newDomain) {
-          state.currentVaultFilename = null;
-          state.currentVaultFilename = getOrCreateSessionFilename();
-          updateVaultNoteIndicator();
-        }
-      }
     }
   } catch {}
   // refresh in background
@@ -1347,6 +1328,16 @@ function prependPageContext(metadata) {
       <span class="ctx-dot"></span>
       <span class="ctx-title">${escapeHtml(metadata.title || 'Untitled')}</span>
     `;
+  }
+
+  // Update vault filename when page context changes
+  if (state.autoVault && state.vaultConnected) {
+    const prevFilename = state.currentVaultFilename;
+    state.currentVaultFilename = null;
+    state.currentVaultFilename = getOrCreateSessionFilename();
+    if (state.currentVaultFilename !== prevFilename) {
+      updateVaultNoteIndicator();
+    }
   }
 }
 

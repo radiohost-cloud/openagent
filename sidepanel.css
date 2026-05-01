@@ -1744,3 +1744,25 @@ details[open] .vault-summary::before {
 #vaultApiStatus.error {
   color: #cc6666;
 }
+
+/* ─── Responsive ─────────────────────────────────────────── */
+
+@media (max-width: 320px) {
+  .header { padding: 4px 6px; }
+  .brand-name { display: none; }
+  .model-badge { display: none; }
+  .header-btn { width: 26px; height: 26px; }
+
+  .settings-row { flex-direction: column; gap: 6px; }
+  .settings-row .form-group--sm { width: 100%; }
+
+  .modal-content { width: 96%; max-width: none; }
+  .modal-body { padding: 12px; }
+  .form-group { margin-bottom: 12px; }
+
+  .input-area { padding: 8px 10px; }
+  .input-wrapper { padding: 5px 6px 5px 8px; }
+
+  .model-list { max-height: 150px; }
+  .model-item { padding: 6px 8px; }
+}

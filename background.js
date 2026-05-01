@@ -606,7 +606,6 @@ async function vaultApiTest(message) {
   const token = message.token || '';
   if (!url || !token) return { error: 'URL or token missing' };
 
-  // Try different vault endpoints - Local REST API plugin supports /vault
   const endpoints = ['/vault', '/'];
   for (const ep of endpoints) {
     try {
@@ -615,10 +614,9 @@ async function vaultApiTest(message) {
       });
       if (resp.ok) return { ok: true, endpoint: ep };
     } catch (err) {
-      return { error: err.message };
+      // try next endpoint
     }
   }
-  // If all endpoints fail, try vault endpoint and return the status
   try {
     const resp = await fetch(url + '/vault', {
       headers: { 'Authorization': `Bearer ${token}` },
@@ -637,7 +635,6 @@ async function vaultApiRead(message) {
   const vaultName = settings.vaultName || '';
   if (!url || !token) return { error: 'Vault API not configured', notes: [] };
 
-  // Build vault subfolder prefix
   const vaultPrefix = vaultName.startsWith('/') ? vaultName.slice(1) : vaultName;
   const vaultPath = vaultPrefix ? `/${vaultPrefix}` : '';
 
@@ -662,7 +659,7 @@ async function vaultApiRead(message) {
       if (!filename.endsWith('.md')) continue;
 
       try {
-        const fileResp = await fetch(url + '/search?path=' + encodeURIComponent(path), {
+        const fileResp = await fetch(url + '/vault/' + encodeURIComponent(path), {
           headers: { 'Authorization': `Bearer ${token}` },
         });
         if (fileResp.ok) {
@@ -690,26 +687,25 @@ async function vaultApiWrite(message) {
   const fullPath = vaultPrefix ? `${vaultPrefix}/${filename}` : filename;
 
   try {
-    // Read existing file first
-    const path = '/search?path=' + encodeURIComponent(fullPath);
-    const resp = await fetch(url + path, {
+    // Read existing file first via /vault/{path}
+    const readResp = await fetch(url + '/vault/' + encodeURIComponent(fullPath), {
       headers: { 'Authorization': `Bearer ${token}` },
     });
     let existing = '';
-    if (resp.ok) {
-      const data = await resp.json();
+    if (readResp.ok) {
+      const data = await readResp.json();
       if (data.content) existing = data.content;
     }
-    const body = {
-      content: existing && append ? (existing + '\n\n---\n\n' + content) : content,
-    };
-    const writeResp = await fetch(url + '/uments/' + encodeURIComponent(fullPath), {
-      method: 'POST',
+
+    const writeContent = existing && append ? (existing + '\n\n---\n\n' + content) : content;
+    const method = append ? 'POST' : 'PUT';
+    const writeResp = await fetch(url + '/vault/' + encodeURIComponent(fullPath), {
+      method,
       headers: {
         'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
+        'Content-Type': 'text/plain',
       },
-      body: JSON.stringify(body),
+      body: writeContent,
     });
     if (!writeResp.ok) {
       const err = await writeResp.text();

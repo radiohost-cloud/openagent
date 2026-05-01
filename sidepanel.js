@@ -1671,25 +1671,24 @@ function formatContent(text) {
     tableRows.push(JSON.parse(rowJson));
     return `__TROW_${idx}__`;
   });
-  // Restore table rows
+  // Tables — build HTML and replace markers
   if (tableRows.length > 0) {
     let tableHtml = '<div class="table-wrapper"><table>';
-    let headerRow = null;
+    // Detect header row (the separator row with ---)
+    let headerIdx = -1;
     for (let i = 0; i < tableRows.length; i++) {
-      const cells = tableRows[i];
-      const isHeader = cells.every((c) => c.match(/^[\-\=]+$/) || c.match(/^[A-Z\s]+$/));
-      if (isHeader && i + 1 < tableRows.length) {
-        headerRow = cells;
-      } else {
-        const tag = headerRow ? 'th' : 'td';
-        const cellHtml = cells.map((c) => `<${tag}>${c}</${tag}>`).join('');
-        tableHtml += `<tr>${cellHtml}</tr>`;
-        if (headerRow) headerRow = null;
-      }
+      if (tableRows[i].some((c) => /^-+$/.test(c))) { headerIdx = i; break; }
+    }
+    for (let i = 0; i < tableRows.length; i++) {
+      if (i === headerIdx) continue; // skip separator row
+      const tag = headerIdx !== -1 && i < headerIdx ? 'th' : 'td';
+      const cellHtml = tableRows[i].map((c) => `<${tag}>${c}</${tag}>`).join('');
+      tableHtml += `<tr>${cellHtml}</tr>`;
     }
     tableHtml += '</table></div>';
-    processed = processed.replace(/__TROW_(\d+)__/g, () => '');
-    processed = processed.replace(/__TROW_0__[\s\S]*?(?=__TROW_|$)/, tableHtml);
+    processed = processed.replace(/__TROW_(\d+)__/g, (match, idx) => {
+      return parseInt(idx) === tableRows.length - 1 ? tableHtml : '';
+    });
   }
   // Line breaks
   processed = processed.replace(/\n/g, '<br>');

@@ -1086,6 +1086,9 @@ async function handleSend() {
         saveAutoVaultNote().catch((err) => console.error('[SP] auto-vault error:', err));
       }
 
+      // Save conversation after each response (updates existing or creates new)
+      saveConversation();
+
       // Process conversation end - extract memory
       processConversationEnd().catch((err) => console.error('[SP] memory process error:', err));
     }
@@ -1355,6 +1358,7 @@ function restoreConversation(id) {
 
   renderMessages();
   updateBadge();
+  saveConversation();
 }
 
 // ─── Rendering ────────────────────────────────────────────────────────────────

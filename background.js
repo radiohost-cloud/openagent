@@ -82,10 +82,6 @@ async function injectIntoTab(tabId) {
     await chrome.scripting.executeScript({
       target: { tabId },
       files: ['content.js'],
-    }).catch(() => {
-      return new Promise((resolve) => {
-        chrome.tabs.executeScript(tabId, { file: 'content.js', runAt: 'document_end' }, resolve);
-      });
     });
   } catch (err) {
     if (err.message && !err.message.includes('Cannot access contents')) {

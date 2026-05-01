@@ -11,6 +11,9 @@ const STORAGE_KEYS = {
   LANGUAGE: 'claude_language',
   VAULT_PATH: 'openagent_vault_path',
   VAULT_HANDLE: 'openagent_vault_handle',
+  VAULT_API_URL: 'openagent_vault_api_url',
+  VAULT_API_TOKEN: 'openagent_vault_api_token',
+  VAULT_MODE: 'openagent_vault_mode',
   AUTO_VAULT: 'openagent_auto_vault',
   FONT_SIZE: 'openagent_font_size',
 };
@@ -238,6 +241,9 @@ async function loadSettings() {
     preset: result[STORAGE_KEYS.PRESET] || 'default',
     language: result[STORAGE_KEYS.LANGUAGE] || 'en',
     vaultPath: result[STORAGE_KEYS.VAULT_PATH] || '',
+    vaultApiUrl: result[STORAGE_KEYS.VAULT_API_URL] || '',
+    vaultApiToken: result[STORAGE_KEYS.VAULT_API_TOKEN] || '',
+    vaultMode: result[STORAGE_KEYS.VAULT_MODE] || 'local',
     autoVault: result[STORAGE_KEYS.AUTO_VAULT] || false,
     fontSize: result[STORAGE_KEYS.FONT_SIZE] || 'medium',
   };
@@ -253,6 +259,9 @@ async function saveSettings(data) {
     [STORAGE_KEYS.PRESET]: data.preset || 'default',
     [STORAGE_KEYS.LANGUAGE]: data.language || 'en',
     [STORAGE_KEYS.VAULT_PATH]: data.vaultPath || '',
+    [STORAGE_KEYS.VAULT_API_URL]: data.vaultApiUrl || '',
+    [STORAGE_KEYS.VAULT_API_TOKEN]: data.vaultApiToken || '',
+    [STORAGE_KEYS.VAULT_MODE]: data.vaultMode || 'local',
     [STORAGE_KEYS.FONT_SIZE]: data.fontSize || 'medium',
   });
   return { ok: true };

@@ -2,7 +2,7 @@
 
 const state = {
   messages: [],
-  settings: { apiKey: '', provider: 'openrouter', model: '', systemPrompt: '', theme: 'dark', preset: 'default', language: 'en', vaultPath: '', fontSize: 'medium' },
+  settings: { apiKey: '', provider: 'openrouter', model: '', systemPrompt: '', theme: 'dark', preset: 'default', language: 'en', vaultPath: '', vaultApiUrl: '', vaultApiToken: '', vaultMode: 'local', fontSize: 'medium' },
   pageContext: null,
   pageScreenshot: null,
   visionModels: [],
@@ -12,6 +12,7 @@ const state = {
   currentVaultFilename: null,
   vaultDirHandle: null,
   vaultReady: false,
+  vaultApiConnected: false,
   conversations: [],
   historyOpen: false,
   currentConversationId: null,
@@ -62,9 +63,16 @@ const i18nStrings = {
     langPolish: 'Polski',
     linkOpenrouterKeys: 'Get API key →',
     settingsVaultTitle: 'Obsidian Vault',
+    settingsVaultModeLocal: 'Local folder',
+    settingsVaultModeApi: 'REST API',
     settingsVaultPath: 'Folder',
     settingsVaultPathPlaceholder: 'Click Select folder to choose your vault',
     settingsVaultPathHint: 'Notes are saved directly to your vault.',
+    settingsVaultApiUrl: 'API URL',
+    settingsVaultApiUrlPlaceholder: 'https://127.0.0.1:27124',
+    settingsVaultApiToken: 'API Token',
+    settingsVaultApiTokenPlaceholder: 'Token from Local REST API plugin',
+    settingsVaultApiHint: 'Requires Local REST API plugin in Obsidian.',
     settingsSelectFolder: 'Select folder',
     settingsChangeFolder: 'Change folder',
     settingsFontSize: 'Font size',
@@ -124,9 +132,16 @@ const i18nStrings = {
     langPolish: 'Polski',
     linkOpenrouterKeys: 'Pobierz klucz API →',
     settingsVaultTitle: 'Magazyn Obsidian',
+    settingsVaultModeLocal: 'Folder lokalny',
+    settingsVaultModeApi: 'REST API',
     settingsVaultPath: 'Folder',
     settingsVaultPathPlaceholder: 'Kliknij Wybierz folder aby wybrać magazyn',
     settingsVaultPathHint: 'Notatki są zapisywane bezpośrednio w magazynie.',
+    settingsVaultApiUrl: 'URL API',
+    settingsVaultApiUrlPlaceholder: 'https://127.0.0.1:27124',
+    settingsVaultApiToken: 'Token API',
+    settingsVaultApiTokenPlaceholder: 'Token z wtyczki Local REST API',
+    settingsVaultApiHint: 'Wymaga wtyczki Local REST API w Obsidian.',
     settingsSelectFolder: 'Wybierz folder',
     settingsChangeFolder: 'Zmień folder',
     settingsFontSize: 'Wielkość czcionki',
@@ -185,9 +200,16 @@ const i18nStrings = {
     langPolish: 'Polski',
     linkOpenrouterKeys: 'Obtener clave API →',
     settingsVaultTitle: 'Bóveda de Obsidian',
+    settingsVaultModeLocal: 'Carpeta local',
+    settingsVaultModeApi: 'REST API',
     settingsVaultPath: 'Carpeta',
     settingsVaultPathPlaceholder: 'Haz clic en Seleccionar carpeta para elegir tu bóveda',
     settingsVaultPathHint: 'Las notas se guardan directamente en tu bóveda.',
+    settingsVaultApiUrl: 'URL de API',
+    settingsVaultApiUrlPlaceholder: 'https://127.0.0.1:27124',
+    settingsVaultApiToken: 'Token de API',
+    settingsVaultApiTokenPlaceholder: 'Token del plugin Local REST API',
+    settingsVaultApiHint: 'Requiere el plugin Local REST API en Obsidian.',
     settingsSelectFolder: 'Seleccionar carpeta',
     settingsChangeFolder: 'Cambiar carpeta',
     settingsFontSize: 'Tamaño de fuente',
@@ -246,9 +268,16 @@ const i18nStrings = {
     langPolish: 'Polski',
     linkOpenrouterKeys: 'Obtenir une clé API →',
     settingsVaultTitle: 'Coffre Obsidian',
+    settingsVaultModeLocal: 'Dossier local',
+    settingsVaultModeApi: 'REST API',
     settingsVaultPath: 'Dossier',
     settingsVaultPathPlaceholder: 'Cliquez sur Sélectionner un dossier pour choisir votre coffre',
     settingsVaultPathHint: 'Les notes sont enregistrées directement dans votre coffre.',
+    settingsVaultApiUrl: 'URL de API',
+    settingsVaultApiUrlPlaceholder: 'https://127.0.0.1:27124',
+    settingsVaultApiToken: "Jeton d'API",
+    settingsVaultApiTokenPlaceholder: "Jeton du plugin Local REST API",
+    settingsVaultApiHint: "Nécessite le plugin Local REST API dans Obsidian.",
     settingsSelectFolder: 'Sélectionner un dossier',
     settingsChangeFolder: 'Modifier le dossier',
     settingsFontSize: 'Taille de police',
@@ -306,9 +335,16 @@ const i18nStrings = {
     langPolish: 'Polski',
     linkOpenrouterKeys: 'API-Schlüssel erhalten →',
     settingsVaultTitle: 'Obsidian-Tresor',
+    settingsVaultModeLocal: 'Lokaler Ordner',
+    settingsVaultModeApi: 'REST API',
     settingsVaultPath: 'Ordner',
     settingsVaultPathPlaceholder: 'Klicken Sie auf Ordner auswählen, um Ihren Tresor zu wählen',
     settingsVaultPathHint: 'Notizen werden direkt in Ihrem Tresor gespeichert.',
+    settingsVaultApiUrl: 'API-URL',
+    settingsVaultApiUrlPlaceholder: 'https://127.0.0.1:27124',
+    settingsVaultApiToken: 'API-Token',
+    settingsVaultApiTokenPlaceholder: 'Token vom Local REST API Plugin',
+    settingsVaultApiHint: 'Erfordert das Local REST API Plugin in Obsidian.',
     settingsSelectFolder: 'Ordner auswählen',
     settingsChangeFolder: 'Ordner ändern',
     settingsFontSize: 'Schriftgröße',
@@ -367,9 +403,16 @@ const i18nStrings = {
     langPolish: 'Polski',
     linkOpenrouterKeys: 'Получить API-ключ →',
     settingsVaultTitle: 'Хранилище Obsidian',
+    settingsVaultModeLocal: 'Локальная папка',
+    settingsVaultModeApi: 'REST API',
     settingsVaultPath: 'Папка',
     settingsVaultPathPlaceholder: 'Нажмите Выбрать папку, чтобы выбрать хранилище',
     settingsVaultPathHint: 'Заметки сохраняются напрямую в хранилище.',
+    settingsVaultApiUrl: 'URL API',
+    settingsVaultApiUrlPlaceholder: 'https://127.0.0.1:27124',
+    settingsVaultApiToken: 'Токен API',
+    settingsVaultApiTokenPlaceholder: 'Токен из плагина Local REST API',
+    settingsVaultApiHint: 'Требуется плагин Local REST API в Obsidian.',
     settingsSelectFolder: 'Выбрать папку',
     settingsChangeFolder: 'Изменить папку',
     settingsFontSize: 'Размер шрифта',
@@ -424,6 +467,12 @@ const dom = {
   vaultPathInput: $('#vaultPathInput'),
   vaultSelectBtn: $('#vaultSelectBtn'),
   vaultStatus: $('#vaultStatusDot'),
+  vaultModeLocal: $('#vaultModeLocal'),
+  vaultModeApi: $('#vaultModeApi'),
+  vaultApiPanel: $('#vaultApiPanel'),
+  vaultApiUrlInput: $('#vaultApiUrlInput'),
+  vaultApiTokenInput: $('#vaultApiTokenInput'),
+  vaultLocalPanel: null, // set dynamically
 };
 
 // ─── i18n ────────────────────────────────────────────────────────────────────
@@ -467,37 +516,30 @@ function applyFontSize(size) {
   document.body.dataset.fontSize = size;
 }
 
-// ─── Vault (File System Access API) ─────────────────────────────────────────
+// ─── Vault (File System Access API + REST API) ────────────────────────────────
 
-async function pickVaultFolder() {
-  try {
-    const dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
-    state.vaultDirHandle = dirHandle;
-    state.vaultReady = true;
-    state.settings.vaultPath = dirHandle.name;
-    state.autoVault = true;
-    dom.vaultPathInput.value = dirHandle.name;
-    dom.vaultPathInput.title = 'Selected: ' + dirHandle.name;
-    if (dom.vaultStatus) dom.vaultStatus.classList.add('ready', 'active');
-    await sendBgMessage({
-      type: 'settings.save',
-      data: { ...state.settings },
-    });
-    await sendBgMessage({ type: 'autovault.save', enabled: true });
-    updateVaultBtn();
-    setStatus(i18n('statusVaultReady'), 'success');
-  } catch (err) {
-    if (err.name !== 'AbortError') {
-      setStatus('Vault error: ' + err.message, 'error');
-    }
-  }
+function vaultMode() {
+  return state.settings.vaultMode || 'local';
 }
 
-// Vault is accessible as long as the side panel is open.
-// The user picks the folder once per session via the icon or Settings.
-// The AI uses <vault_read> and <vault_write> XML tags in responses.
+function vaultApiBase() {
+  let url = (state.settings.vaultApiUrl || '').replace(/\/$/, '');
+  if (!url) return null;
+  return url;
+}
+
+function vaultApiHeaders() {
+  const token = state.settings.vaultApiToken || '';
+  return {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json',
+  };
+}
 
 async function vaultWrite(filename, content, append = false) {
+  if (vaultMode() === 'api') {
+    return vaultApiWrite(filename, content, append);
+  }
   if (!state.vaultDirHandle) {
     if (state.settings.vaultPath) {
       return { error: 'Vault folder access expired — click the Obsidian button to re-authorize.' };
@@ -522,6 +564,39 @@ async function vaultWrite(filename, content, append = false) {
   }
 }
 
+async function vaultApiWrite(filename, content, append) {
+  const base = vaultApiBase();
+  if (!base) return { error: 'No API URL configured. Go to Settings.' };
+  if (!state.settings.vaultApiToken) return { error: 'No API token configured. Go to Settings.' };
+
+  const path = '/search?path=' + encodeURIComponent(filename);
+  try {
+    const resp = await fetch(base + path, {
+      headers: vaultApiHeaders(),
+    });
+    let existing = '';
+    if (resp.ok) {
+      const data = await resp.json();
+      if (data.content) existing = data.content;
+    }
+    const body = {
+      content: existing ? (append ? existing + '\n\n---\n\n' + content : content) : content,
+    };
+    const writeResp = await fetch(base + '/uments/' + encodeURIComponent(filename), {
+      method: 'POST',
+      headers: vaultApiHeaders(),
+      body: JSON.stringify(body),
+    });
+    if (!writeResp.ok) {
+      const err = await writeResp.text();
+      return { error: 'Write failed: ' + err };
+    }
+    return { ok: true, path: filename };
+  } catch (err) {
+    return { error: 'API error: ' + err.message };
+  }
+}
+
 function getOrCreateSessionFilename() {
   if (state.currentVaultFilename) return state.currentVaultFilename;
   const date = new Date();
@@ -534,6 +609,9 @@ function getOrCreateSessionFilename() {
 }
 
 async function vaultReadFiles(query = '', limit = 20) {
+  if (vaultMode() === 'api') {
+    return vaultApiReadFiles(query, limit);
+  }
   if (!state.vaultDirHandle) {
     return { error: 'No vault selected', notes: [] };
   }
@@ -555,6 +633,70 @@ async function vaultReadFiles(query = '', limit = 20) {
     return { error: err.message, notes };
   }
   return { notes };
+}
+
+async function vaultApiReadFiles(query, limit) {
+  const base = vaultApiBase();
+  if (!base) return { error: 'No API URL configured', notes: [] };
+  if (!state.settings.vaultApiToken) return { error: 'No API token configured', notes: [] };
+
+  try {
+    const searchUrl = query
+      ? `${base}/search?q=${encodeURIComponent(query)}&type=file&ext=md&limit=${limit}`
+      : `${base}/vault?limit=${limit}`;
+
+    const resp = await fetch(searchUrl, { headers: vaultApiHeaders() });
+    if (!resp.ok) {
+      return { error: `API error: ${resp.status}`, notes: [] };
+    }
+    const data = await resp.json();
+    const files = data.files || data || [];
+    const notes = [];
+
+    for (const item of files) {
+      if (notes.length >= limit) break;
+      const path = item.path || item;
+      const filename = path.split('/').pop() || path;
+      if (!filename.endsWith('.md')) continue;
+
+      try {
+        const fileResp = await fetch(base + '/search?path=' + encodeURIComponent(path), {
+          headers: vaultApiHeaders(),
+        });
+        if (fileResp.ok) {
+          const fileData = await fileResp.json();
+          notes.push({ filename, content: fileData.content || '' });
+        }
+      } catch {}
+    }
+    return { notes };
+  } catch (err) {
+    return { error: 'API error: ' + err.message, notes: [] };
+  }
+}
+
+async function pickVaultFolder() {
+  try {
+    const dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+    state.vaultDirHandle = dirHandle;
+    state.vaultReady = true;
+    state.settings.vaultPath = dirHandle.name;
+    state.autoVault = true;
+    dom.vaultPathInput.value = dirHandle.name;
+    dom.vaultPathInput.title = 'Selected: ' + dirHandle.name;
+    if (dom.vaultStatus) dom.vaultStatus.classList.add('ready', 'active');
+    await sendBgMessage({
+      type: 'settings.save',
+      data: { ...state.settings },
+    });
+    await sendBgMessage({ type: 'autovault.save', enabled: true });
+    updateVaultBtn();
+    setStatus(i18n('statusVaultReady'), 'success');
+  } catch (err) {
+    if (err.name !== 'AbortError') {
+      setStatus('Vault error: ' + err.message, 'error');
+    }
+  }
 }
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
@@ -596,23 +738,42 @@ async function loadMemoryContext() {
 }
 
 function updateVaultBtn() {
+  const isApi = vaultMode() === 'api';
   const hasHandle = !!state.vaultDirHandle;
   const hasPath = !!state.settings.vaultPath;
+  const hasApiUrl = !!(state.settings.vaultApiUrl && state.settings.vaultApiToken);
   const isOn = state.autoVault;
 
-  dom.vaultBtn.classList.toggle('active', hasHandle && isOn);
-  if (dom.vaultStatus) dom.vaultStatus.classList.toggle('ready', hasHandle);
-
-  if (!hasPath) {
-    dom.vaultBtn.title = i18n('btnVaultNotSet');
-  } else if (hasHandle) {
-    dom.vaultBtn.title = isOn ? i18n('btnVaultOn') : i18n('btnVaultOff');
+  if (isApi) {
+    dom.vaultBtn.classList.toggle('active', hasApiUrl && isOn);
+    if (dom.vaultStatus) dom.vaultStatus.classList.toggle('ready', hasApiUrl);
+    if (!hasApiUrl) {
+      dom.vaultBtn.title = i18n('btnVaultNotSet');
+    } else {
+      dom.vaultBtn.title = isOn ? i18n('btnVaultOn') : i18n('btnVaultOff');
+    }
   } else {
-    dom.vaultBtn.title = i18n('btnVaultReauth');
+    dom.vaultBtn.classList.toggle('active', hasHandle && isOn);
+    if (dom.vaultStatus) dom.vaultStatus.classList.toggle('ready', hasHandle);
+    if (!hasPath) {
+      dom.vaultBtn.title = i18n('btnVaultNotSet');
+    } else if (hasHandle) {
+      dom.vaultBtn.title = isOn ? i18n('btnVaultOn') : i18n('btnVaultOff');
+    } else {
+      dom.vaultBtn.title = i18n('btnVaultReauth');
+    }
   }
 }
 
 function toggleVaultOnBtn() {
+  if (vaultMode() === 'api') {
+    if (!state.settings.vaultApiUrl) return;
+    state.autoVault = !state.autoVault;
+    saveAutoVault();
+    updateVaultBtn();
+    setStatus(state.autoVault ? i18n('statusVaultReady') : i18n('btnVaultOff'), state.autoVault ? 'success' : 'info');
+    return;
+  }
   if (!state.vaultDirHandle) return;
   state.autoVault = !state.autoVault;
   saveAutoVault();
@@ -730,6 +891,46 @@ function bindEvents() {
     dom.vaultSelectBtn.addEventListener('click', () => pickVaultFolder());
   }
 
+  if (dom.vaultModeLocal) {
+    dom.vaultModeLocal.addEventListener('click', () => {
+      state.settings.vaultMode = 'local';
+      dom.vaultModeLocal.classList.add('active');
+      dom.vaultModeApi.classList.remove('active');
+      dom.vaultApiPanel.classList.add('hidden');
+      if (dom.vaultLocalPanel) dom.vaultLocalPanel.classList.remove('hidden');
+      updateVaultBtn();
+      sendBgMessage({ type: 'settings.save', data: { ...state.settings } }).catch(() => {});
+    });
+  }
+
+  if (dom.vaultModeApi) {
+    dom.vaultModeApi.addEventListener('click', () => {
+      state.settings.vaultMode = 'api';
+      dom.vaultModeApi.classList.add('active');
+      dom.vaultModeLocal.classList.remove('active');
+      dom.vaultApiPanel.classList.remove('hidden');
+      if (dom.vaultLocalPanel) dom.vaultLocalPanel.classList.add('hidden');
+      updateVaultBtn();
+      sendBgMessage({ type: 'settings.save', data: { ...state.settings } }).catch(() => {});
+    });
+  }
+
+  if (dom.vaultApiUrlInput) {
+    dom.vaultApiUrlInput.addEventListener('change', () => {
+      state.settings.vaultApiUrl = dom.vaultApiUrlInput.value.trim();
+      updateVaultBtn();
+      sendBgMessage({ type: 'settings.save', data: { ...state.settings } }).catch(() => {});
+    });
+  }
+
+  if (dom.vaultApiTokenInput) {
+    dom.vaultApiTokenInput.addEventListener('change', () => {
+      state.settings.vaultApiToken = dom.vaultApiTokenInput.value.trim();
+      updateVaultBtn();
+      sendBgMessage({ type: 'settings.save', data: { ...state.settings } }).catch(() => {});
+    });
+  }
+
   dom.modelSearch.addEventListener('input', () => {
     filterModels(dom.modelSearch.value);
   });
@@ -760,6 +961,22 @@ async function loadSettings() {
       dom.vaultPathInput.value = state.settings.vaultPath;
       dom.vaultPathInput.title = 'Selected: ' + state.settings.vaultPath;
     }
+
+    // Vault API settings
+    if (dom.vaultApiUrlInput) dom.vaultApiUrlInput.value = state.settings.vaultApiUrl || '';
+    if (dom.vaultApiTokenInput) dom.vaultApiTokenInput.value = state.settings.vaultApiToken || '';
+
+    // Vault mode toggle
+    const mode = state.settings.vaultMode || 'local';
+    if (dom.vaultModeLocal && dom.vaultModeApi) {
+      dom.vaultModeLocal.classList.toggle('active', mode === 'local');
+      dom.vaultModeApi.classList.toggle('active', mode === 'api');
+      const localPanel = document.getElementById('vaultLocalPanel');
+      const apiPanel = dom.vaultApiPanel;
+      if (apiPanel) apiPanel.classList.toggle('hidden', mode !== 'api');
+      if (localPanel) localPanel.classList.toggle('hidden', mode !== 'local');
+    }
+
     // vaultDirHandle is session-only (FileSystemDirectoryHandle not serializable).
     // vaultReady reflects whether we have an active handle, not just a saved path.
     // The user must re-authorize via pickVaultFolder() after page reload.
@@ -781,19 +998,23 @@ async function handleSaveSettings() {
   const preset = dom.themePreset.value;
   const language = state.settings.language;
   const vaultPath = dom.vaultPathInput.value.trim();
+  const vaultApiUrl = dom.vaultApiUrlInput ? dom.vaultApiUrlInput.value.trim() : state.settings.vaultApiUrl;
+  const vaultApiToken = dom.vaultApiTokenInput ? dom.vaultApiTokenInput.value.trim() : state.settings.vaultApiToken;
+  const vaultMode = state.settings.vaultMode || 'local';
   const fontSize = dom.fontSizeSelect.value;
 
   try {
     await sendBgMessage({
       type: 'settings.save',
-      data: { apiKey, provider: 'openrouter', model, systemPrompt, theme, preset, language, vaultPath },
+      data: { apiKey, provider: 'openrouter', model, systemPrompt, theme, preset, language, vaultPath, vaultApiUrl, vaultApiToken, vaultMode },
     });
-    state.settings = { apiKey, provider: 'openrouter', model, systemPrompt, theme, preset, language, vaultPath };
+    state.settings = { ...state.settings, apiKey, provider: 'openrouter', model, systemPrompt, theme, preset, language, vaultPath, vaultApiUrl, vaultApiToken, vaultMode };
     dom.settingsStatus.textContent = i18n('settingsSaved');
     dom.settingsStatus.className = 'settings-status';
     toggleModal(false);
     loadModels();
     updateModelBadge();
+    updateVaultBtn();
   } catch (err) {
     dom.settingsStatus.textContent = 'Error: ' + err.message;
     dom.settingsStatus.className = 'settings-status error';

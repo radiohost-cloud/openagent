@@ -43,7 +43,8 @@
     "default_path": "sidepanel.html"
   },
   "host_permissions": [
-    "<all_urls>"
+    "<all_urls>",
+    "https://127.0.0.1:27124/*"
   ],
   "web_accessible_resources": [
     {

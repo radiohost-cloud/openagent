@@ -1633,3 +1633,52 @@ details[open] .vault-summary::before {
   color: var(--muted);
   font-family: var(--font);
 }
+
+.vault-mode-row {
+  margin-bottom: 12px;
+}
+
+.vault-mode-toggle {
+  width: 100%;
+}
+
+.vault-mode-toggle .toggle-btn {
+  flex: 1;
+}
+
+#vaultLocalPanel {
+  margin-bottom: 4px;
+}
+
+#vaultApiPanel {
+  margin-bottom: 4px;
+}
+
+#vaultApiPanel .form-group {
+  margin-bottom: 12px;
+}
+
+#vaultApiPanel .form-group:last-child {
+  margin-bottom: 0;
+}
+
+#vaultApiPanel input {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 12px;
+  transition: border-color 0.15s;
+}
+
+#vaultApiPanel input:focus {
+  outline: none;
+  border-color: rgba(60, 60, 60, 0.4);
+}
+
+#vaultApiPanel input::placeholder {
+  color: var(--muted);
+}

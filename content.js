@@ -12,37 +12,44 @@
 
   // Check URL every second
   setInterval(() => {
-    if (location.href !== lastUrl) {
-      lastUrl = location.href;
-      // Send to background, which forwards to side panel
-      chrome.runtime.sendMessage({ type: 'context.refresh' }).catch(() => {});
-    }
+    try {
+      if (location.href !== lastUrl) {
+        lastUrl = location.href;
+        chrome.runtime.sendMessage({ type: 'context.refresh' }).catch(() => {});
+      }
+    } catch (e) {}
   }, 1000);
 
   // Also intercept pushState for immediate notification
   const _pushState = history.pushState;
   history.pushState = function (...args) {
-    _pushState.apply(this, args);
-    if (location.href !== lastUrl) {
-      lastUrl = location.href;
-      chrome.runtime.sendMessage({ type: 'context.refresh' }).catch(() => {});
-    }
+    try {
+      _pushState.apply(this, args);
+      if (location.href !== lastUrl) {
+        lastUrl = location.href;
+        chrome.runtime.sendMessage({ type: 'context.refresh' }).catch(() => {});
+      }
+    } catch (e) {}
   };
 
   const _replaceState = history.replaceState;
   history.replaceState = function (...args) {
-    _replaceState.apply(this, args);
-    if (location.href !== lastUrl) {
-      lastUrl = location.href;
-      chrome.runtime.sendMessage({ type: 'context.refresh' }).catch(() => {});
-    }
+    try {
+      _replaceState.apply(this, args);
+      if (location.href !== lastUrl) {
+        lastUrl = location.href;
+        chrome.runtime.sendMessage({ type: 'context.refresh' }).catch(() => {});
+      }
+    } catch (e) {}
   };
 
   window.addEventListener('popstate', () => {
-    if (location.href !== lastUrl) {
-      lastUrl = location.href;
-      chrome.runtime.sendMessage({ type: 'context.refresh' }).catch(() => {});
-    }
+    try {
+      if (location.href !== lastUrl) {
+        lastUrl = location.href;
+        chrome.runtime.sendMessage({ type: 'context.refresh' }).catch(() => {});
+      }
+    } catch (e) {}
   });
 })();
 
@@ -55,7 +62,9 @@
     fab.id = 'openagent-fab';
     fab.innerHTML = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2z" fill="#3C3C3C"/><path d="M8 10.5c0-.276.224-.5.5-.5h7c.276 0 .5.224.5.5v1c0 .276-.224.5-.5.5h-7a.5.5 0 0 1-.5-.5v-1z" fill="white"/><path d="M8 13.5c0-.276.224-.5.5-.5h7c.276 0 .5.224.5.5v1c0 .276-.224.5-.5.5h-7a.5.5 0 0 1-.5-.5v-1z" fill="white"/></svg><span>OpenAgent</span>`;
     fab.addEventListener('click', () => {
-      if (chrome.sidePanel) chrome.sidePanel.open({ path: 'sidepanel.html' }).catch(() => {});
+      try {
+        if (chrome.sidePanel) chrome.sidePanel.open({ path: 'sidepanel.html' }).catch(() => {});
+      } catch (e) {}
     });
     if (!document.getElementById('openagent-fab-style')) {
       const s = document.createElement('style');
@@ -70,20 +79,22 @@
 // ─── Message Listener ───────────────────────────────────────────────────────────
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  switch (message.type) {
-    case 'page.collect':
-      collectPageProbe(message.overrideUrl).then(sendResponse).catch((err) => sendResponse({ error: err.message, rawCapture: { metadata: pageMetadata() } }));
-      return true;
-    case 'page.dom.snapshot':
-      sendResponse(collectDomSnapshot());
-      return true;
-    case 'page.dom.perform':
-      performDomActions(message.steps).then(sendResponse).catch((err) => sendResponse({ ok: false, summary: err.message, results: [] }));
-      return true;
-    case 'page.navigate':
-      sendResponse(handleNavigation(message.command));
-      return true;
-  }
+  try {
+    switch (message.type) {
+      case 'page.collect':
+        collectPageProbe(message.overrideUrl).then(sendResponse).catch((err) => sendResponse({ error: err.message, rawCapture: { metadata: pageMetadata() } }));
+        return true;
+      case 'page.dom.snapshot':
+        sendResponse(collectDomSnapshot());
+        return true;
+      case 'page.dom.perform':
+        performDomActions(message.steps).then(sendResponse).catch((err) => sendResponse({ ok: false, summary: err.message, results: [] }));
+        return true;
+      case 'page.navigate':
+        sendResponse(handleNavigation(message.command));
+        return true;
+    }
+  } catch (e) {}
   return false;
 });
 

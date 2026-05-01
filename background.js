@@ -600,10 +600,24 @@ async function vaultApiFetch(path, options = {}) {
 }
 
 async function vaultApiTest(message) {
-  const settings = await loadSettings();
-  const url = (settings.vaultApiUrl || '').replace(/\/$/, '');
-  const token = settings.vaultApiToken || '';
-  if (!url || !token) return { error: 'URL or token missing' };
+  // Read URL/token directly from message if provided, otherwise from settings
+  const url = (message.url || '').replace(/\/$/, '');
+  const token = message.token || '';
+  if (!url || !token) {
+    const settings = await loadSettings();
+    const finalUrl = (settings.vaultApiUrl || '').replace(/\/$/, '');
+    const finalToken = settings.vaultApiToken || '';
+    if (!finalUrl || !finalToken) return { error: 'URL or token missing' };
+    try {
+      const resp = await fetch(finalUrl + '/vault', {
+        headers: { 'Authorization': `Bearer ${finalToken}` },
+      });
+      if (resp.ok) return { ok: true };
+      return { error: `HTTP ${resp.status}` };
+    } catch (err) {
+      return { error: err.message };
+    }
+  }
   try {
     const resp = await fetch(url + '/vault', {
       headers: { 'Authorization': `Bearer ${token}` },

@@ -905,16 +905,13 @@ function bindEvents() {
         return;
       }
 
-      // Temporarily save for the test (settings are saved on input change too)
-      state.settings.vaultApiUrl = url;
-      state.settings.vaultApiToken = token;
-      await sendBgMessage({
-        type: 'settings.save',
-        data: { ...state.settings },
-      });
-
+      // Pass URL and token directly to bypass storage timing issues
       try {
-        const result = await sendBgMessage({ type: 'vault.api.test' });
+        const result = await sendBgMessage({
+          type: 'vault.api.test',
+          url,
+          token,
+        });
         if (result && !result.error) {
           dom.vaultApiStatus.textContent = i18n('settingsVaultApiTestOk');
           dom.vaultApiStatus.className = 'form-hint ok';

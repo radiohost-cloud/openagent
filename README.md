@@ -8,6 +8,10 @@
   <img src="docs/screenshot3.png" width="200"/>
   <img src="docs/screenshot4.png" width="200"/>
   <img src="docs/screenshot5.png" width="200"/>
+  <img src="docs/screenshot6.png" width="200"/>
+  <img src="docs/screenshot7.png" width="200"/>
+  <img src="docs/screenshot8.png" width="200"/>
+  <img src="docs/screenshot9.png" width="200"/>
 </p>
 
 ---

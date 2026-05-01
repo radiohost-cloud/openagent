@@ -1621,8 +1621,11 @@ function extractDomain(url) {
   }
 }
 
+let conversationProcessing = false;
+
 async function processConversationEnd() {
-  if (!state.settings.apiKey || state.messages.length < 2) return;
+  if (conversationProcessing || !state.settings.apiKey || state.messages.length < 2) return;
+  conversationProcessing = true;
 
   const pageUrl = state.pageContext?.metadata?.url || state.pageContext?.url || '';
   const domain = extractDomain(pageUrl);
@@ -1636,7 +1639,7 @@ async function processConversationEnd() {
     state.settings.model
   );
 
-  if (!result) return;
+  if (!result) { conversationProcessing = false; return; }
 
   await sendBgMessage({
     type: 'memory.save',
@@ -1647,6 +1650,7 @@ async function processConversationEnd() {
     memEntries: result.memEntries,
     conversation: state.messages,
   });
+  conversationProcessing = false;
 }
 
 // ─── Vault Tool Processing ─────────────────────────────────────────────────────

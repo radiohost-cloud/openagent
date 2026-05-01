@@ -1692,9 +1692,11 @@ function formatContent(text) {
   }
   // Line breaks
   processed = processed.replace(/\n/g, '<br>');
-  // Clean up br tags around block elements
-  processed = processed.replace(/<br><(h[234]|blockquote|ul|pre|div)/g, '<$1');
-  processed = processed.replace(/<\/(h[234]|blockquote|ul|pre|div)><br>/g, '</$1>');
+  // Clean up br tags around block elements (including table-wrapper)
+  processed = processed.replace(/<br><(h[234]|blockquote|ul|pre|div|table)/g, '<$1');
+  processed = processed.replace(/<\/(h[234]|blockquote|ul|pre|div|table)><br>/g, '</$1>');
+  processed = processed.replace(/<br><\/(table)>/g, '</$1>');
+  processed = processed.replace(/(table-wrapper)><br>/g, '$1>');
   return processed;
 }
 

@@ -9,48 +9,61 @@
 
 (function () {
   let lastUrl = location.href;
+  let sendInterval = null;
+  let sendPopstate = null;
+  let sendPushState = null;
+  let sendReplaceState = null;
+  let sendFab = null;
 
-  // Check URL every second
-  setInterval(() => {
+  function safeSend(msg) {
     try {
-      if (location.href !== lastUrl) {
-        lastUrl = location.href;
-        if (chrome?.runtime?.sendMessage) if (chrome?.runtime?.sendMessage) chrome.runtime.sendMessage({ type: 'context.refresh' }).catch(() => {});
+      if (typeof chrome !== 'undefined' && chrome.runtime && typeof chrome.runtime.sendMessage === 'function') {
+        chrome.runtime.sendMessage(msg).catch(function() {});
       }
     } catch (e) {}
+  }
+
+  // Check URL every second
+  sendInterval = setInterval(function () {
+    if (location.href !== lastUrl) {
+      lastUrl = location.href;
+      safeSend({ type: 'context.refresh' });
+    }
   }, 1000);
 
   // Also intercept pushState for immediate notification
-  const _pushState = history.pushState;
-  history.pushState = function (...args) {
-    try {
-      _pushState.apply(this, args);
-      if (location.href !== lastUrl) {
-        lastUrl = location.href;
-        if (chrome?.runtime?.sendMessage) chrome.runtime.sendMessage({ type: 'context.refresh' }).catch(() => {});
-      }
-    } catch (e) {}
+  sendPushState = history.pushState;
+  history.pushState = function () {
+    sendPushState.apply(history, arguments);
+    if (location.href !== lastUrl) {
+      lastUrl = location.href;
+      safeSend({ type: 'context.refresh' });
+    }
   };
 
-  const _replaceState = history.replaceState;
-  history.replaceState = function (...args) {
-    try {
-      _replaceState.apply(this, args);
-      if (location.href !== lastUrl) {
-        lastUrl = location.href;
-        if (chrome?.runtime?.sendMessage) chrome.runtime.sendMessage({ type: 'context.refresh' }).catch(() => {});
-      }
-    } catch (e) {}
+  sendReplaceState = history.replaceState;
+  history.replaceState = function () {
+    sendReplaceState.apply(history, arguments);
+    if (location.href !== lastUrl) {
+      lastUrl = location.href;
+      safeSend({ type: 'context.refresh' });
+    }
   };
 
-  window.addEventListener('popstate', () => {
-    try {
-      if (location.href !== lastUrl) {
-        lastUrl = location.href;
-        if (chrome?.runtime?.sendMessage) chrome.runtime.sendMessage({ type: 'context.refresh' }).catch(() => {});
-      }
-    } catch (e) {}
+  sendPopstate = window.addEventListener('popstate', function () {
+    if (location.href !== lastUrl) {
+      lastUrl = location.href;
+      safeSend({ type: 'context.refresh' });
+    }
   });
+
+  // Store cleanup functions for FAB click
+  window.__openagentCleanup = function () {
+    clearInterval(sendInterval);
+    history.pushState = sendPushState;
+    history.replaceState = sendReplaceState;
+    window.removeEventListener('popstate', sendPopstate);
+  };
 })();
 
 // ─── Floating Button ─────────────────────────────────────────────────────────
@@ -61,9 +74,11 @@
     const fab = document.createElement('div');
     fab.id = 'openagent-fab';
     fab.innerHTML = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2z" fill="#3C3C3C"/><path d="M8 10.5c0-.276.224-.5.5-.5h7c.276 0 .5.224.5.5v1c0 .276-.224.5-.5.5h-7a.5.5 0 0 1-.5-.5v-1z" fill="white"/><path d="M8 13.5c0-.276.224-.5.5-.5h7c.276 0 .5.224.5.5v1c0 .276-.224.5-.5.5h-7a.5.5 0 0 1-.5-.5v-1z" fill="white"/></svg><span>OpenAgent</span>`;
-    fab.addEventListener('click', () => {
+    fab.addEventListener('click', function () {
       try {
-        if (chrome.sidePanel) chrome.sidePanel.open({ path: 'sidepanel.html' }).catch(() => {});
+        if (chrome.sidePanel && typeof chrome.sidePanel.open === 'function') {
+          chrome.sidePanel.open({ path: 'sidepanel.html' }).catch(function() {});
+        }
       } catch (e) {}
     });
     if (!document.getElementById('openagent-fab-style')) {

@@ -1690,13 +1690,10 @@ function formatContent(text) {
       return parseInt(idx) === tableRows.length - 1 ? tableHtml : '';
     });
   }
-  // Line breaks
+  // Line breaks — collapse runs of <br> to max 1
   processed = processed.replace(/\n/g, '<br>');
-  // Clean up br tags around block elements (including table-wrapper)
-  processed = processed.replace(/<br><(h[234]|blockquote|ul|pre|div|table)/g, '<$1');
-  processed = processed.replace(/<\/(h[234]|blockquote|ul|pre|div|table)><br>/g, '</$1>');
-  processed = processed.replace(/<br><\/(table)>/g, '</$1>');
-  processed = processed.replace(/(table-wrapper)><br>/g, '$1>');
+  processed = processed.replace(/(<br\s*\/?>\s*){2,}/gi, '<br>');
+  processed = processed.replace(/<br\s*\/?>\s*$/gi, '');
   return processed;
 }
 

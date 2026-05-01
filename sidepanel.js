@@ -17,6 +17,7 @@ const state = {
   memoryContext: null,
   contextDebounce: null,
   vaultSavedCount: 0,
+  vaultWritten: false,
 };
 
 const i18nStrings = {
@@ -1365,6 +1366,7 @@ function prependPageContext(metadata) {
     if (state.currentVaultFilename && state.currentVaultFilename !== candidateFilename) {
       state.currentVaultFilename = candidateFilename;
       state.vaultSavedCount = 0;
+      state.vaultWritten = false;
       updateVaultNoteIndicator();
     } else if (!state.currentVaultFilename) {
       state.currentVaultFilename = candidateFilename;
@@ -1383,6 +1385,7 @@ function clearConversation() {
   state.currentConversationId = null;
   state.currentVaultFilename = null;
   state.vaultSavedCount = 0;
+  state.vaultWritten = false;
   state.memoryContext = null;
   if (dom.headerCtx) dom.headerCtx.innerHTML = '';
   renderMessages();
@@ -1484,6 +1487,7 @@ function restoreConversation(id) {
 
   state.currentConversationId = id;
   state.currentVaultFilename = conv.vaultFilename || null;
+  state.vaultWritten = !!conv.vaultFilename;
 
   // Append to current messages (continue conversation)
   state.messages.push(...conv.messages);
@@ -1917,15 +1921,26 @@ async function saveAutoVaultNote() {
   const filename = getOrCreateSessionFilename();
   if (!filename) return;
 
-  const isFirstSave = state.vaultSavedCount === 0;
   const newMessages = state.messages.slice(state.vaultSavedCount);
   if (newMessages.length === 0) return;
 
   const pageUrl = state.pageContext?.metadata?.url || state.pageContext?.url || '';
 
   let content;
-  if (isFirstSave) {
-    // First save: full header + all messages
+  if (state.vaultWritten) {
+    // Already written — just append new messages
+    const lines = [];
+    for (const msg of newMessages) {
+      const role = msg.role === 'user' ? '**You**' : '**OpenAgent**';
+      let text = (msg.content || '').replace(/<vault_write[^>]*>[\s\S]*?<\/vault_write>/gi, '').replace(/<vault_read[^>]*\/>/gi, '').replace(/\*\*From vault:\*\*[\s\S]*/gi, '').replace(/^✓ Saved:.*$/gm, '').trim();
+      if (text) lines.push(`${role}:\n${text}`);
+    }
+    if (lines.length === 0) return;
+    content = lines.join('\n\n');
+    const result = await vaultWrite(filename, content, true);
+    if (result?.error) return;
+  } else {
+    // First save for this session: full header + all messages
     const date = new Date();
     const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
     const timeStr = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
@@ -1937,20 +1952,9 @@ async function saveAutoVaultNote() {
     }
     lines.push('\n---\n*OpenAgent Chrome Extension*');
     content = lines.join('\n');
-    const result = await vaultWrite(filename, content, false);
-    if (result?.error) return;
-  } else {
-    // Subsequent saves: append only new messages
-    const lines = [];
-    for (const msg of newMessages) {
-      const role = msg.role === 'user' ? '**You**' : '**OpenAgent**';
-      let text = (msg.content || '').replace(/<vault_write[^>]*>[\s\S]*?<\/vault_write>/gi, '').replace(/<vault_read[^>]*\/>/gi, '').replace(/\*\*From vault:\*\*[\s\S]*/gi, '').replace(/^✓ Saved:.*$/gm, '').trim();
-      if (text) lines.push(`${role}:\n${text}`);
-    }
-    if (lines.length === 0) return;
-    content = lines.join('\n\n');
     const result = await vaultWrite(filename, content, true);
     if (result?.error) return;
+    state.vaultWritten = true;
   }
 
   state.vaultSavedCount = state.messages.length;

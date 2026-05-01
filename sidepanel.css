@@ -263,6 +263,14 @@ html, body {
   overflow: hidden;
   line-height: 1;
   white-space: nowrap;
+  font-size: 0;
+  text-indent: -9999px;
+}
+
+.copy-msg-btn svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
 }
 
 .message:hover .copy-msg-btn {

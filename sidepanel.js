@@ -1239,6 +1239,14 @@ async function collectPageContext() {
     if (data.rawCapture?.metadata) {
       prependPageContext(data.rawCapture.metadata);
     }
+    // Regenerate vault filename for new page domain if vault is active
+    if (state.autoVault && state.vaultConnected && state.currentVaultFilename) {
+      const newFilename = getOrCreateSessionFilename();
+      if (newFilename !== state.currentVaultFilename) {
+        state.currentVaultFilename = newFilename;
+        updateVaultNoteIndicator();
+      }
+    }
   } catch (err) {
     // Silently fail - tab might be loading
   }
@@ -1249,6 +1257,7 @@ async function loadCachedContext() {
     const stored = await chrome.storage.local.get(['openagent_current_tab']);
     const cached = stored.openagent_current_tab;
     if (cached?.url && cached.url.startsWith('http')) {
+      const prevUrl = state.pageContext?.metadata?.url || state.pageContext?.url;
       state.pageContext = cached;
       // Only use favicon if it's a real URL (chrome://favicon is blocked in side panel)
       const faviconUrl = cached.favicon && !cached.favicon.startsWith('chrome://') ? cached.favicon : null;
@@ -1257,6 +1266,15 @@ async function loadCachedContext() {
         title: cached.title,
         favicon: faviconUrl,
       });
+      // Update vault filename when URL domain changes
+      if (state.autoVault && state.vaultConnected && state.currentVaultFilename && prevUrl) {
+        const prevDomain = (() => { try { return new URL(prevUrl).hostname; } catch { return ''; } })();
+        const newDomain = (() => { try { return new URL(cached.url).hostname; } catch { return ''; } })();
+        if (prevDomain !== newDomain) {
+          state.currentVaultFilename = getOrCreateSessionFilename();
+          updateVaultNoteIndicator();
+        }
+      }
     }
   } catch {}
   // refresh in background

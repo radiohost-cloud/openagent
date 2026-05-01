@@ -253,18 +253,13 @@ html, body {
   padding: 0;
   border-radius: 4px;
   opacity: 0;
-  transition: opacity 0.15s;
+  transition: opacity 0.15s, color 0.15s;
   width: 20px;
   height: 20px;
   display: inline-flex;
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
-  line-height: 1;
-  white-space: nowrap;
-  font-size: 0;
-  text-indent: -9999px;
 }
 
 .copy-msg-btn svg {
@@ -279,7 +274,6 @@ html, body {
 
 .copy-msg-btn:hover {
   color: var(--text);
-  background: var(--surface-2);
 }
 
 .copy-msg-btn.copied {
@@ -290,13 +284,13 @@ html, body {
   position: absolute;
   top: 8px;
   right: 8px;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
+  background: transparent;
+  border: none;
   cursor: pointer;
   color: var(--muted);
   padding: 4px;
   border-radius: 4px;
-  transition: all 0.15s;
+  transition: color 0.15s;
   width: 26px;
   height: 26px;
   display: flex;
@@ -304,9 +298,18 @@ html, body {
   justify-content: center;
 }
 
+.copy-code-btn svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
 .copy-code-btn:hover {
   color: var(--text);
-  border-color: var(--accent);
+}
+
+.copy-code-btn.copied {
+  color: #6fcf97;
 }
 
 body.light .copy-code-btn {

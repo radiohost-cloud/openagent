@@ -1475,7 +1475,19 @@ function renderMessage(role, content) {
   div.querySelectorAll('.copy-code-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
       const code = btn.parentElement.querySelector('code').textContent;
-      navigator.clipboard.writeText(code).then(() => setStatus(i18n('btnCopy'), 'success'));
+      const copyIcon = btn.querySelector('.icon-copy');
+      const checkIcon = btn.querySelector('.icon-check');
+      navigator.clipboard.writeText(code).then(() => {
+        if (copyIcon) copyIcon.style.display = 'none';
+        if (checkIcon) checkIcon.style.display = '';
+        btn.classList.add('copied');
+        setStatus(i18n('btnCopy'), 'success');
+        setTimeout(() => {
+          if (copyIcon) copyIcon.style.display = '';
+          if (checkIcon) checkIcon.style.display = 'none';
+          btn.classList.remove('copied');
+        }, 1500);
+      });
     });
   });
   scrollToBottom();
@@ -1490,7 +1502,9 @@ function formatContent(text) {
   processed = processed.replace(/```(\w*)\n?([\s\S]*?)```/g, (match) => {
     const lang = match.match(/```(\w*)/)?.[1] || '';
     const code = escapeHtml(match.replace(/```\w*\n?/g, '').replace(/```$/g, '').trim());
-    return `<pre class="code-block" data-lang="${lang}"><code>${code}</code><button class="copy-code-btn" aria-label="Copy"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button></pre>`;
+    const copySvg = `<svg class="icon-copy" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
+    const checkSvg = `<svg class="icon-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:none"><polyline points="20 6 9 17 4 12"/></svg>`;
+    return `<pre class="code-block" data-lang="${lang}"><code>${code}</code><button class="copy-code-btn" aria-label="Copy">${copySvg}${checkSvg}</button></pre>`;
   });
   // Restore inline code immediately
   processed = processed.replace(/`([^`]+)`/g, (match, code) => {

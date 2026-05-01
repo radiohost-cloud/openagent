@@ -223,6 +223,16 @@ html, body {
   font-family: var(--font);
 }
 
+.message-content a {
+  color: var(--accent, #9f7aea);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.message-content a:hover {
+  opacity: 0.8;
+}
+
 .message.user .message-content { color: var(--user-text); }
 
 .message.error .message-content {

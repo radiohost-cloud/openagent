@@ -1654,6 +1654,11 @@ function formatContent(text) {
   processed = processed.replace(/_(.+?)_/g, '<em>$1</em>');
   // Blockquotes
   processed = processed.replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>');
+  // Links — make URLs and markdown links clickable (skip if already inside a tag or link)
+  processed = processed.replace(/(<a\b[^>]*>[\s\S]*?<\/a>|<code\b[^>]*>[\s\S]*?<\/code>|<pre\b[^>]*>[\s\S]*?<\/pre>)/g, (match) => `__SKIP__${match}__SKIP__`);
+  processed = processed.replace(/\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+  processed = processed.replace(/(?:^|(?<=[ ">=\]]))(https?:\/\/[^\s<]+)/gm, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
+  processed = processed.replace(/__SKIP__|__SKIP__/g, '');
   // Unordered lists
   processed = processed.replace(/^[\-\*] (.+)$/gm, '<li>$1</li>');
   // Ordered lists

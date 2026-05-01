@@ -681,8 +681,8 @@ async function vaultApiRead(message) {
           headers: { 'Authorization': `Bearer ${token}` },
         });
         if (fileResp.ok) {
-          const fileData = await fileResp.json();
-          notes.push({ filename, content: fileData.content || '' });
+          const fileContent = await fileResp.text();
+          notes.push({ filename, content: fileContent || '' });
         }
       } catch {}
     }
@@ -709,8 +709,7 @@ async function vaultApiWrite(message) {
     });
     let existing = '';
     if (readResp.ok) {
-      const data = await readResp.json();
-      if (data.content) existing = data.content;
+      existing = await readResp.text();
     }
 
     const writeContent = existing && append ? (existing + '\n\n---\n\n' + content) : content;

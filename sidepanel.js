@@ -11,6 +11,7 @@ const state = {
   autoVault: false,
   currentVaultFilename: null,
   vaultConnected: false,
+  currentDomain: null,
   conversations: [],
   historyOpen: false,
   currentConversationId: null,
@@ -1022,7 +1023,7 @@ function filterModels(query) {
 async function handleNavigation(url, originalText) {
   dom.input.value = '';
   dom.input.style.height = 'auto';
-  state.messages.push({ role: 'user', content: originalText });
+  state.messages.push({ role: 'user', content: originalText, domain: state.currentDomain });
 
   const loadingDiv = document.createElement('div');
   loadingDiv.className = 'message assistant';
@@ -1049,7 +1050,7 @@ async function handleNavigation(url, originalText) {
     }
 
     loadingDiv.querySelector('.message-content').textContent = `Opened ${url}`;
-    state.messages.push({ role: 'assistant', content: `Opened ${url}` });
+    state.messages.push({ role: 'assistant', content: `Opened ${url}`, domain: state.currentDomain });
 
     setTimeout(async () => {
       try {
@@ -1063,7 +1064,7 @@ async function handleNavigation(url, originalText) {
   } catch (err) {
     loadingDiv.querySelector('.message-content').textContent = `Error: ${err.message}`;
     loadingDiv.querySelector('.message-content').style.color = '#f87171';
-    state.messages.push({ role: 'assistant', content: `Error: ${err.message}` });
+    state.messages.push({ role: 'assistant', content: `Error: ${err.message}`, domain: state.currentDomain });
   }
 }
 
@@ -1146,7 +1147,7 @@ async function handleSend() {
 
   dom.input.value = '';
   dom.input.style.height = 'auto';
-  state.messages.push({ role: 'user', content: text });
+  state.messages.push({ role: 'user', content: text, domain: state.currentDomain });
   renderMessage('user', text);
 
   showTyping();
@@ -1210,7 +1211,7 @@ async function handleSend() {
         const recalled = readResults.map((n) => `## ${n.filename}\n${n.content}`).join('\n\n---\n\n');
         finalContent += '\n\n**From vault:**\n' + recalled;
       }
-      state.messages.push({ role: 'assistant', content: finalContent });
+      state.messages.push({ role: 'assistant', content: finalContent, domain: state.currentDomain });
       renderMessage('assistant', finalContent);
 
       if (state.autoVault && state.vaultConnected) {
@@ -1273,6 +1274,7 @@ async function collectPageContext() {
         images: data.rawCapture.images || [],
       };
       prependPageContext(state.pageContext.metadata);
+      state.currentDomain = domain;
     }
   }
 }
@@ -1348,6 +1350,7 @@ function prependPageContext(metadata) {
     `;
   }
 
+  state.currentDomain = metadata.domain || null;
   // Update vault filename only when visiting a different page
   if (state.autoVault && state.vaultConnected) {
     const currentUrl = metadata.url || state.pageContext?.metadata?.url || '';
@@ -1385,6 +1388,7 @@ function clearConversation() {
   state.currentVaultFilename = null;
   state.vaultSavedCount = 0;
   state.vaultWritten = false;
+  state.currentDomain = null;
   state.memoryContext = null;
   lastTabUrl = '';
   renderMessages();
@@ -1395,8 +1399,8 @@ function clearConversation() {
 function saveConversation() {
   if (state.messages.length === 0) return;
 
+  const url = state.pageContext?.metadata?.url || state.pageContext?.url || '';
   const domain = (() => {
-    const url = state.pageContext?.metadata?.url || state.pageContext?.url || '';
     if (!url) return 'openagent';
     try { return new URL(url).hostname.replace(/^www\./, '').replace(/\./g, '-'); } catch { return 'openagent'; }
   })();
@@ -1404,11 +1408,15 @@ function saveConversation() {
   const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
   const convId = `${domain}-${dateStr}`;
 
+  // Only save messages that belong to this conversation's domain
+  const convMessages = state.messages.filter((m) => m.domain === domain);
+  if (convMessages.length === 0 && state.messages.length > 0) return; // no messages for this domain yet
+
   const existing = state.conversations.find((c) => c.id === convId);
   if (existing) {
-    // Append only new messages (avoid duplicates when returning to same page)
+    // Append only new messages (deduped by first 50 chars of content)
     const existingIds = new Set(existing.messages.map((m) => m.content?.slice(0, 50)));
-    const newMsgs = state.messages.filter((m) => !existingIds.has(m.content?.slice(0, 50)));
+    const newMsgs = convMessages.filter((m) => !existingIds.has(m.content?.slice(0, 50)));
     if (newMsgs.length > 0) {
       existing.messages = existing.messages.concat(newMsgs);
     }
@@ -1423,10 +1431,10 @@ function saveConversation() {
 
   const conv = {
     id: convId,
-    pageUrl: state.pageContext?.metadata?.url || '',
+    pageUrl: url,
     pageTitle: state.pageContext?.metadata?.title || document.title,
     timestamp: Date.now(),
-    messages: state.messages,
+    messages: convMessages,
     bodyText: state.pageContext?.bodyText || '',
     images: state.pageContext?.images || [],
     vaultFilename: state.currentVaultFilename || null,

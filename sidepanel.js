@@ -1260,11 +1260,13 @@ async function collectPageContext() {
     const respUrl = data.rawCapture.metadata?.url || '';
     if (respUrl === tabUrl) {
       lastTabUrl = tabUrl;
+      const domain = (() => { try { return new URL(tabUrl).hostname.replace(/^www\./, '').replace(/\./g, '-'); } catch { return 'openagent'; } })();
       state.pageContext = {
         metadata: {
           url: tabUrl,
           title: tab.title || '',
           favicon: tab.favIconUrl || '',
+          domain,
         },
         bodyText: data.rawCapture.bodyText || '',
         images: data.rawCapture.images || [],

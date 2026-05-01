@@ -303,7 +303,9 @@ async function handlePromptSend(message, sendResponse) {
 async function buildMessages(history, pageContext, pageScreenshot, systemPrompt, autoVault, memoryContext) {
   const msgs = [];
 
-  const systemContent = systemPrompt || null;
+  // Default system prompt if none set
+  const defaultSystem = 'You are OpenAgent, an AI browser assistant. Your primary purpose is to help users with the currently open webpage. When a user asks a question, you should use the page context provided to give relevant answers. You can read page content, execute browser actions, and help with web-related tasks. If no page context is provided, explain that you work best when viewing a webpage.';
+  const systemContent = systemPrompt || defaultSystem;
 
   if (systemContent) {
     msgs.push({ role: 'system', content: systemContent });

@@ -1347,14 +1347,10 @@ function prependPageContext(metadata) {
     `;
   }
 
-  // Update vault filename when page context changes
-  if (state.autoVault && state.vaultConnected) {
-    const prevFilename = state.currentVaultFilename;
-    state.currentVaultFilename = null;
+  // Update vault filename only if it's a genuinely new page (different URL)
+  if (state.autoVault && state.vaultConnected && !state.currentVaultFilename) {
     state.currentVaultFilename = getOrCreateSessionFilename();
-    if (state.currentVaultFilename !== prevFilename) {
-      updateVaultNoteIndicator();
-    }
+    updateVaultNoteIndicator();
   }
 }
 

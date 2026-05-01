@@ -185,7 +185,6 @@ html, body {
   animation: msgIn 0.15s ease;
   max-width: 100%;
   position: relative;
-  overflow: hidden;
 }
 
 @keyframes msgIn {
@@ -231,6 +230,7 @@ html, body {
   margin: 6px 0;
   font-size: 12px;
   line-height: 1.5;
+  position: relative;
 }
 
 .screenshot-thumb {
@@ -286,6 +286,7 @@ html, body {
   right: 8px;
   background: transparent;
   border: none;
+  outline: none;
   cursor: pointer;
   color: var(--muted);
   padding: 4px;
@@ -313,8 +314,7 @@ html, body {
 }
 
 body.light .copy-code-btn {
-  background: var(--surface);
-  color: var(--text);
+  background: transparent;
 }
 
 /* Markdown inside messages */

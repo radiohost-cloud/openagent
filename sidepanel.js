@@ -1396,85 +1396,52 @@ function renderMessage(role, content) {
   const empty = dom.messages.querySelector('.empty-state');
   if (empty) empty.remove();
 
+  const label = role === 'user' ? i18n('msgLabelYou') : i18n('msgLabelClaude');
+  const formatted = formatContent(content);
+
+  const copyBtnHtml = role === 'assistant'
+    ? `<button class="copy-msg-btn" aria-label="${i18n('btnCopy')}">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:none"><polyline points="20 6 9 17 4 12"/></svg>
+       </button>`
+    : '';
+
   const div = document.createElement('div');
   div.className = `message ${role}`;
-
-  const labelDiv = document.createElement('div');
-  labelDiv.className = 'message-label';
-  labelDiv.textContent = role === 'user' ? i18n('msgLabelYou') : i18n('msgLabelClaude');
-  div.appendChild(labelDiv);
-
-  const contentDiv = document.createElement('div');
-  contentDiv.className = 'message-content';
-  contentDiv.innerHTML = formatContent(content);
-  div.appendChild(contentDiv);
-
-  if (role === 'assistant') {
-    const btn = document.createElement('button');
-    btn.className = 'copy-msg-btn';
-    btn.setAttribute('aria-label', i18n('btnCopy'));
-    btn.style.cssText = 'position:absolute;top:12px;right:12px;background:transparent;border:none;cursor:pointer;opacity:0;padding:0;border-radius:4px;width:20px;height:20px;display:flex;align-items:center;justify-content:center;overflow:hidden;transition:opacity 0.15s;';
-
-    function makeCopySvg() {
-      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-      svg.setAttribute('width', '14');
-      svg.setAttribute('height', '14');
-      svg.setAttribute('viewBox', '0 0 24 24');
-      svg.setAttribute('fill', 'none');
-      svg.setAttribute('stroke', 'currentColor');
-      svg.setAttribute('stroke-width', '2');
-      svg.setAttribute('stroke-linecap', 'round');
-      svg.setAttribute('stroke-linejoin', 'round');
-      const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-      rect.setAttribute('x', '9'); rect.setAttribute('y', '9');
-      rect.setAttribute('width', '13'); rect.setAttribute('height', '13');
-      rect.setAttribute('rx', '2'); rect.setAttribute('ry', '2');
-      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      path.setAttribute('d', 'M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1');
-      svg.appendChild(rect);
-      svg.appendChild(path);
-      return svg;
-    }
-
-    function makeCheckSvg() {
-      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-      svg.setAttribute('width', '14');
-      svg.setAttribute('height', '14');
-      svg.setAttribute('viewBox', '0 0 24 24');
-      svg.setAttribute('fill', 'none');
-      svg.setAttribute('stroke', 'currentColor');
-      svg.setAttribute('stroke-width', '2.5');
-      svg.setAttribute('stroke-linecap', 'round');
-      svg.setAttribute('stroke-linejoin', 'round');
-      const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
-      poly.setAttribute('points', '20 6 9 17 4 12');
-      svg.appendChild(poly);
-      return svg;
-    }
-
-    btn.appendChild(makeCopySvg());
-    btn.addEventListener('click', () => {
-      navigator.clipboard.writeText(content).then(() => {
-        btn.innerHTML = '';
-        btn.appendChild(makeCheckSvg());
-        btn.classList.add('copied');
-        btn.style.color = '#6fcf97';
-        setStatus(i18n('btnCopy'), 'success');
-        setTimeout(() => {
-          btn.innerHTML = '';
-          btn.appendChild(makeCopySvg());
-          btn.classList.remove('copied');
-          btn.style.color = '';
-        }, 1500);
-      });
-    });
-    div.appendChild(btn);
-  }
+  div.innerHTML = `
+    <div class="message-label">${label}</div>
+    ${copyBtnHtml}
+    <div class="message-content">${formatted}</div>
+  `;
 
   dom.messages.appendChild(div);
+
+  // Attach message copy button handler
+  if (role === 'assistant') {
+    const btn = div.querySelector('.copy-msg-btn');
+    if (btn) {
+      const copyIcon = btn.querySelector('svg:first-child');
+      const checkIcon = btn.querySelector('svg:last-child');
+      btn.addEventListener('click', () => {
+        navigator.clipboard.writeText(content).then(() => {
+          if (copyIcon) copyIcon.style.display = 'none';
+          if (checkIcon) checkIcon.style.display = '';
+          btn.style.color = '#6fcf97';
+          setStatus(i18n('btnCopy'), 'success');
+          setTimeout(() => {
+            if (copyIcon) copyIcon.style.display = '';
+            if (checkIcon) checkIcon.style.display = 'none';
+            btn.style.color = '';
+          }, 1500);
+        });
+      });
+    }
+  }
+
+  // Attach code block copy button handlers
   div.querySelectorAll('.copy-code-btn').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const code = btn.parentElement.querySelector('code').textContent;
+    btn.addEventListener('click', (e) => {
+      const code = btn.closest('pre').querySelector('code').textContent;
       const copyIcon = btn.querySelector('.icon-copy');
       const checkIcon = btn.querySelector('.icon-check');
       navigator.clipboard.writeText(code).then(() => {
@@ -1490,6 +1457,7 @@ function renderMessage(role, content) {
       });
     });
   });
+
   scrollToBottom();
   updateBadge();
 }

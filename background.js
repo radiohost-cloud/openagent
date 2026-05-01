@@ -159,6 +159,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     'page.screenshot': () => capturePageScreenshot(),
     'memory.load': () => handleMemoryLoad(message),
     'memory.save': () => handleMemorySave(message),
+    'vault.api.test': () => vaultApiTest(message),
+    'vault.api.read': () => vaultApiRead(message),
+    'vault.api.write': () => vaultApiWrite(message),
   };
 
   const handler = handlers[message.type];
@@ -571,5 +574,124 @@ async function handleMemorySave(message) {
     return { ok: true };
   } catch (err) {
     return { error: err.message };
+  }
+}
+
+// ─── Vault REST API (via service worker for CORS) ───────────────────────────────
+
+async function vaultApiFetch(path, options = {}) {
+  const settings = await loadSettings();
+  const url = (settings.vaultApiUrl || '').replace(/\/$/, '');
+  const token = settings.vaultApiToken || '';
+  if (!url || !token) return { error: 'Vault API not configured' };
+  try {
+    const resp = await fetch(url + path, {
+      ...options,
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        ...(options.headers || {}),
+      },
+    });
+    return { ok: true, status: resp.status, json: resp.json ? await resp.json().catch(() => ({})) : {}, text: resp.text ? await resp.text().catch(() => '') : '' };
+  } catch (err) {
+    return { error: err.message };
+  }
+}
+
+async function vaultApiTest(message) {
+  const settings = await loadSettings();
+  const url = (settings.vaultApiUrl || '').replace(/\/$/, '');
+  const token = settings.vaultApiToken || '';
+  if (!url || !token) return { error: 'URL or token missing' };
+  try {
+    const resp = await fetch(url + '/vault', {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    if (resp.ok) return { ok: true };
+    return { error: `HTTP ${resp.status}` };
+  } catch (err) {
+    return { error: err.message };
+  }
+}
+
+async function vaultApiRead(message) {
+  const { query, limit } = message;
+  const settings = await loadSettings();
+  const url = (settings.vaultApiUrl || '').replace(/\/$/, '');
+  const token = settings.vaultApiToken || '';
+  if (!url || !token) return { error: 'Vault API not configured', notes: [] };
+
+  try {
+    const searchUrl = query
+      ? `${url}/search?q=${encodeURIComponent(query)}&type=file&ext=md&limit=${limit || 20}`
+      : `${url}/vault?limit=${limit || 20}`;
+
+    const resp = await fetch(searchUrl, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    if (!resp.ok) return { error: `API error: ${resp.status}`, notes: [] };
+
+    const data = await resp.json();
+    const files = data.files || data || [];
+    const notes = [];
+
+    for (const item of files) {
+      if (notes.length >= (limit || 20)) break;
+      const path = item.path || item;
+      const filename = path.split('/').pop() || path;
+      if (!filename.endsWith('.md')) continue;
+
+      try {
+        const fileResp = await fetch(url + '/search?path=' + encodeURIComponent(path), {
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+        if (fileResp.ok) {
+          const fileData = await fileResp.json();
+          notes.push({ filename, content: fileData.content || '' });
+        }
+      } catch {}
+    }
+    return { notes };
+  } catch (err) {
+    return { error: 'API error: ' + err.message, notes: [] };
+  }
+}
+
+async function vaultApiWrite(message) {
+  const { filename, content, append } = message;
+  const settings = await loadSettings();
+  const url = (settings.vaultApiUrl || '').replace(/\/$/, '');
+  const token = settings.vaultApiToken || '';
+  if (!url || !token) return { error: 'Vault API not configured' };
+
+  try {
+    const path = '/search?path=' + encodeURIComponent(filename);
+    const resp = await fetch(url + path, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    let existing = '';
+    if (resp.ok) {
+      const data = await resp.json();
+      if (data.content) existing = data.content;
+    }
+    const body = {
+      content: existing && append ? (existing + '\n\n---\n\n' + content) : content,
+    };
+    const writeResp = await fetch(url + '/uments/' + encodeURIComponent(filename), {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+    if (!writeResp.ok) {
+      const err = await writeResp.text();
+      return { error: 'Write failed: ' + err };
+    }
+    return { ok: true, path: filename };
+  } catch (err) {
+    return { error: 'API error: ' + err.message };
   }
 }

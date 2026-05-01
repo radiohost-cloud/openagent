@@ -548,20 +548,6 @@ function vaultMode() {
   return state.settings.vaultMode || 'local';
 }
 
-function vaultApiBase() {
-  let url = (state.settings.vaultApiUrl || '').replace(/\/$/, '');
-  if (!url) return null;
-  return url;
-}
-
-function vaultApiHeaders() {
-  const token = state.settings.vaultApiToken || '';
-  return {
-    'Authorization': `Bearer ${token}`,
-    'Content-Type': 'application/json',
-  };
-}
-
 async function vaultWrite(filename, content, append = false) {
   if (vaultMode() === 'api') {
     return vaultApiWrite(filename, content, append);
@@ -591,36 +577,13 @@ async function vaultWrite(filename, content, append = false) {
 }
 
 async function vaultApiWrite(filename, content, append) {
-  const base = vaultApiBase();
-  if (!base) return { error: 'No API URL configured. Go to Settings.' };
-  if (!state.settings.vaultApiToken) return { error: 'No API token configured. Go to Settings.' };
-
-  const path = '/search?path=' + encodeURIComponent(filename);
-  try {
-    const resp = await fetch(base + path, {
-      headers: vaultApiHeaders(),
-    });
-    let existing = '';
-    if (resp.ok) {
-      const data = await resp.json();
-      if (data.content) existing = data.content;
-    }
-    const body = {
-      content: existing ? (append ? existing + '\n\n---\n\n' + content : content) : content,
-    };
-    const writeResp = await fetch(base + '/uments/' + encodeURIComponent(filename), {
-      method: 'POST',
-      headers: vaultApiHeaders(),
-      body: JSON.stringify(body),
-    });
-    if (!writeResp.ok) {
-      const err = await writeResp.text();
-      return { error: 'Write failed: ' + err };
-    }
-    return { ok: true, path: filename };
-  } catch (err) {
-    return { error: 'API error: ' + err.message };
-  }
+  // Route through background service worker to bypass CORS restrictions
+  return await sendBgMessage({
+    type: 'vault.api.write',
+    filename,
+    content,
+    append,
+  });
 }
 
 function getOrCreateSessionFilename() {
@@ -662,43 +625,12 @@ async function vaultReadFiles(query = '', limit = 20) {
 }
 
 async function vaultApiReadFiles(query, limit) {
-  const base = vaultApiBase();
-  if (!base) return { error: 'No API URL configured', notes: [] };
-  if (!state.settings.vaultApiToken) return { error: 'No API token configured', notes: [] };
-
-  try {
-    const searchUrl = query
-      ? `${base}/search?q=${encodeURIComponent(query)}&type=file&ext=md&limit=${limit}`
-      : `${base}/vault?limit=${limit}`;
-
-    const resp = await fetch(searchUrl, { headers: vaultApiHeaders() });
-    if (!resp.ok) {
-      return { error: `API error: ${resp.status}`, notes: [] };
-    }
-    const data = await resp.json();
-    const files = data.files || data || [];
-    const notes = [];
-
-    for (const item of files) {
-      if (notes.length >= limit) break;
-      const path = item.path || item;
-      const filename = path.split('/').pop() || path;
-      if (!filename.endsWith('.md')) continue;
-
-      try {
-        const fileResp = await fetch(base + '/search?path=' + encodeURIComponent(path), {
-          headers: vaultApiHeaders(),
-        });
-        if (fileResp.ok) {
-          const fileData = await fileResp.json();
-          notes.push({ filename, content: fileData.content || '' });
-        }
-      } catch {}
-    }
-    return { notes };
-  } catch (err) {
-    return { error: 'API error: ' + err.message, notes: [] };
-  }
+  // Route through background service worker to bypass CORS restrictions
+  return await sendBgMessage({
+    type: 'vault.api.read',
+    query,
+    limit,
+  });
 }
 
 async function pickVaultFolder() {
@@ -962,22 +894,32 @@ function bindEvents() {
       if (!dom.vaultApiStatus) return;
       dom.vaultApiStatus.textContent = '...';
       dom.vaultApiStatus.className = 'form-hint';
-      const url = (dom.vaultApiUrlInput?.value || state.settings.vaultApiApiUrl || '').replace(/\/$/, '');
-      const token = dom.vaultApiTokenInput?.value || state.settings.vaultApiToken || '';
+
+      // Save current values before testing
+      const url = dom.vaultApiUrlInput?.value.trim() || '';
+      const token = dom.vaultApiTokenInput?.value.trim() || '';
+
       if (!url || !token) {
         dom.vaultApiStatus.textContent = i18n('settingsVaultApiTestFail') + ': URL or token empty';
         dom.vaultApiStatus.className = 'form-hint error';
         return;
       }
+
+      // Temporarily save for the test (settings are saved on input change too)
+      state.settings.vaultApiUrl = url;
+      state.settings.vaultApiToken = token;
+      await sendBgMessage({
+        type: 'settings.save',
+        data: { ...state.settings },
+      });
+
       try {
-        const resp = await fetch(url + '/vault', {
-          headers: { 'Authorization': `Bearer ${token}` },
-        });
-        if (resp.ok) {
+        const result = await sendBgMessage({ type: 'vault.api.test' });
+        if (result && !result.error) {
           dom.vaultApiStatus.textContent = i18n('settingsVaultApiTestOk');
           dom.vaultApiStatus.className = 'form-hint ok';
         } else {
-          dom.vaultApiStatus.textContent = `${i18n('settingsVaultApiTestFail')}: ${resp.status}`;
+          dom.vaultApiStatus.textContent = `${i18n('settingsVaultApiTestFail')}: ${result?.error || 'Unknown'}`;
           dom.vaultApiStatus.className = 'form-hint error';
         }
       } catch (err) {

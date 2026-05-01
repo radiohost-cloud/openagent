@@ -538,12 +538,19 @@ async function vaultWrite(filename, content, append = false) {
 
 async function vaultApiWrite(filename, content, append) {
   // Route through background service worker to bypass CORS restrictions
-  return await sendBgMessage({
-    type: 'vault.api.write',
-    filename,
-    content,
-    append,
-  });
+  try {
+    const result = await sendBgMessage({
+      type: 'vault.api.write',
+      filename,
+      content,
+      append,
+    });
+    console.log('[SP] vaultApiWrite:', filename, 'append=', append, 'result=', JSON.stringify(result));
+    return result;
+  } catch (err) {
+    console.error('[SP] vaultApiWrite error:', err);
+    return { error: err.message };
+  }
 }
 
 function getOrCreateSessionFilename() {
@@ -1891,14 +1898,16 @@ async function processVaultToolCalls(messageContent) {
 // ─── Auto Vault Note ───────────────────────────────────────────────────────────
 
 async function saveAutoVaultNote() {
-  if (!state.autoVault || !state.vaultConnected) return;
+  if (!state.autoVault) { console.log('[SP] auto-vault: skipped — autoVault=false'); return; }
+  if (!state.vaultConnected) { console.log('[SP] auto-vault: skipped — vaultConnected=false'); return; }
   const filename = getOrCreateSessionFilename();
-  if (!filename) return;
+  if (!filename) { console.log('[SP] auto-vault: skipped — no filename'); return; }
 
   // Determine which messages to save — only new ones since last save
   const isFirstSave = state.vaultSavedCount === 0;
   const newMessages = state.messages.slice(state.vaultSavedCount);
-  if (newMessages.length === 0) return;
+  console.log('[SP] auto-vault: filename=', filename, 'savedCount=', state.vaultSavedCount, 'totalMsgs=', state.messages.length, 'newMsgs=', newMessages.length, 'isFirst=', isFirstSave);
+  if (newMessages.length === 0) { console.log('[SP] auto-vault: skipped — no new messages'); return; }
 
   const pageUrl = state.pageContext?.metadata?.url || state.pageContext?.url || '';
 

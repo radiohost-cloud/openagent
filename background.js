@@ -603,40 +603,29 @@ async function vaultApiFetch(path, options = {}) {
 }
 
 async function vaultApiTest(message) {
-  // Read URL/token directly from message if provided, otherwise from settings
   const url = (message.url || '').replace(/\/$/, '');
   const token = message.token || '';
-  console.log('[OpenAgent] vaultApiTest:', { url, token: token ? '***' : 'empty' });
+  if (!url || !token) return { error: 'URL or token missing' };
 
-  if (!url || !token) {
-    const settings = await loadSettings();
-    const finalUrl = (settings.vaultApiUrl || '').replace(/\/$/, '');
-    const finalToken = settings.vaultApiToken || '';
-    console.log('[OpenAgent] vaultApiTest from settings:', { url: finalUrl, token: finalToken ? '***' : 'empty' });
-    if (!finalUrl || !finalToken) return { error: 'URL or token missing' };
+  // Try different vault endpoints - Local REST API plugin supports /vault
+  const endpoints = ['/vault', '/'];
+  for (const ep of endpoints) {
     try {
-      console.log('[OpenAgent] vaultApiTest: fetching', finalUrl + '/vault');
-      const resp = await fetch(finalUrl + '/vault', {
-        headers: { 'Authorization': `Bearer ${finalToken}` },
+      const resp = await fetch(url + ep, {
+        headers: { 'Authorization': `Bearer ${token}` },
       });
-      console.log('[OpenAgent] vaultApiTest: response', resp.status);
-      if (resp.ok) return { ok: true };
-      return { error: `HTTP ${resp.status}` };
+      if (resp.ok) return { ok: true, endpoint: ep };
     } catch (err) {
-      console.log('[OpenAgent] vaultApiTest: error', err.message);
       return { error: err.message };
     }
   }
+  // If all endpoints fail, try vault endpoint and return the status
   try {
-    console.log('[OpenAgent] vaultApiTest: fetching', url + '/vault');
     const resp = await fetch(url + '/vault', {
       headers: { 'Authorization': `Bearer ${token}` },
     });
-    console.log('[OpenAgent] vaultApiTest: response', resp.status);
-    if (resp.ok) return { ok: true };
-    return { error: `HTTP ${resp.status}` };
+    return { error: `HTTP ${resp.status} — endpoint /vault not found. Check Local REST API plugin is running and the vault is open.` };
   } catch (err) {
-    console.log('[OpenAgent] vaultApiTest: error', err.message);
     return { error: err.message };
   }
 }

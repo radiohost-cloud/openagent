@@ -479,6 +479,8 @@ const dom = {
   vaultApiTestBtn: $('#vaultApiTestBtn'),
   vaultApiStatus: $('#vaultApiStatus'),
   vaultNameInput: $('#vaultNameInput'),
+  vaultNoteIndicator: $('#vaultNoteIndicator'),
+  vaultNoteName: $('#vaultNoteName'),
 };
 
 // ─── i18n ────────────────────────────────────────────────────────────────────
@@ -597,6 +599,7 @@ async function init() {
   loadModels();
   updateModelBadge();
   updateBadge();
+  updateVaultNoteIndicator();
   await loadCachedContext();
 }
 
@@ -638,6 +641,7 @@ function toggleVaultOnBtn() {
   saveAutoVault();
   updateVaultBtn();
   updateBadge();
+  updateVaultNoteIndicator();
   setStatus(state.autoVault ? i18n('statusVaultReady') : i18n('btnVaultOff'), state.autoVault ? 'success' : 'info');
 }
 
@@ -743,6 +747,7 @@ function bindEvents() {
       state.settings.vaultApiUrl = dom.vaultApiUrlInput.value.trim();
       updateVaultBtn();
       updateBadge();
+      updateVaultNoteIndicator();
       sendBgMessage({ type: 'settings.save', data: { ...state.settings } }).catch(() => {});
     });
   }
@@ -752,6 +757,7 @@ function bindEvents() {
       state.settings.vaultApiToken = dom.vaultApiTokenInput.value.trim();
       updateVaultBtn();
       updateBadge();
+      updateVaultNoteIndicator();
       sendBgMessage({ type: 'settings.save', data: { ...state.settings } }).catch(() => {});
     });
   }
@@ -783,12 +789,14 @@ function bindEvents() {
           state.vaultConnected = true;
           updateVaultBtn();
           updateBadge();
+          updateVaultNoteIndicator();
         } else {
           dom.vaultApiStatus.textContent = `${i18n('settingsVaultApiTestFail')}: ${result?.error || 'Unknown'}`;
           dom.vaultApiStatus.className = 'form-hint error';
           state.vaultConnected = false;
           updateVaultBtn();
           updateBadge();
+          updateVaultNoteIndicator();
         }
       } catch (err) {
         dom.vaultApiStatus.textContent = `${i18n('settingsVaultApiTestFail')}: ${err.message}`;
@@ -854,6 +862,7 @@ async function loadSettings() {
 
     updateVaultBtn();
     updateBadge();
+    updateVaultNoteIndicator();
   } catch (err) {
     console.error('Failed to load settings:', err);
   }
@@ -884,6 +893,7 @@ async function handleSaveSettings() {
     updateModelBadge();
     updateVaultBtn();
     updateBadge();
+    updateVaultNoteIndicator();
   } catch (err) {
     dom.settingsStatus.textContent = 'Error: ' + err.message;
     dom.settingsStatus.className = 'settings-status error';
@@ -1696,6 +1706,18 @@ function updateBadge() {
     : null;
   chrome.action.setIcon({ path: { '16': iconPath || 'icons/openagent-16.png', '24': iconPath || 'icons/openagent-24.png', '32': iconPath || 'icons/openagent-32.png', '48': iconPath || 'icons/openagent-48.png', '128': iconPath || 'icons/openagent-128.png' } });
   chrome.action.setBadgeText({ text: '' });
+}
+
+function updateVaultNoteIndicator() {
+  const hasApiUrl = !!(state.settings.vaultApiUrl && state.settings.vaultApiToken);
+  const isVaultActive = hasApiUrl && state.autoVault && state.vaultConnected;
+  if (isVaultActive && state.currentVaultFilename) {
+    dom.vaultNoteIndicator.classList.remove('hidden');
+    dom.vaultNoteName.textContent = state.currentVaultFilename;
+  } else {
+    dom.vaultNoteIndicator.classList.add('hidden');
+    dom.vaultNoteName.textContent = '';
+  }
 }
 
 function toggleModal(open) {

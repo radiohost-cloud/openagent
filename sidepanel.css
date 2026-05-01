@@ -1745,6 +1745,32 @@ details[open] .vault-summary::before {
   color: #cc6666;
 }
 
+.vault-note-indicator {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  color: #9f7aea;
+  margin-bottom: 6px;
+  padding: 0 2px;
+  font-family: var(--font);
+}
+
+.vault-note-indicator svg {
+  flex-shrink: 0;
+  stroke: #9f7aea;
+}
+
+.vault-note-indicator span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vault-note-indicator.hidden {
+  display: none;
+}
+
 /* ─── Responsive ─────────────────────────────────────────── */
 
 @media (max-width: 320px) {

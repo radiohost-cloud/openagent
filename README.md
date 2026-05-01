@@ -39,10 +39,12 @@
 - **Instruct the AI** to click, type, scroll, or navigate — the AI controls the browser for you
 
 ### 📁 Obsidian Integration
-- Save notes to your vault using the File System Access API
-- Toggle **auto-save** to append your entire conversation to a session note automatically
-- Notes saved as `.md` files directly to your vault root
-- **Requires Obsidian desktop app** installed for full functionality (search, backlinks, graph view)
+- **Auto-save conversations** — every message is automatically appended to a session note in your vault
+- **Session notes** — notes are named after the website domain and date (e.g. `github-com-2026-05-01.md`)
+- **Vault awareness** — the AI knows it's connected to Obsidian and can read/write notes on demand
+- **History resume** — restored conversations sync back to their vault notes automatically
+- **Remote access** — works over Local REST API, no need to have Obsidian open on the same machine
+- **Requires:** Obsidian desktop app + [Local REST API plugin](https://obsidian.md/plugins?id=obsidian-local-rest-api)
 
 ### 🎨 Customization
 - **14 color presets** — dark and light themes
@@ -70,6 +72,18 @@
 3. Paste your [OpenRouter API key](https://openrouter.ai/keys)
 4. Pick a model from the dropdown and start chatting
 
+### Obsidian Setup
+
+1. Install the [Local REST API plugin](https://obsidian.md/plugins?id=obsidian-local-rest-api) in Obsidian
+2. Enable the plugin in Obsidian settings
+3. In OpenAgent settings, expand **Obsidian Vault**
+4. Enter:
+   - **Vault name** — subfolder path within your vault (e.g. `/obsidian/` or leave empty for root)
+   - **API URL** — `http://127.0.0.1:27124` (default)
+   - **API Token** — from the Local REST API plugin settings
+5. Click **Test connection** — green "Connected" means it's working
+6. The vault button in the toolbar turns purple when connected
+
 ---
 
 ### 🔧 System Prompt (Customization)
@@ -81,25 +95,17 @@ The AI already knows its role by default, but a custom prompt lets you:
 - Add domain-specific instructions (e.g., "Always cite sources", "Format code blocks with language tags")
 - Define response style and structure
 
-**Example prompt:**
-```
-You are OpenAgent — an AI browser assistant with access to Obsidian vault.
+**Vault tools** (available automatically when Obsidian is connected):
 
-## Your Main Role
-You are the bridge between web browsing and the user's note system. You help capture, organize, and link information from web pages directly into their Obsidian knowledge base.
+| Tool | Usage | Description |
+|------|-------|-------------|
+| Read notes | `<vault_read query="search terms" />` | Search vault for `.md` files matching the query |
+| Write session | `<vault_write>content</vault_write>` | Append to the current session note |
+| Write note | `<vault_write filename="topic.md">content</vault_write>` | Create a new `.md` note |
 
-## Always Know
-- **Primary function**: help the user with the currently open webpage
-- **Page context**: you always have access to the current tab's content
-- **Vault cooperation**: you can read and write notes using <vault_read> and <vault_write>
+Session notes are automatically saved per conversation and named after the website domain + date (e.g. `github-com-2026-05-01.md`). The AI receives full vault instructions whenever the vault is connected, regardless of your custom prompt.
 
-## Behavior
-- Be proactive, but never presumptuous — explain before taking action on vault
-- If you don't have page context, say so directly
-- Always preserve source URL and metadata when capturing to vault
-```
-
-Leave empty to use the default built-in prompt. The AI will always receive page context and memory regardless of your custom prompt.
+Leave the system prompt empty to use the default built-in prompt. The AI will always receive page context, memory, and vault capabilities regardless of your custom prompt.
 
 ---
 

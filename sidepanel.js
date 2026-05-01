@@ -635,6 +635,22 @@ async function vaultApiReadFiles(query, limit) {
   });
 }
 
+async function vaultApiTest() {
+  const url = state.settings.vaultApiUrl;
+  const token = state.settings.vaultApiToken;
+  if (!url || !token) return { error: 'URL or token missing' };
+  try {
+    const result = await sendBgMessage({
+      type: 'vault.api.test',
+      url,
+      token,
+    });
+    return result;
+  } catch (err) {
+    return { error: err.message };
+  }
+}
+
 async function pickVaultFolder() {
   try {
     const dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
@@ -919,9 +935,15 @@ function bindEvents() {
         if (result && !result.error) {
           dom.vaultApiStatus.textContent = i18n('settingsVaultApiTestOk');
           dom.vaultApiStatus.className = 'form-hint ok';
+          state.vaultApiConnected = true;
+          if (dom.vaultCardApiStatus) dom.vaultCardApiStatus.textContent = i18n('statusConnected');
+          updateVaultBtn();
         } else {
           dom.vaultApiStatus.textContent = `${i18n('settingsVaultApiTestFail')}: ${result?.error || 'Unknown'}`;
           dom.vaultApiStatus.className = 'form-hint error';
+          state.vaultApiConnected = false;
+          if (dom.vaultCardApiStatus) dom.vaultCardApiStatus.textContent = '';
+          updateVaultBtn();
         }
       } catch (err) {
         console.error('[OpenAgent] vaultApiTest error:', err);
@@ -993,6 +1015,15 @@ async function loadSettings() {
     // For API mode, auto-enable vault if URL+token are configured
     if (mode === 'api' && state.settings.vaultApiUrl && state.settings.vaultApiToken && !autoData?.autoVault) {
       state.autoVault = true;
+    }
+
+    // Auto-connect API if mode is api and credentials are configured
+    if (mode === 'api' && state.settings.vaultApiUrl && state.settings.vaultApiToken) {
+      const result = await vaultApiTest();
+      state.vaultApiConnected = !result.error;
+      if (dom.vaultCardApiStatus) {
+        dom.vaultCardApiStatus.textContent = state.vaultApiConnected ? i18n('statusConnected') : '';
+      }
     }
 
     updateVaultBtn();
@@ -1314,7 +1345,7 @@ async function handleSend() {
       state.messages.push({ role: 'assistant', content: finalContent });
       renderMessage('assistant', finalContent);
 
-      if (state.autoVault && state.vaultDirHandle) {
+      if (state.autoVault && (state.vaultDirHandle || vaultMode() === 'api')) {
         saveAutoVaultNote().catch((err) => console.error('[SP] auto-vault error:', err));
       }
 

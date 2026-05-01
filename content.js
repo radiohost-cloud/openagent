@@ -17,9 +17,8 @@
 
   function safeSend(msg) {
     try {
-      if (typeof chrome !== 'undefined' && chrome.runtime && typeof chrome.runtime.sendMessage === 'function') {
-        chrome.runtime.sendMessage(msg).catch(function() {});
-      }
+      if (typeof chrome === 'undefined' || !chrome.runtime || typeof chrome.runtime.sendMessage !== 'function') return;
+      chrome.runtime.sendMessage(msg);
     } catch (e) {}
   }
 
@@ -77,7 +76,7 @@
     fab.addEventListener('click', function () {
       try {
         if (chrome.sidePanel && typeof chrome.sidePanel.open === 'function') {
-          chrome.sidePanel.open({ path: 'sidepanel.html' }).catch(function() {});
+          try { chrome.sidePanel.open({ path: 'sidepanel.html' }); } catch (e) {}
         }
       } catch (e) {}
     });

@@ -1406,7 +1406,12 @@ function saveConversation() {
 
   const existing = state.conversations.find((c) => c.id === convId);
   if (existing) {
-    existing.messages = state.messages;
+    // Append only new messages (avoid duplicates when returning to same page)
+    const existingIds = new Set(existing.messages.map((m) => m.content?.slice(0, 50)));
+    const newMsgs = state.messages.filter((m) => !existingIds.has(m.content?.slice(0, 50)));
+    if (newMsgs.length > 0) {
+      existing.messages = existing.messages.concat(newMsgs);
+    }
     existing.timestamp = Date.now();
     existing.bodyText = state.pageContext?.bodyText || existing.bodyText;
     existing.images = state.pageContext?.images || existing.images;
@@ -1461,10 +1466,9 @@ function renderHistoryPanel() {
     dom.historyDrawerList.innerHTML = state.conversations.map((conv) => {
       const date = new Date(conv.timestamp);
       const dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      const title = conv.pageTitle || conv.pageUrl || 'Untitled';
       return `<div class="history-drawer-item" data-id="${conv.id}">
         <div class="history-drawer-row">
-          <div class="history-drawer-title">${escapeHtml(title.slice(0, 50))}</div>
+          <div class="history-drawer-title">${escapeHtml(conv.id)}</div>
           <button class="history-delete-btn" data-delete="${conv.id}" title="${i18n('btnDelete')}">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
           </button>
@@ -1501,38 +1505,19 @@ function restoreConversation(id) {
   state.currentVaultFilename = conv.vaultFilename || null;
   state.vaultWritten = !!conv.vaultFilename;
 
-  // Append to current messages (continue conversation)
-  state.messages.push(...conv.messages);
+  // Restore conversation from history
+  state.currentConversationId = id;
+  state.currentVaultFilename = conv.vaultFilename || null;
+  state.vaultWritten = !!conv.vaultFilename;
+  state.messages = [...conv.messages];
   state.vaultSavedCount = conv.messages.length;
-
-  // If vault is active, save history to vault (non-append so it's the base)
-  if (state.autoVault && state.vaultConnected && state.currentVaultFilename) {
-    const filename = state.currentVaultFilename;
-    const pageUrl = conv.pageUrl || '';
-    const date = new Date(conv.timestamp || Date.now());
-    const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-    const timeStr = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
-    const lines = [`# Session — ${dateStr} ${timeStr}`, pageUrl ? `**URL:** ${pageUrl}` : ''];
-    for (const msg of conv.messages) {
-      const role = msg.role === 'user' ? '**You**' : '**OpenAgent**';
-      let text = (msg.content || '').replace(/<vault_write[^>]*>[\s\S]*?<\/vault_write>/gi, '').replace(/<vault_read[^>]*\/>/gi, '').replace(/\*\*From vault:\*\*[\s\S]*/gi, '').replace(/^✓ Saved:.*$/gm, '').trim();
-      if (text) lines.push(`\n${role}:\n${text}`);
-    }
-    lines.push('\n---\n*OpenAgent Chrome Extension*');
-    vaultWrite(filename, lines.join('\n'), true).catch((err) => console.error('[SP] vault history save failed:', err));
-  }
 
   state.historyOpen = false;
   document.getElementById('historyPanel').classList.add('hidden');
 
   if (conv.pageUrl) {
-    // Restore page context from conversation
-    const metadata = {
-      url: conv.pageUrl,
-      title: conv.pageTitle || 'Untitled',
-      favicon: null, // chrome://favicon blocked in side panel
-      domain: new URL(conv.pageUrl).hostname,
-    };
+    const domain = (() => { try { return new URL(conv.pageUrl).hostname.replace(/^www\./, ''); } catch { return ''; } })();
+    const metadata = { url: conv.pageUrl, title: conv.pageTitle || 'Untitled', favicon: null, domain };
     // If current page matches, refresh context; otherwise use stored context
     if (state.pageContext?.metadata?.url === conv.pageUrl) {
       // Already on same page, refresh context

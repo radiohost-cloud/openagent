@@ -1515,23 +1515,9 @@ function restoreConversation(id) {
   state.historyOpen = false;
   document.getElementById('historyPanel').classList.add('hidden');
 
-  if (conv.pageUrl) {
-    const domain = (() => { try { return new URL(conv.pageUrl).hostname.replace(/^www\./, ''); } catch { return ''; } })();
-    const metadata = { url: conv.pageUrl, title: conv.pageTitle || 'Untitled', favicon: null, domain };
-    // If current page matches, refresh context; otherwise use stored context
-    if (state.pageContext?.metadata?.url === conv.pageUrl) {
-      // Already on same page, refresh context
-      collectPageContext();
-    } else {
-      state.pageContext = {
-        metadata,
-        bodyText: conv.bodyText || '',
-        images: conv.images || [],
-        selectedText: '',
-      };
-      prependPageContext(metadata);
-    }
-  }
+  // Always load current page context after restoring conversation
+  lastTabUrl = '';
+  collectPageContext();
 
   renderMessages();
   updateBadge();

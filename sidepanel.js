@@ -1486,7 +1486,7 @@ function restoreConversation(id) {
       if (text) lines.push(`\n${role}:\n${text}`);
     }
     lines.push('\n---\n*OpenAgent Chrome Extension*');
-    vaultWrite(filename, lines.join('\n'), false).catch((err) => console.error('[SP] vault history save failed:', err));
+    vaultWrite(filename, lines.join('\n'), true).catch((err) => console.error('[SP] vault history save failed:', err));
   }
 
   state.historyOpen = false;

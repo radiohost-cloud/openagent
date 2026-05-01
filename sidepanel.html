@@ -172,23 +172,11 @@
           <details class="vault-section">
             <summary class="vault-summary" data-i18n="settingsVaultTitle">Obsidian Vault</summary>
             <div class="vault-body">
-              <div id="vaultSelectorPanel">
-                <div class="vault-selector-row">
-                  <div class="vault-selector-info">
-                    <div id="vaultSelectedDisplay" class="vault-selected-display">
-                      <span id="vaultSelectedName" class="vault-selected-name" data-i18n="settingsVaultNotSelected">No vault selected</span>
-                      <span id="vaultSelectedPath" class="vault-selected-path"></span>
-                    </div>
-                  </div>
-                  <div class="vault-selector-actions">
-                    <button id="vaultSelectorBtn" class="vault-action-btn" data-i18n="settingsVaultSelect">Select vault</button>
-                  </div>
-                </div>
-                <div id="vaultListContainer" class="vault-list-container hidden">
-                  <div id="vaultList" class="vault-list"></div>
-                </div>
+              <div class="form-group">
+                <label data-i18n="settingsVaultName">Vault name</label>
+                <input type="text" id="vaultNameInput" class="settings-select" data-i18n-placeholder="settingsVaultNamePlaceholder" placeholder="/obsidian/" />
+                <div class="form-hint" data-i18n="settingsVaultNameHint">Subfolder path within your Obsidian vault, e.g. /obsidian/</div>
               </div>
-              <div class="vault-divider"></div>
               <div class="form-group">
                 <label data-i18n="settingsVaultApiUrl">API URL</label>
                 <input type="text" id="vaultApiUrlInput" class="settings-select" data-i18n-placeholder="settingsVaultApiUrlPlaceholder" placeholder="http://127.0.0.1:27124" />

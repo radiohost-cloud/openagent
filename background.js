@@ -9,7 +9,7 @@ const STORAGE_KEYS = {
   THEME: 'claude_theme',
   PRESET: 'claude_preset',
   LANGUAGE: 'claude_language',
-  VAULT_PATH: 'openagent_vault_path',
+  VAULT_NAME: 'openagent_vault_name',
   VAULT_API_URL: 'openagent_vault_api_url',
   VAULT_API_TOKEN: 'openagent_vault_api_token',
   AUTO_VAULT: 'openagent_auto_vault',
@@ -241,7 +241,7 @@ async function loadSettings() {
     theme: result[STORAGE_KEYS.THEME] || 'dark',
     preset: result[STORAGE_KEYS.PRESET] || 'default',
     language: result[STORAGE_KEYS.LANGUAGE] || 'en',
-    vaultPath: result[STORAGE_KEYS.VAULT_PATH] || '',
+    vaultName: result[STORAGE_KEYS.VAULT_NAME] || '',
     vaultApiUrl: result[STORAGE_KEYS.VAULT_API_URL] || '',
     vaultApiToken: result[STORAGE_KEYS.VAULT_API_TOKEN] || '',
     autoVault: result[STORAGE_KEYS.AUTO_VAULT] || false,
@@ -258,7 +258,7 @@ async function saveSettings(data) {
     [STORAGE_KEYS.THEME]: data.theme || 'dark',
     [STORAGE_KEYS.PRESET]: data.preset || 'default',
     [STORAGE_KEYS.LANGUAGE]: data.language || 'en',
-    [STORAGE_KEYS.VAULT_PATH]: data.vaultPath || '',
+    [STORAGE_KEYS.VAULT_NAME]: data.vaultName || '',
     [STORAGE_KEYS.VAULT_API_URL]: data.vaultApiUrl || '',
     [STORAGE_KEYS.VAULT_API_TOKEN]: data.vaultApiToken || '',
     [STORAGE_KEYS.FONT_SIZE]: data.fontSize || 'medium',
@@ -275,8 +275,8 @@ async function handlePromptSend(message, sendResponse) {
     return;
   }
 
-  const { conversationHistory, pageContext, pageScreenshot, autoVault, vaultConnected, vaultPath, memoryContext } = message;
-  const msgs = await buildMessages(conversationHistory, pageContext, pageScreenshot, settings.systemPrompt, autoVault, vaultConnected, vaultPath, memoryContext);
+  const { conversationHistory, pageContext, pageScreenshot, autoVault, vaultConnected, vaultName, memoryContext } = message;
+  const msgs = await buildMessages(conversationHistory, pageContext, pageScreenshot, settings.systemPrompt, autoVault, vaultConnected, vaultName, memoryContext);
 
   try {
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -308,7 +308,7 @@ async function handlePromptSend(message, sendResponse) {
   }
 }
 
-async function buildMessages(history, pageContext, pageScreenshot, systemPrompt, autoVault, vaultConnected, vaultPath, memoryContext) {
+async function buildMessages(history, pageContext, pageScreenshot, systemPrompt, autoVault, vaultConnected, vaultName, memoryContext) {
   const msgs = [];
 
   // Default system prompt if none set
@@ -354,8 +354,8 @@ async function buildMessages(history, pageContext, pageScreenshot, systemPrompt,
   if (autoVault) {
     let note;
     if (vaultConnected) {
-      const vaultName = vaultPath ? vaultPath.split('/').filter(Boolean).pop() : 'Obsidian';
-      note = `\n\n[NOTE: AUTO-VAULT ENABLED — Obsidian vault "${vaultName}" is connected via Local REST API${vaultPath ? ` at ${vaultPath}` : ''}. After responding, proactively identify important information discussed in this conversation and save a concise summary note to the Obsidian vault using <vault_write filename="topic-date.md">...</vault_write>. Focus on key facts, decisions, URLs, code snippets, or anything the user would want to remember.]`;
+      const vaultDisplayName = vaultName ? vaultName.split('/').filter(Boolean).pop() : 'Obsidian';
+      note = `\n\n[NOTE: AUTO-VAULT ENABLED — Obsidian vault "${vaultDisplayName}" is connected via Local REST API${vaultName ? ` (path: ${vaultName})` : ''}. After responding, proactively identify important information discussed in this conversation and save a concise summary note to the Obsidian vault using <vault_write filename="topic-date.md">...</vault_write>. Focus on key facts, decisions, URLs, code snippets, or anything the user would want to remember.]`;
     } else {
       note = `\n\n[NOTE: AUTO-VAULT ENABLED — No Obsidian vault connection detected. Set up Obsidian Local REST API in Settings to enable vault features.]`;
     }
@@ -379,8 +379,8 @@ async function startStream(message, sendResponse) {
     return;
   }
 
-  const { conversationHistory, pageContext, pageScreenshot, autoVault, vaultConnected, vaultPath, memoryContext } = message;
-  const msgs = await buildMessages(conversationHistory, pageContext, pageScreenshot, settings.systemPrompt, autoVault, vaultConnected, vaultPath, memoryContext);
+  const { conversationHistory, pageContext, pageScreenshot, autoVault, vaultConnected, vaultName, memoryContext } = message;
+  const msgs = await buildMessages(conversationHistory, pageContext, pageScreenshot, settings.systemPrompt, autoVault, vaultConnected, vaultName, memoryContext);
 
   try {
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -634,12 +634,17 @@ async function vaultApiRead(message) {
   const settings = await loadSettings();
   const url = (settings.vaultApiUrl || '').replace(/\/$/, '');
   const token = settings.vaultApiToken || '';
+  const vaultName = settings.vaultName || '';
   if (!url || !token) return { error: 'Vault API not configured', notes: [] };
+
+  // Build vault subfolder prefix
+  const vaultPrefix = vaultName.startsWith('/') ? vaultName.slice(1) : vaultName;
+  const vaultPath = vaultPrefix ? `/${vaultPrefix}` : '';
 
   try {
     const searchUrl = query
       ? `${url}/search?q=${encodeURIComponent(query)}&type=file&ext=md&limit=${limit || 20}`
-      : `${url}/vault?limit=${limit || 20}`;
+      : `${url}/vault${vaultPath}?limit=${limit || 20}`;
 
     const resp = await fetch(searchUrl, {
       headers: { 'Authorization': `Bearer ${token}` },
@@ -677,10 +682,16 @@ async function vaultApiWrite(message) {
   const settings = await loadSettings();
   const url = (settings.vaultApiUrl || '').replace(/\/$/, '');
   const token = settings.vaultApiToken || '';
+  const vaultName = settings.vaultName || '';
   if (!url || !token) return { error: 'Vault API not configured' };
 
+  // Build path with optional vault subfolder
+  const vaultPrefix = vaultName.startsWith('/') ? vaultName.slice(1) : vaultName;
+  const fullPath = vaultPrefix ? `${vaultPrefix}/${filename}` : filename;
+
   try {
-    const path = '/search?path=' + encodeURIComponent(filename);
+    // Read existing file first
+    const path = '/search?path=' + encodeURIComponent(fullPath);
     const resp = await fetch(url + path, {
       headers: { 'Authorization': `Bearer ${token}` },
     });
@@ -692,7 +703,7 @@ async function vaultApiWrite(message) {
     const body = {
       content: existing && append ? (existing + '\n\n---\n\n' + content) : content,
     };
-    const writeResp = await fetch(url + '/uments/' + encodeURIComponent(filename), {
+    const writeResp = await fetch(url + '/uments/' + encodeURIComponent(fullPath), {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,

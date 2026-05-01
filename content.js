@@ -1,7 +1,8 @@
 // content.js - Chrome Extension Content Script
 // Collects page context and performs browser automation
 
-const domElementRefs = new Map();
+(function () {
+  const domElementRefs = new Map();
 
 // ─── Page URL Change Detection ───────────────────────────────────────────────────
 // Poll our own URL and notify when it changes — works reliably on all SPAs.
@@ -328,3 +329,6 @@ function handleNavigation(command) {
   }
   return { ok: true };
 }
+
+// End of content script IIFE
+})();

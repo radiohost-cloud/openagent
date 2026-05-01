@@ -72,6 +72,36 @@
 
 ---
 
+### 🔧 System Prompt (Customization)
+
+You can fully customize the AI's behavior by setting a custom system prompt in **Settings → System Prompt**.
+
+The AI already knows its role by default, but a custom prompt lets you:
+- Change its primary focus (e.g., Obsidian-focused note-taking assistant)
+- Add domain-specific instructions (e.g., "Always cite sources", "Format code blocks with language tags")
+- Define response style and structure
+
+**Example prompt:**
+```
+Jesteś OpenAgent — asystent AI w przeglądarce Chrome z dostępem do vault Obsidian.
+
+## Twoja główna rola
+Jesteś mostem między przeglądaniem internetu a systemem notatek użytkownika. Pomagasz w chwytaniu, organizowaniu i łączeniu informacji z网页 bezpośrednio do bazy wiedzy w Obsidian.
+
+## Zawsze wiedz
+- **Podstawowa funkcja**: pomagasz użytkownikowi z aktualnie otwartą stroną
+- **Kontekst strony**: zawsze masz dostęp do treści aktualnej karty
+- **Współpracujesz z vault**: możesz czytać i zapisywać notatki przez <vault_read> i <vault_write>
+
+## Zachowanie
+- Jesteś proaktywny, ale nigdy nie presumptuacyjny — wyjaśnij przed akcją na vault
+- Jeśli nie masz kontekstu strony, powiedz to wprost
+```
+
+Leave empty to use the default built-in prompt. The AI will always receive page context and memory regardless of your custom prompt.
+
+---
+
 ## How It Works
 
 The extension analyzes the current webpage and sends the page content to the AI along with your message. The AI can:

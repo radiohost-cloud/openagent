@@ -667,13 +667,15 @@ async function saveAutoVault() {
 // ─── Events ──────────────────────────────────────────────────────────────────
 
 function bindEvents() {
+  // Poll every 2 seconds to keep context fresh (critical for YouTube SPA)
+  setInterval(() => {
+    collectPageContext();
+  }, 2000);
+
   chrome.runtime.onMessage.addListener((message) => {
     if (message.type === 'context.refresh') {
-      if (state.contextDebounce) clearTimeout(state.contextDebounce);
-      state.contextDebounce = setTimeout(async () => {
-        await collectPageContext();
-        await loadMemoryContext();
-      }, 200);
+      lastTabUrl = '';
+      setTimeout(() => collectPageContext(), 1200);
     }
   });
 
@@ -1232,52 +1234,49 @@ async function handleSend() {
 
 // ─── Page Context ──────────────────────────────────────────────────────────────
 
+let lastTabUrl = '';
+
 async function collectPageContext() {
-  state.pageContext = null;
-  dom.pageCtxDiv?.remove();
-  dom.pageCtxDiv = null;
+  const tab = await chrome.tabs.query({ active: true, lastFocusedWindow: true }).then(t => t[0]).catch(() => null);
+  if (!tab?.id || !tab.url?.startsWith('http')) return;
 
+  const tabUrl = tab.url;
+
+  // Skip if tab URL hasn't changed
+  if (tabUrl === lastTabUrl) return;
+
+  // Inject fresh content script
+  try { await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] }); } catch {}
+
+  // Wait for page to settle
+  await new Promise(r => setTimeout(r, 3000));
+
+  let data = null;
   try {
-    let data = await sendBgMessage({ type: 'page.collect' });
-    if (data.error || !data.rawCapture) {
-      // content script not injected — force inject and retry
-      await sendBgMessage({ type: 'inject.content' });
-      await new Promise((r) => setTimeout(r, 500));
-      data = await sendBgMessage({ type: 'page.collect' });
-    }
-    if (data.error) {
-      return;
-    }
-    if (!data.rawCapture) {
-      return;
-    }
+    data = await chrome.tabs.sendMessage(tab.id, { type: 'page.collect', overrideUrl: tabUrl });
+  } catch {}
 
-    state.pageContext = data.rawCapture;
-    if (data.rawCapture?.metadata) {
-      prependPageContext(data.rawCapture.metadata);
+  if (data?.rawCapture) {
+    // Only accept if content script URL matches current tab URL
+    const respUrl = data.rawCapture.metadata?.url || '';
+    if (respUrl === tabUrl) {
+      lastTabUrl = tabUrl;
+      state.pageContext = {
+        metadata: {
+          url: tabUrl,
+          title: tab.title || '',
+          favicon: tab.favIconUrl || '',
+        },
+        bodyText: data.rawCapture.bodyText || '',
+        images: data.rawCapture.images || [],
+      };
+      prependPageContext(state.pageContext.metadata);
     }
-  } catch (err) {
-    // Silently fail - tab might be loading
   }
 }
 
 async function loadCachedContext() {
-  try {
-    const stored = await chrome.storage.local.get(['openagent_current_tab']);
-    const cached = stored.openagent_current_tab;
-    if (cached?.url && cached.url.startsWith('http')) {
-      const prevUrl = state.pageContext?.metadata?.url || state.pageContext?.url;
-      state.pageContext = cached;
-      // Only use favicon if it's a real URL (chrome://favicon is blocked in side panel)
-      const faviconUrl = cached.favicon && !cached.favicon.startsWith('chrome://') ? cached.favicon : null;
-      prependPageContext({
-        url: cached.url,
-        title: cached.title,
-        favicon: faviconUrl,
-      });
-    }
-  } catch {}
-  // refresh in background
+  lastTabUrl = '';
   collectPageContext();
   await loadMemoryContext();
 }

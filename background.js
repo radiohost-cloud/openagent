@@ -22,13 +22,13 @@ const injectedTabs = new Set();
 
 chrome.tabs.onActivated.addListener(async (activeInfo) => {
   await injectIntoTab(activeInfo.tabId);
-  await notifyContextRefresh(activeInfo.tabId);
+  const tab = await chrome.tabs.get(activeInfo.tabId).catch(() => null);
+  await notifyContextRefresh(activeInfo.tabId, tab?.url);
 });
 
-// Also listen for tab updates (catches same-tab navigations)
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   if (changeInfo.status === 'complete' && tab.active && tab.url?.startsWith('http')) {
-    await notifyContextRefresh(tabId);
+    await notifyContextRefresh(tabId, tab.url);
   }
 });
 
@@ -36,56 +36,31 @@ if (chrome.webNavigation && chrome.webNavigation.onCompleted) {
   chrome.webNavigation.onCompleted.addListener(async (details) => {
     if (!details.frameId) {
       await injectIntoTab(details.tabId);
-      await notifyContextRefresh(details.tabId);
+      await notifyContextRefresh(details.tabId, details.url);
     }
   }, { url: [{ schemes: ['http', 'https'] }] });
 
+  // CRITICAL: on SPA navigation, re-inject content script to get fresh page data
+  // This is the key fix for YouTube — the old content script instance is stuck
+  // on the previous video, so we force a reload
   chrome.webNavigation.onHistoryStateUpdated.addListener(async (details) => {
     if (!details.frameId) {
-      await notifyContextRefresh(details.tabId);
+      // Remove from injected set so next collectPageContext will re-inject
+      injectedTabs.delete(details.tabId);
+      await injectIntoTab(details.tabId);
+      await notifyContextRefresh(details.tabId, details.url);
     }
   });
 
   chrome.webNavigation.onReferenceFragmentUpdated.addListener(async (details) => {
     if (!details.frameId) {
-      await notifyContextRefresh(details.tabId);
+      await notifyContextRefresh(details.tabId, details.url);
     }
   });
 }
 
-async function notifyContextRefresh(tabId) {
-  let tab;
-  try {
-    tab = await chrome.tabs.get(tabId);
-  } catch {
-    return;
-  }
-  if (!tab?.url || !tab.url.startsWith('http')) return;
-
-  try {
-    const data = await chrome.tabs.sendMessage(tabId, { type: 'page.collect' });
-    if (data?.rawCapture?.metadata) {
-      await chrome.storage.local.set({
-        openagent_current_tab: {
-          url: tab.url,
-          title: tab.title,
-          favicon: data.rawCapture.metadata.favicon || `chrome://favicon/${tab.url}`,
-          bodyText: data.rawCapture.bodyText,
-          images: data.rawCapture.images,
-          timestamp: Date.now(),
-        },
-      });
-    }
-  } catch (err) {
-    await chrome.storage.local.set({
-      openagent_current_tab: {
-        url: tab.url,
-        title: tab.title,
-        favicon: `chrome://favicon/${tab.url}`,
-        timestamp: Date.now(),
-      },
-    });
-  }
+async function notifyContextRefresh(tabId, newUrl) {
+  if (!newUrl || !newUrl.startsWith('http')) return;
   chrome.runtime.sendMessage({ type: 'context.refresh' }).catch(() => {});
 }
 
@@ -98,7 +73,8 @@ chrome.tabs.query({ url: ['http://*/*', 'https://*/*'] }, async (tabs) => {
 });
 
 async function injectIntoTab(tabId) {
-  if (!tabId || injectedTabs.has(tabId)) return;
+  if (!tabId) return;
+  if (injectedTabs.has(tabId)) return; // already injected, skip
   injectedTabs.add(tabId);
   try {
     const tab = await chrome.tabs.get(tabId);
@@ -106,9 +82,12 @@ async function injectIntoTab(tabId) {
     await chrome.scripting.executeScript({
       target: { tabId },
       files: ['content.js'],
+    }).catch(() => {
+      return new Promise((resolve) => {
+        chrome.tabs.executeScript(tabId, { file: 'content.js', runAt: 'document_end' }, resolve);
+      });
     });
   } catch (err) {
-    // chrome:// pages, extensions, etc. don't grant host permissions
     if (err.message && !err.message.includes('Cannot access contents')) {
       console.warn('[OpenAgent] injectIntoTab: failed', tabId, err.message);
     }
@@ -119,18 +98,7 @@ async function injectIntoTab(tabId) {
 
 async function getWebTab() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!tab) return null;
-
-  if (tab.url && (tab.url.startsWith('http://') || tab.url.startsWith('https://'))) {
-    return tab;
-  }
-
-  const webTabs = await chrome.tabs.query({
-    url: ['http://*/*', 'https://*/*'],
-    windowId: tab.windowId,
-  });
-
-  return webTabs.length > 0 ? webTabs[0] : null;
+  return tab?.url?.startsWith('http') ? tab : null;
 }
 
 // ─── Message Router ───────────────────────────────────────────────────────────
@@ -160,6 +128,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     'vault.api.test': () => vaultApiTest(message),
     'vault.api.read': () => vaultApiRead(message),
     'vault.api.write': () => vaultApiWrite(message),
+    'context.refresh': () => { chrome.runtime.sendMessage({ type: 'context.refresh' }).catch(() => {}); return { ok: true }; },
   };
 
   const handler = handlers[message.type];

@@ -1141,6 +1141,12 @@ async function handleSend() {
   state.isLoading = true;
   dom.sendBtn.disabled = true;
 
+  // Ensure vault filename exists before sending
+  if (state.autoVault && state.vaultConnected && !state.currentVaultFilename) {
+    state.currentVaultFilename = getOrCreateSessionFilename();
+    updateVaultNoteIndicator();
+  }
+
   try {
     const model = state.settings.model;
     if (state.pageScreenshot && !model) {
@@ -1163,6 +1169,7 @@ async function handleSend() {
       vaultConnected: state.vaultConnected,
       vaultApiUrl: state.settings.vaultApiUrl,
       vaultName: state.settings.vaultName,
+      vaultFilename: state.currentVaultFilename,
       memoryContext: state.memoryContext,
     });
 

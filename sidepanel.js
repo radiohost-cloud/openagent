@@ -1381,14 +1381,14 @@ function clearConversation() {
     processConversationEnd().catch((err) => console.error('[SP] memory process error:', err));
   }
   state.messages = [];
-  state.pageContext = null;
   state.currentConversationId = null;
   state.currentVaultFilename = null;
   state.vaultSavedCount = 0;
   state.vaultWritten = false;
   state.memoryContext = null;
-  if (dom.headerCtx) dom.headerCtx.innerHTML = '';
+  lastTabUrl = '';
   renderMessages();
+  if (state.pageContext?.metadata) prependPageContext(state.pageContext.metadata);
   updateBadge();
 }
 

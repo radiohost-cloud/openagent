@@ -1490,7 +1490,7 @@ function formatContent(text) {
   processed = processed.replace(/```(\w*)\n?([\s\S]*?)```/g, (match) => {
     const lang = match.match(/```(\w*)/)?.[1] || '';
     const code = escapeHtml(match.replace(/```\w*\n?/g, '').replace(/```$/g, '').trim());
-    return `<pre class="code-block" data-lang="${lang}"><code>${code}</code><button class="copy-code-btn">${i18n('btnCopy')}</button></pre>`;
+    return `<pre class="code-block" data-lang="${lang}"><code>${code}</code><button class="copy-code-btn" aria-label="Copy"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button></pre>`;
   });
   // Restore inline code immediately
   processed = processed.replace(/`([^`]+)`/g, (match, code) => {

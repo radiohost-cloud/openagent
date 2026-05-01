@@ -294,10 +294,14 @@ html, body {
   border: 1px solid var(--border);
   cursor: pointer;
   color: var(--muted);
-  padding: 2px 6px;
+  padding: 4px;
   border-radius: 4px;
-  font-size: 10px;
   transition: all 0.15s;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .copy-code-btn:hover {

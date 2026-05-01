@@ -545,7 +545,6 @@ async function vaultApiWrite(filename, content, append) {
       content,
       append,
     });
-    console.log('[SP] vaultApiWrite:', filename, 'append=', append, 'result=', JSON.stringify(result));
     return result;
   } catch (err) {
     console.error('[SP] vaultApiWrite error:', err);
@@ -1897,16 +1896,13 @@ async function processVaultToolCalls(messageContent) {
 // ─── Auto Vault Note ───────────────────────────────────────────────────────────
 
 async function saveAutoVaultNote() {
-  if (!state.autoVault) { console.log('[SP] auto-vault: skipped — autoVault=false'); return; }
-  if (!state.vaultConnected) { console.log('[SP] auto-vault: skipped — vaultConnected=false'); return; }
+  if (!state.autoVault || !state.vaultConnected) return;
   const filename = getOrCreateSessionFilename();
-  if (!filename) { console.log('[SP] auto-vault: skipped — no filename'); return; }
+  if (!filename) return;
 
-  // Determine which messages to save — only new ones since last save
   const isFirstSave = state.vaultSavedCount === 0;
   const newMessages = state.messages.slice(state.vaultSavedCount);
-  console.log('[SP] auto-vault: filename=', filename, 'savedCount=', state.vaultSavedCount, 'totalMsgs=', state.messages.length, 'newMsgs=', newMessages.length, 'isFirst=', isFirstSave);
-  if (newMessages.length === 0) { console.log('[SP] auto-vault: skipped — no new messages'); return; }
+  if (newMessages.length === 0) return;
 
   const pageUrl = state.pageContext?.metadata?.url || state.pageContext?.url || '';
 
@@ -1925,10 +1921,7 @@ async function saveAutoVaultNote() {
     lines.push('\n---\n*OpenAgent Chrome Extension*');
     content = lines.join('\n');
     const result = await vaultWrite(filename, content, false);
-    if (result?.error) {
-      console.error('[SP] auto-vault failed:', result.error);
-      return;
-    }
+    if (result?.error) return;
   } else {
     // Subsequent saves: append only new messages
     const lines = [];
@@ -1940,14 +1933,10 @@ async function saveAutoVaultNote() {
     if (lines.length === 0) return;
     content = lines.join('\n\n');
     const result = await vaultWrite(filename, content, true);
-    if (result?.error) {
-      console.error('[SP] auto-vault append failed:', result.error);
-      return;
-    }
+    if (result?.error) return;
   }
 
   state.vaultSavedCount = state.messages.length;
-  console.log('[SP] auto-vault saved:', filename, 'msg count:', newMessages.length, 'isFirst:', isFirstSave);
 }
 
 // ─── Start ─────────────────────────────────────────────────────────────────────

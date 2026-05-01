@@ -185,6 +185,7 @@ html, body {
   animation: msgIn 0.15s ease;
   max-width: 100%;
   position: relative;
+  overflow: hidden;
 }
 
 @keyframes msgIn {
@@ -253,6 +254,12 @@ html, body {
   border-radius: 4px;
   opacity: 0;
   transition: opacity 0.15s;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
 }
 
 .message:hover .copy-msg-btn {

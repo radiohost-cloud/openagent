@@ -1826,7 +1826,10 @@ async function saveAutoVaultNote() {
   const content = `# Session — ${dateStr} ${timeStr}\n\n` +
     (pageUrl ? `**URL:** ${pageUrl}\n` : '') +
     `\n---\n\n` +
-    const result = await vaultWrite(filename, content, true);
+    conversationText +
+    `\n\n---\n*OpenAgent Chrome Extension*`;
+
+  const result = await vaultWrite(filename, content, true);
   if (result?.error) {
     console.error('[SP] auto-vault failed:', result.error);
   }

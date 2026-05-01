@@ -4,17 +4,6 @@
 (function () {
   const domElementRefs = new Map();
 
-// ─── Page URL Change Detection ───────────────────────────────────────────────────
-// Poll our own URL and notify when it changes — works reliably on all SPAs.
-
-(function () {
-  let lastUrl = location.href;
-  let sendInterval = null;
-  let sendPopstate = null;
-  let sendPushState = null;
-  let sendReplaceState = null;
-  let sendFab = null;
-
   function safeSend(msg) {
     try {
       if (typeof chrome === 'undefined' || !chrome.runtime || typeof chrome.runtime.sendMessage !== 'function') return;
@@ -22,48 +11,43 @@
     } catch (e) {}
   }
 
-  // Check URL every second
-  sendInterval = setInterval(function () {
-    if (location.href !== lastUrl) {
-      lastUrl = location.href;
-      safeSend({ type: 'context.refresh' });
-    }
-  }, 1000);
+  // Intercept history API for SPA navigation (YouTube, etc.)
+  (function () {
+    let lastUrl = location.href;
 
-  // Also intercept pushState for immediate notification
-  sendPushState = history.pushState;
-  history.pushState = function () {
-    sendPushState.apply(history, arguments);
-    if (location.href !== lastUrl) {
-      lastUrl = location.href;
-      safeSend({ type: 'context.refresh' });
-    }
-  };
+    const origPushState = history.pushState;
+    history.pushState = function () {
+      origPushState.apply(history, arguments);
+      if (location.href !== lastUrl) {
+        lastUrl = location.href;
+        safeSend({ type: 'context.refresh' });
+      }
+    };
 
-  sendReplaceState = history.replaceState;
-  history.replaceState = function () {
-    sendReplaceState.apply(history, arguments);
-    if (location.href !== lastUrl) {
-      lastUrl = location.href;
-      safeSend({ type: 'context.refresh' });
-    }
-  };
+    const origReplaceState = history.replaceState;
+    history.replaceState = function () {
+      origReplaceState.apply(history, arguments);
+      if (location.href !== lastUrl) {
+        lastUrl = location.href;
+        safeSend({ type: 'context.refresh' });
+      }
+    };
 
-  sendPopstate = window.addEventListener('popstate', function () {
-    if (location.href !== lastUrl) {
-      lastUrl = location.href;
-      safeSend({ type: 'context.refresh' });
-    }
-  });
+    window.addEventListener('popstate', function () {
+      if (location.href !== lastUrl) {
+        lastUrl = location.href;
+        safeSend({ type: 'context.refresh' });
+      }
+    });
 
-  // Store cleanup functions for FAB click
-  window.__openagentCleanup = function () {
-    clearInterval(sendInterval);
-    history.pushState = sendPushState;
-    history.replaceState = sendReplaceState;
-    window.removeEventListener('popstate', sendPopstate);
-  };
-})();
+    // Fallback: check URL every 10s in case history API wasn't used
+    setInterval(function () {
+      if (location.href !== lastUrl) {
+        lastUrl = location.href;
+        safeSend({ type: 'context.refresh' });
+      }
+    }, 10000);
+  })();
 
 // ─── Floating Button ─────────────────────────────────────────────────────────
 

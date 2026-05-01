@@ -700,12 +700,10 @@ async function vaultApiWrite(message) {
   const vaultName = settings.vaultName || '';
   if (!url || !token) return { error: 'Vault API not configured' };
 
-  // Build path with optional vault subfolder
   const vaultPrefix = vaultName.startsWith('/') ? vaultName.slice(1) : vaultName;
   const fullPath = vaultPrefix ? `${vaultPrefix}/${filename}` : filename;
 
   try {
-    // Read existing file first via /vault/{path}
     const readResp = await fetch(url + '/vault/' + encodeURIComponent(fullPath), {
       headers: { 'Authorization': `Bearer ${token}` },
     });
@@ -716,7 +714,7 @@ async function vaultApiWrite(message) {
     }
 
     const writeContent = existing && append ? (existing + '\n\n---\n\n' + content) : content;
-    const method = append ? 'POST' : 'PUT';
+    const method = existing ? 'PUT' : 'PUT';
     const writeResp = await fetch(url + '/vault/' + encodeURIComponent(fullPath), {
       method,
       headers: {
@@ -727,10 +725,12 @@ async function vaultApiWrite(message) {
     });
     if (!writeResp.ok) {
       const err = await writeResp.text();
+      console.error('[BG] vault write error:', writeResp.status, fullPath, err);
       return { error: 'Write failed: ' + err };
     }
     return { ok: true, path: filename };
   } catch (err) {
+    console.error('[BG] vault api error:', err);
     return { error: 'API error: ' + err.message };
   }
 }

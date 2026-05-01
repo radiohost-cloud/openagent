@@ -1869,6 +1869,8 @@ async function saveAutoVaultNote() {
   const result = await vaultWrite(filename, content, true);
   if (result?.error) {
     console.error('[SP] auto-vault failed:', result.error);
+  } else {
+    console.log('[SP] auto-vault saved:', filename, 'bytes:', content.length);
   }
 }
 

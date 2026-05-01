@@ -1347,10 +1347,29 @@ function prependPageContext(metadata) {
     `;
   }
 
-  // Update vault filename only if it's a genuinely new page (different URL)
-  if (state.autoVault && state.vaultConnected && !state.currentVaultFilename) {
-    state.currentVaultFilename = getOrCreateSessionFilename();
-    updateVaultNoteIndicator();
+  // Update vault filename only when visiting a different page
+  if (state.autoVault && state.vaultConnected) {
+    const currentUrl = metadata.url || state.pageContext?.metadata?.url || '';
+    const candidateFilename = (() => {
+      const url = currentUrl;
+      if (!url) return 'openagent';
+      try {
+        const date = new Date();
+        const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        const domain = new URL(url).hostname.replace(/^www\./, '').replace(/\./g, '-');
+        return `${domain}-${dateStr}.md`;
+      } catch {
+        return 'openagent';
+      }
+    })();
+    if (state.currentVaultFilename && state.currentVaultFilename !== candidateFilename) {
+      state.currentVaultFilename = candidateFilename;
+      state.vaultSavedCount = 0;
+      updateVaultNoteIndicator();
+    } else if (!state.currentVaultFilename) {
+      state.currentVaultFilename = candidateFilename;
+      updateVaultNoteIndicator();
+    }
   }
 }
 

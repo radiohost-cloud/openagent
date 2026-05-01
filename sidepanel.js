@@ -2,7 +2,7 @@
 
 const state = {
   messages: [],
-  settings: { apiKey: '', provider: 'openrouter', model: '', systemPrompt: '', theme: 'dark', preset: 'default', language: 'en', vaultPath: '', vaultApiUrl: '', vaultApiToken: '', vaultMode: 'local', fontSize: 'medium' },
+  settings: { apiKey: '', provider: 'openrouter', model: '', systemPrompt: '', theme: 'dark', preset: 'default', language: 'en', vaultApiUrl: '', vaultApiToken: '', fontSize: 'medium' },
   pageContext: null,
   pageScreenshot: null,
   visionModels: [],
@@ -10,9 +10,7 @@ const state = {
   allModels: [],
   autoVault: false,
   currentVaultFilename: null,
-  vaultDirHandle: null,
-  vaultReady: false,
-  vaultApiConnected: false,
+  vaultConnected: false,
   conversations: [],
   historyOpen: false,
   currentConversationId: null,
@@ -488,19 +486,10 @@ const dom = {
   themePreset: $('#themePreset'),
   langSelect: $('#langSelect'),
   fontSizeSelect: $('#fontSizeSelect'),
-  vaultPathInput: $('#vaultPathInput'),
-  vaultSelectBtn: $('#vaultSelectBtn'),
-  vaultStatus: $('#vaultStatusDot'),
-  vaultCardLocal: $('#vaultCardLocal'),
-  vaultCardApi: $('#vaultCardApi'),
-  vaultCardLocalStatus: $('#vaultCardLocalStatus'),
-  vaultCardApiStatus: $('#vaultCardApiStatus'),
-  vaultApiPanel: $('#vaultApiPanel'),
   vaultApiUrlInput: $('#vaultApiUrlInput'),
   vaultApiTokenInput: $('#vaultApiTokenInput'),
   vaultApiTestBtn: $('#vaultApiTestBtn'),
   vaultApiStatus: $('#vaultApiStatus'),
-  vaultLocalPanel: $('#vaultLocalPanel'),
 };
 
 // ─── i18n ────────────────────────────────────────────────────────────────────
@@ -544,38 +533,13 @@ function applyFontSize(size) {
   document.body.dataset.fontSize = size;
 }
 
-// ─── Vault (File System Access API + REST API) ────────────────────────────────
-
-function vaultMode() {
-  return state.settings.vaultMode || 'local';
-}
+// ─── Vault (Obsidian Local REST API) ─────────────────────────────────────────
 
 async function vaultWrite(filename, content, append = false) {
-  if (vaultMode() === 'api') {
-    return vaultApiWrite(filename, content, append);
+  if (!state.vaultConnected) {
+    return { error: 'Obsidian vault not connected. Enter API URL and token in Settings.' };
   }
-  if (!state.vaultDirHandle) {
-    if (state.settings.vaultPath) {
-      return { error: 'Vault folder access expired — click the Obsidian button to re-authorize.' };
-    }
-    return { error: 'No vault selected. Go to Settings to pick your vault folder.' };
-  }
-  try {
-    const fileHandle = await state.vaultDirHandle.getFileHandle(filename, { create: true });
-    if (append) {
-      try {
-        const file = await fileHandle.getFile();
-        const existing = await file.text();
-        content = existing + '\n\n---\n\n' + content;
-      } catch {}
-    }
-    const writable = await fileHandle.createWritable();
-    await writable.write(content);
-    await writable.close();
-    return { ok: true, path: filename };
-  } catch (err) {
-    return { error: err.message };
-  }
+  return await vaultApiWrite(filename, content, append);
 }
 
 async function vaultApiWrite(filename, content, append) {
@@ -600,34 +564,13 @@ function getOrCreateSessionFilename() {
 }
 
 async function vaultReadFiles(query = '', limit = 20) {
-  if (vaultMode() === 'api') {
-    return vaultApiReadFiles(query, limit);
+  if (!state.vaultConnected) {
+    return { error: 'Obsidian vault not connected', notes: [] };
   }
-  if (!state.vaultDirHandle) {
-    return { error: 'No vault selected', notes: [] };
-  }
-  const notes = [];
-  try {
-    for await (const entry of state.vaultDirHandle.values()) {
-      if (entry.kind !== 'file' || !entry.name.endsWith('.md')) continue;
-      if (notes.length >= limit) break;
-      try {
-        const file = await entry.getFile();
-        const text = await file.text();
-        const q = query.toLowerCase();
-        if (!query || text.toLowerCase().includes(q) || entry.name.toLowerCase().includes(q)) {
-          notes.push({ filename: entry.name, content: text });
-        }
-      } catch {}
-    }
-  } catch (err) {
-    return { error: err.message, notes };
-  }
-  return { notes };
+  return await vaultApiReadFiles(query, limit);
 }
 
 async function vaultApiReadFiles(query, limit) {
-  // Route through background service worker to bypass CORS restrictions
   return await sendBgMessage({
     type: 'vault.api.read',
     query,
@@ -648,30 +591,6 @@ async function vaultApiTest() {
     return result;
   } catch (err) {
     return { error: err.message };
-  }
-}
-
-async function pickVaultFolder() {
-  try {
-    const dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
-    state.vaultDirHandle = dirHandle;
-    state.vaultReady = true;
-    state.settings.vaultPath = dirHandle.name;
-    state.autoVault = true;
-    dom.vaultPathInput.value = dirHandle.name;
-    dom.vaultPathInput.title = 'Selected: ' + dirHandle.name;
-    if (dom.vaultStatus) dom.vaultStatus.classList.add('ready', 'active');
-    await sendBgMessage({
-      type: 'settings.save',
-      data: { ...state.settings },
-    });
-    await sendBgMessage({ type: 'autovault.save', enabled: true });
-    updateVaultBtn();
-    setStatus(i18n('statusVaultReady'), 'success');
-  } catch (err) {
-    if (err.name !== 'AbortError') {
-      setStatus('Vault error: ' + err.message, 'error');
-    }
   }
 }
 
@@ -714,45 +633,20 @@ async function loadMemoryContext() {
 }
 
 function updateVaultBtn() {
-  const isApi = vaultMode() === 'api';
-  const hasHandle = !!state.vaultDirHandle;
-  const hasPath = !!state.settings.vaultPath;
   const hasApiUrl = !!(state.settings.vaultApiUrl && state.settings.vaultApiToken);
   const isOn = state.autoVault;
 
-  if (isApi) {
-    dom.vaultBtn.classList.remove('active');
-    dom.vaultBtn.classList.toggle('vault-api-active', hasApiUrl && isOn);
-    if (dom.vaultStatus) dom.vaultStatus.classList.toggle('ready', hasApiUrl);
-    if (!hasApiUrl) {
-      dom.vaultBtn.title = i18n('btnVaultNotSet');
-    } else {
-      dom.vaultBtn.title = isOn ? i18n('btnVaultOn') : i18n('btnVaultOff');
-    }
+  dom.vaultBtn.classList.remove('active');
+  dom.vaultBtn.classList.toggle('vault-api-active', hasApiUrl && isOn && state.vaultConnected);
+  if (!hasApiUrl) {
+    dom.vaultBtn.title = i18n('btnVaultNotSet');
   } else {
-    dom.vaultBtn.classList.remove('vault-api-active');
-    dom.vaultBtn.classList.toggle('active', hasHandle && isOn);
-    if (dom.vaultStatus) dom.vaultStatus.classList.toggle('ready', hasHandle);
-    if (!hasPath) {
-      dom.vaultBtn.title = i18n('btnVaultNotSet');
-    } else if (hasHandle) {
-      dom.vaultBtn.title = isOn ? i18n('btnVaultOn') : i18n('btnVaultOff');
-    } else {
-      dom.vaultBtn.title = i18n('btnVaultReauth');
-    }
+    dom.vaultBtn.title = isOn ? i18n('btnVaultOn') : i18n('btnVaultOff');
   }
 }
 
 function toggleVaultOnBtn() {
-  if (vaultMode() === 'api') {
-    if (!state.settings.vaultApiUrl) return;
-    state.autoVault = !state.autoVault;
-    saveAutoVault();
-    updateVaultBtn();
-    setStatus(state.autoVault ? i18n('statusVaultReady') : i18n('btnVaultOff'), state.autoVault ? 'success' : 'info');
-    return;
-  }
-  if (!state.vaultDirHandle) return;
+  if (!state.settings.vaultApiUrl || !state.settings.vaultApiToken) return;
   state.autoVault = !state.autoVault;
   saveAutoVault();
   updateVaultBtn();
@@ -854,60 +748,7 @@ function bindEvents() {
 
   dom.historyDrawerClose.addEventListener('click', toggleHistory);
 
-  dom.vaultBtn.addEventListener('click', () => {
-    if (vaultMode() === 'api') {
-      toggleVaultOnBtn();
-    } else if (state.vaultDirHandle) {
-      toggleVaultOnBtn();
-    } else if (state.settings.vaultPath) {
-      pickVaultFolder();
-    } else {
-      pickVaultFolder();
-    }
-  });
-
-  if (dom.vaultSelectBtn) {
-    dom.vaultSelectBtn.addEventListener('click', () => pickVaultFolder());
-  }
-
-  if (dom.vaultCardLocal) {
-    dom.vaultCardLocal.addEventListener('click', async () => {
-      state.settings.vaultMode = 'local';
-      dom.vaultCardLocal.classList.add('selected');
-      dom.vaultCardApi.classList.remove('selected');
-      if (dom.vaultApiPanel) dom.vaultApiPanel.classList.add('hidden');
-      if (dom.vaultLocalPanel) dom.vaultLocalPanel.classList.remove('hidden');
-      if (dom.vaultCardApiStatus) dom.vaultCardApiStatus.textContent = '';
-      state.vaultApiConnected = false;
-      await sendBgMessage({ type: 'settings.save', data: { vaultMode: 'local' } }).catch(() => {});
-      updateVaultBtn();
-    });
-  }
-
-  if (dom.vaultCardApi) {
-    dom.vaultCardApi.addEventListener('click', async () => {
-      state.settings.vaultMode = 'api';
-      dom.vaultCardApi.classList.add('selected');
-      dom.vaultCardLocal.classList.remove('selected');
-      if (dom.vaultApiPanel) dom.vaultApiPanel.classList.remove('hidden');
-      if (dom.vaultLocalPanel) dom.vaultLocalPanel.classList.add('hidden');
-      if (dom.vaultCardLocalStatus) dom.vaultCardLocalStatus.textContent = '';
-      await sendBgMessage({ type: 'settings.save', data: { vaultMode: 'api' } }).catch(() => {});
-      // Auto-connect if credentials are configured
-      if (state.settings.vaultApiUrl && state.settings.vaultApiToken) {
-        state.autoVault = true;
-        const result = await vaultApiTest();
-        state.vaultApiConnected = !result.error;
-        if (dom.vaultCardApiStatus) {
-          dom.vaultCardApiStatus.textContent = state.vaultApiConnected ? i18n('statusConnected') : '';
-        }
-        if (!result.error) {
-          saveAutoVault();
-        }
-      }
-      updateVaultBtn();
-    });
-  }
+  dom.vaultBtn.addEventListener('click', toggleVaultOnBtn);
 
   if (dom.vaultApiUrlInput) {
     dom.vaultApiUrlInput.addEventListener('change', () => {
@@ -931,7 +772,6 @@ function bindEvents() {
       dom.vaultApiStatus.textContent = '...';
       dom.vaultApiStatus.className = 'form-hint';
 
-      // Save current values before testing
       const url = dom.vaultApiUrlInput?.value.trim() || '';
       const token = dom.vaultApiTokenInput?.value.trim() || '';
 
@@ -941,7 +781,6 @@ function bindEvents() {
         return;
       }
 
-      // Pass URL and token directly to bypass storage timing issues
       try {
         const result = await sendBgMessage({
           type: 'vault.api.test',
@@ -951,18 +790,15 @@ function bindEvents() {
         if (result && !result.error) {
           dom.vaultApiStatus.textContent = i18n('settingsVaultApiTestOk');
           dom.vaultApiStatus.className = 'form-hint ok';
-          state.vaultApiConnected = true;
-          if (dom.vaultCardApiStatus) dom.vaultCardApiStatus.textContent = i18n('statusConnected');
+          state.vaultConnected = true;
           updateVaultBtn();
         } else {
           dom.vaultApiStatus.textContent = `${i18n('settingsVaultApiTestFail')}: ${result?.error || 'Unknown'}`;
           dom.vaultApiStatus.className = 'form-hint error';
-          state.vaultApiConnected = false;
-          if (dom.vaultCardApiStatus) dom.vaultCardApiStatus.textContent = '';
+          state.vaultConnected = false;
           updateVaultBtn();
         }
       } catch (err) {
-        console.error('[OpenAgent] vaultApiTest error:', err);
         dom.vaultApiStatus.textContent = `${i18n('settingsVaultApiTestFail')}: ${err.message}`;
         dom.vaultApiStatus.className = 'form-hint error';
       }
@@ -995,50 +831,29 @@ async function loadSettings() {
       loadModels();
     });
 
-    if (state.settings.vaultPath) {
-      dom.vaultPathInput.value = state.settings.vaultPath;
-      dom.vaultPathInput.title = 'Selected: ' + state.settings.vaultPath;
-    }
-
     // Vault API settings
     if (dom.vaultApiUrlInput) dom.vaultApiUrlInput.value = state.settings.vaultApiUrl || '';
     if (dom.vaultApiTokenInput) dom.vaultApiTokenInput.value = state.settings.vaultApiToken || '';
 
-    // Vault mode card UI
-    if (dom.vaultCardLocal && dom.vaultCardApi) {
-      dom.vaultCardLocal.classList.toggle('selected', mode === 'local');
-      dom.vaultCardApi.classList.toggle('selected', mode === 'api');
-      if (dom.vaultLocalPanel) dom.vaultLocalPanel.classList.toggle('hidden', mode !== 'local');
-      if (dom.vaultApiPanel) dom.vaultApiPanel.classList.toggle('hidden', mode !== 'api');
-
-      // Update card status indicators
-      if (dom.vaultCardLocalStatus) {
-        dom.vaultCardLocalStatus.textContent = mode === 'local' && state.vaultDirHandle ? i18n('statusConnected') : '';
-      }
-      if (dom.vaultCardApiStatus) {
-        dom.vaultCardApiStatus.textContent = mode === 'api' && state.vaultApiConnected ? i18n('statusConnected') : '';
-      }
-    }
-
-    // vaultDirHandle is session-only (FileSystemDirectoryHandle not serializable).
-    // vaultReady reflects whether we have an active handle, not just a saved path.
-    // The user must re-authorize via pickVaultFolder() after page reload.
-    state.vaultReady = false;
-
     const autoData = await sendBgMessage({ type: 'autovault.load' });
     state.autoVault = autoData?.autoVault || false;
 
-    // For API mode, auto-enable vault if URL+token are configured
-    if (mode === 'api' && state.settings.vaultApiUrl && state.settings.vaultApiToken && !autoData?.autoVault) {
-      state.autoVault = true;
-    }
-
-    // Auto-connect API if mode is api and credentials are configured
-    if (mode === 'api' && state.settings.vaultApiUrl && state.settings.vaultApiToken) {
+    // Auto-connect vault if URL+token are configured
+    if (state.settings.vaultApiUrl && state.settings.vaultApiToken) {
       const result = await vaultApiTest();
-      state.vaultApiConnected = !result.error;
-      if (dom.vaultCardApiStatus) {
-        dom.vaultCardApiStatus.textContent = state.vaultApiConnected ? i18n('statusConnected') : '';
+      state.vaultConnected = !result.error;
+      if (dom.vaultApiStatus) {
+        if (state.vaultConnected) {
+          dom.vaultApiStatus.textContent = i18n('settingsVaultApiTestOk');
+          dom.vaultApiStatus.className = 'form-hint ok';
+        } else {
+          dom.vaultApiStatus.textContent = result?.error ? result.error.replace(/^.*?: /, '') : '';
+          dom.vaultApiStatus.className = 'form-hint error';
+        }
+      }
+      // Auto-enable vault if not already set
+      if (state.vaultConnected && !autoData?.autoVault) {
+        state.autoVault = true;
       }
     }
 
@@ -1055,18 +870,16 @@ async function handleSaveSettings() {
   const theme = state.settings.theme;
   const preset = dom.themePreset.value;
   const language = state.settings.language;
-  const vaultPath = dom.vaultPathInput.value.trim();
   const vaultApiUrl = dom.vaultApiUrlInput ? dom.vaultApiUrlInput.value.trim() : state.settings.vaultApiUrl;
   const vaultApiToken = dom.vaultApiTokenInput ? dom.vaultApiTokenInput.value.trim() : state.settings.vaultApiToken;
-  const vaultMode = state.settings.vaultMode || 'local';
   const fontSize = dom.fontSizeSelect.value;
 
   try {
     await sendBgMessage({
       type: 'settings.save',
-      data: { apiKey, provider: 'openrouter', model, systemPrompt, theme, preset, language, vaultPath, vaultApiUrl, vaultApiToken, vaultMode },
+      data: { apiKey, provider: 'openrouter', model, systemPrompt, theme, preset, language, vaultApiUrl, vaultApiToken, fontSize },
     });
-    state.settings = { ...state.settings, apiKey, provider: 'openrouter', model, systemPrompt, theme, preset, language, vaultPath, vaultApiUrl, vaultApiToken, vaultMode };
+    state.settings = { ...state.settings, apiKey, provider: 'openrouter', model, systemPrompt, theme, preset, language, vaultApiUrl, vaultApiToken, fontSize };
     dom.settingsStatus.textContent = i18n('settingsSaved');
     dom.settingsStatus.className = 'settings-status';
     toggleModal(false);
@@ -1361,7 +1174,7 @@ async function handleSend() {
       state.messages.push({ role: 'assistant', content: finalContent });
       renderMessage('assistant', finalContent);
 
-      if (state.autoVault && (state.vaultDirHandle || vaultMode() === 'api')) {
+      if (state.autoVault && state.vaultConnected) {
         saveAutoVaultNote().catch((err) => console.error('[SP] auto-vault error:', err));
       }
 

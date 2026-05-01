@@ -3,6 +3,7 @@
 > AI-powered browser assistant. Chat about any webpage, automate browser actions, and save notes directly to Obsidian — all without leaving your current tab.
 
 <p float="left">
+  <img src="docs/screenshot9.png" width="200"/>
   <img src="docs/screenshot1.png" width="200"/>
   <img src="docs/screenshot2.png" width="200"/>
   <img src="docs/screenshot3.png" width="200"/>
@@ -11,7 +12,6 @@
   <img src="docs/screenshot6.png" width="200"/>
   <img src="docs/screenshot7.png" width="200"/>
   <img src="docs/screenshot8.png" width="200"/>
-  <img src="docs/screenshot9.png" width="200"/>
 </p>
 
 ---

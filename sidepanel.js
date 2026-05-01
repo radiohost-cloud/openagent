@@ -674,7 +674,7 @@ function bindEvents() {
   chrome.runtime.onMessage.addListener((message) => {
     if (message.type === 'context.refresh') {
       lastTabUrl = '';
-      setTimeout(() => collectPageContext(), 1200);
+      setTimeout(() => collectPageContext(), 200);
     }
   });
 
@@ -1248,7 +1248,7 @@ async function collectPageContext() {
   try { await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] }); } catch {}
 
   // Wait for page to settle
-  await new Promise(r => setTimeout(r, 3000));
+  await new Promise(r => setTimeout(r, 400));
 
   let data = null;
   try {

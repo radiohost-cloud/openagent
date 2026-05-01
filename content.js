@@ -102,7 +102,7 @@ function pageMetadata(overrideUrl) {
 
 async function collectPageProbe(overrideUrl) {
   // Small delay to let SPA pages settle before reading DOM
-  await new Promise(r => setTimeout(r, 300));
+  await new Promise(r => setTimeout(r, 100));
   const bodyText = collectBodyText();
   const images = collectPageImages().slice(0, 8);
   return {

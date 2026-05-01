@@ -462,11 +462,42 @@ body.light .copy-code-btn {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
 }
 
 .status.hidden { display: none; }
 .status.error { color: #cc6666; }
 .status.success { color: #6fcf97; }
+.status-info { color: var(--muted); }
+
+.status-model { overflow: hidden; text-overflow: ellipsis; flex: 1; }
+
+.status-vault {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #9f7aea;
+  flex-shrink: 0;
+  font-size: 10px;
+  overflow: hidden;
+}
+
+.status-vault svg {
+  width: 10px;
+  height: 10px;
+  stroke: #9f7aea;
+  flex-shrink: 0;
+}
+
+.status-vault span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 160px;
+}
 
 /* ─── History Drawer ─────────────────────────────────────── */
 
@@ -1743,32 +1774,6 @@ details[open] .vault-summary::before {
 
 #vaultApiStatus.error {
   color: #cc6666;
-}
-
-.vault-note-indicator {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 10px;
-  color: #9f7aea;
-  margin-bottom: 6px;
-  padding: 0 2px;
-  font-family: var(--font);
-}
-
-.vault-note-indicator svg {
-  flex-shrink: 0;
-  stroke: #9f7aea;
-}
-
-.vault-note-indicator span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.vault-note-indicator.hidden {
-  display: none;
 }
 
 /* ─── Responsive ─────────────────────────────────────────── */

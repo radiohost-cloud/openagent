@@ -480,7 +480,9 @@ const dom = {
   vaultApiStatus: $('#vaultApiStatus'),
   vaultNameInput: $('#vaultNameInput'),
   vaultNoteIndicator: $('#vaultNoteIndicator'),
-  vaultNoteName: $('#vaultNoteName'),
+  statusModel: $('#statusModel'),
+  statusVault: $('#statusVault'),
+  statusVaultName: $('#statusVaultName'),
 };
 
 // ─── i18n ────────────────────────────────────────────────────────────────────
@@ -1669,11 +1671,10 @@ function removeTyping() {
 // ─── Status ────────────────────────────────────────────────────────────────────
 
 function setStatus(text, type = '') {
-  dom.status.textContent = text;
   dom.status.className = 'status' + (type ? ` ${type}` : '');
   if (!type) {
     setTimeout(() => {
-      if (dom.status.textContent === text) dom.status.classList.add('hidden');
+      dom.status.className = 'status';
     }, 3000);
   }
 }
@@ -1681,7 +1682,7 @@ function setStatus(text, type = '') {
 function updateModelBadge() {
   const model = state.settings.model;
   if (model) {
-    dom.status.textContent = i18n('statusModel') + ' ' + (model.includes('/') ? model.split('/')[1].replace(/-(?:2024|2025)[0-9]*$/, '') : model);
+    dom.statusModel.textContent = i18n('statusModel') + ' ' + (model.includes('/') ? model.split('/')[1].replace(/-(?:2024|2025)[0-9]*$/, '') : model);
     dom.status.className = 'status';
   }
 }
@@ -1712,11 +1713,11 @@ function updateVaultNoteIndicator() {
   const hasApiUrl = !!(state.settings.vaultApiUrl && state.settings.vaultApiToken);
   const isVaultActive = hasApiUrl && state.autoVault && state.vaultConnected;
   if (isVaultActive && state.currentVaultFilename) {
-    dom.vaultNoteIndicator.classList.remove('hidden');
-    dom.vaultNoteName.textContent = state.currentVaultFilename;
+    dom.statusVault.classList.remove('hidden');
+    dom.statusVaultName.textContent = state.currentVaultFilename;
   } else {
-    dom.vaultNoteIndicator.classList.add('hidden');
-    dom.vaultNoteName.textContent = '';
+    dom.statusVault.classList.add('hidden');
+    dom.statusVaultName.textContent = '';
   }
 }
 

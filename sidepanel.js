@@ -1394,8 +1394,30 @@ function clearConversation() {
 
 function saveConversation() {
   if (state.messages.length === 0) return;
+
+  const domain = (() => {
+    const url = state.pageContext?.metadata?.url || state.pageContext?.url || '';
+    if (!url) return 'openagent';
+    try { return new URL(url).hostname.replace(/^www\./, '').replace(/\./g, '-'); } catch { return 'openagent'; }
+  })();
+  const date = new Date();
+  const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  const convId = `${domain}-${dateStr}`;
+
+  const existing = state.conversations.find((c) => c.id === convId);
+  if (existing) {
+    existing.messages = state.messages;
+    existing.timestamp = Date.now();
+    existing.bodyText = state.pageContext?.bodyText || existing.bodyText;
+    existing.images = state.pageContext?.images || existing.images;
+    existing.vaultFilename = state.currentVaultFilename || existing.vaultFilename;
+    chrome.storage.local.set({ openagent_conversations: state.conversations });
+    state.currentConversationId = convId;
+    return;
+  }
+
   const conv = {
-    id: Date.now(),
+    id: convId,
     pageUrl: state.pageContext?.metadata?.url || '',
     pageTitle: state.pageContext?.metadata?.title || document.title,
     timestamp: Date.now(),
@@ -1404,18 +1426,8 @@ function saveConversation() {
     images: state.pageContext?.images || [],
     vaultFilename: state.currentVaultFilename || null,
   };
-  if (state.currentConversationId !== null) {
-    // Update existing conversation in place
-    const idx = state.conversations.findIndex((c) => c.id === state.currentConversationId);
-    if (idx !== -1) {
-      conv.id = state.currentConversationId;
-      state.conversations[idx] = conv;
-      chrome.storage.local.set({ openagent_conversations: state.conversations });
-      return;
-    }
-  }
   state.conversations = [conv, ...state.conversations].slice(0, 50);
-  state.currentConversationId = conv.id;
+  state.currentConversationId = convId;
   chrome.storage.local.set({ openagent_conversations: state.conversations });
 }
 
@@ -1464,13 +1476,13 @@ function renderHistoryPanel() {
   dom.historyDrawerList.querySelectorAll('.history-drawer-item').forEach((el) => {
     el.addEventListener('click', (e) => {
       if (e.target.closest('.history-delete-btn')) return;
-      restoreConversation(parseInt(el.dataset.id));
+      restoreConversation(el.dataset.id);
     });
   });
   dom.historyDrawerList.querySelectorAll('.history-delete-btn').forEach((btn) => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
-      deleteConversation(parseInt(btn.dataset.delete));
+      deleteConversation(btn.dataset.delete);
     });
   });
 }

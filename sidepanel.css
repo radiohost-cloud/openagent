@@ -250,16 +250,19 @@ html, body {
   border: none;
   cursor: pointer;
   color: var(--muted);
-  padding: 4px;
+  padding: 0;
   border-radius: 4px;
   opacity: 0;
   transition: opacity 0.15s;
   width: 20px;
   height: 20px;
-  display: flex;
+  display: inline-flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .message:hover .copy-msg-btn {

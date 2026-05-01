@@ -1434,20 +1434,17 @@ function renderMessage(role, content) {
 
 function formatContent(text) {
   if (!text) return '';
-  // Protect code blocks from markdown processing
-  const codeBlocks = [];
-  let processed = text.replace(/```(\w*)\n?([\s\S]*?)```/g, (match) => {
-    const idx = codeBlocks.length;
+  // Process in a single pass: code blocks first (before other patterns can corrupt them)
+  let processed = text;
+  // Restore code blocks immediately to avoid corruption
+  processed = processed.replace(/```(\w*)\n?([\s\S]*?)```/g, (match) => {
     const lang = match.match(/```(\w*)/)?.[1] || '';
-    codeBlocks.push(`<pre class="code-block" data-lang="${lang}"><code>${escapeHtml(match.replace(/```\w*\n?/g, '').replace(/```$/g, '').trim())}</code><button class="copy-code-btn" data-idx="${idx}">${i18n('btnCopy')}</button></pre>`);
-    return `__CODEBLOCK_${idx}__`;
+    const code = escapeHtml(match.replace(/```\w*\n?/g, '').replace(/```$/g, '').trim());
+    return `<pre class="code-block" data-lang="${lang}"><code>${code}</code><button class="copy-code-btn">${i18n('btnCopy')}</button></pre>`;
   });
-  // Protect inline code
-  const inlineCodes = [];
+  // Restore inline code immediately
   processed = processed.replace(/`([^`]+)`/g, (match, code) => {
-    const idx = inlineCodes.length;
-    inlineCodes.push(`<code>${escapeHtml(code)}</code>`);
-    return `__INLINECODE_${idx}__`;
+    return `<code>${escapeHtml(code)}</code>`;
   });
   // Headings
   processed = processed.replace(/^### (.+)$/gm, '<h4>$1</h4>');
@@ -1479,14 +1476,6 @@ function formatContent(text) {
     tableRows.push(JSON.parse(rowJson));
     return `__TROW_${idx}__`;
   });
-  // Restore code blocks
-  for (let i = 0; i < codeBlocks.length; i++) {
-    processed = processed.replace(`__CODEBLOCK_${i}__`, codeBlocks[i]);
-  }
-  // Restore inline code
-  for (let i = 0; i < inlineCodes.length; i++) {
-    processed = processed.replace(`__INLINECODE_${i}__`, inlineCodes[i]);
-  }
   // Restore table rows
   if (tableRows.length > 0) {
     let tableHtml = '<div class="table-wrapper"><table>';
@@ -1505,7 +1494,6 @@ function formatContent(text) {
     }
     tableHtml += '</table></div>';
     processed = processed.replace(/__TROW_(\d+)__/g, () => '');
-    // Find the first placeholder and replace entire block with table
     processed = processed.replace(/__TROW_0__[\s\S]*?(?=__TROW_|$)/, tableHtml);
   }
   // Line breaks

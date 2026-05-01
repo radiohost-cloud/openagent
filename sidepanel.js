@@ -906,12 +906,14 @@ function bindEvents() {
       }
 
       // Pass URL and token directly to bypass storage timing issues
+      console.log('[OpenAgent] Testing vault API:', { url, token: token ? '***' : 'empty' });
       try {
         const result = await sendBgMessage({
           type: 'vault.api.test',
           url,
           token,
         });
+        console.log('[OpenAgent] vaultApiTest result:', result);
         if (result && !result.error) {
           dom.vaultApiStatus.textContent = i18n('settingsVaultApiTestOk');
           dom.vaultApiStatus.className = 'form-hint ok';
@@ -920,6 +922,7 @@ function bindEvents() {
           dom.vaultApiStatus.className = 'form-hint error';
         }
       } catch (err) {
+        console.error('[OpenAgent] vaultApiTest error:', err);
         dom.vaultApiStatus.textContent = `${i18n('settingsVaultApiTestFail')}: ${err.message}`;
         dom.vaultApiStatus.className = 'form-hint error';
       }

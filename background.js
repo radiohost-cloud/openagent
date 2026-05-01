@@ -166,6 +166,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   const handler = handlers[message.type];
   if (!handler) return false;
+  if (message.type.startsWith('vault.api')) {
+    console.log('[OpenAgent] handler:', message.type, message);
+  }
 
   const result = handler();
   if (result instanceof Promise) {
@@ -603,28 +606,37 @@ async function vaultApiTest(message) {
   // Read URL/token directly from message if provided, otherwise from settings
   const url = (message.url || '').replace(/\/$/, '');
   const token = message.token || '';
+  console.log('[OpenAgent] vaultApiTest:', { url, token: token ? '***' : 'empty' });
+
   if (!url || !token) {
     const settings = await loadSettings();
     const finalUrl = (settings.vaultApiUrl || '').replace(/\/$/, '');
     const finalToken = settings.vaultApiToken || '';
+    console.log('[OpenAgent] vaultApiTest from settings:', { url: finalUrl, token: finalToken ? '***' : 'empty' });
     if (!finalUrl || !finalToken) return { error: 'URL or token missing' };
     try {
+      console.log('[OpenAgent] vaultApiTest: fetching', finalUrl + '/vault');
       const resp = await fetch(finalUrl + '/vault', {
         headers: { 'Authorization': `Bearer ${finalToken}` },
       });
+      console.log('[OpenAgent] vaultApiTest: response', resp.status);
       if (resp.ok) return { ok: true };
       return { error: `HTTP ${resp.status}` };
     } catch (err) {
+      console.log('[OpenAgent] vaultApiTest: error', err.message);
       return { error: err.message };
     }
   }
   try {
+    console.log('[OpenAgent] vaultApiTest: fetching', url + '/vault');
     const resp = await fetch(url + '/vault', {
       headers: { 'Authorization': `Bearer ${token}` },
     });
+    console.log('[OpenAgent] vaultApiTest: response', resp.status);
     if (resp.ok) return { ok: true };
     return { error: `HTTP ${resp.status}` };
   } catch (err) {
+    console.log('[OpenAgent] vaultApiTest: error', err.message);
     return { error: err.message };
   }
 }

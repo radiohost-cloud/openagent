@@ -482,7 +482,6 @@ body.light .copy-code-btn {
   color: #9f7aea;
   flex-shrink: 0;
   font-size: 10px;
-  overflow: hidden;
   flex-direction: row-reverse;
 }
 
@@ -497,7 +496,6 @@ body.light .copy-code-btn {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 160px;
 }
 
 /* ─── History Drawer ─────────────────────────────────────── */

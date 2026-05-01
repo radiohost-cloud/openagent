@@ -16,6 +16,7 @@ const state = {
   currentConversationId: null,
   memoryContext: null,
   contextDebounce: null,
+  vaultSavedCount: 0,
 };
 
 const i18nStrings = {
@@ -551,6 +552,7 @@ function getOrCreateSessionFilename() {
   const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
   const domain = state.pageContext?.metadata?.domain || state.pageContext?.url ? (() => { try { return new URL(state.pageContext?.metadata?.url || state.pageContext?.url).hostname.replace(/\./g, '-'); } catch { return 'openagent'; } })() : 'openagent';
   state.currentVaultFilename = `${domain}-${dateStr}.md`;
+  state.vaultSavedCount = 0;
   return state.currentVaultFilename;
 }
 
@@ -640,6 +642,7 @@ function updateVaultBtn() {
 function toggleVaultOnBtn() {
   if (!state.settings.vaultApiUrl || !state.settings.vaultApiToken) return;
   state.autoVault = !state.autoVault;
+  state.vaultSavedCount = 0;
   saveAutoVault();
   updateVaultBtn();
   updateBadge();
@@ -1357,6 +1360,7 @@ function clearConversation() {
   state.pageContext = null;
   state.currentConversationId = null;
   state.currentVaultFilename = null;
+  state.vaultSavedCount = 0;
   state.memoryContext = null;
   if (dom.headerCtx) dom.headerCtx.innerHTML = '';
   renderMessages();
@@ -1461,6 +1465,24 @@ function restoreConversation(id) {
 
   // Append to current messages (continue conversation)
   state.messages.push(...conv.messages);
+  state.vaultSavedCount = conv.messages.length;
+
+  // If vault is active, save history to vault (non-append so it's the base)
+  if (state.autoVault && state.vaultConnected && state.currentVaultFilename) {
+    const filename = state.currentVaultFilename;
+    const pageUrl = conv.pageUrl || '';
+    const date = new Date(conv.timestamp || Date.now());
+    const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    const timeStr = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+    const lines = [`# Session — ${dateStr} ${timeStr}`, pageUrl ? `**URL:** ${pageUrl}` : ''];
+    for (const msg of conv.messages) {
+      const role = msg.role === 'user' ? '**You**' : '**OpenAgent**';
+      let text = (msg.content || '').replace(/<vault_write[^>]*>[\s\S]*?<\/vault_write>/gi, '').replace(/<vault_read[^>]*\/>/gi, '').replace(/\*\*From vault:\*\*[\s\S]*/gi, '').replace(/^✓ Saved:.*$/gm, '').trim();
+      if (text) lines.push(`\n${role}:\n${text}`);
+    }
+    lines.push('\n---\n*OpenAgent Chrome Extension*');
+    vaultWrite(filename, lines.join('\n'), false).catch((err) => console.error('[SP] vault history save failed:', err));
+  }
 
   state.historyOpen = false;
   document.getElementById('historyPanel').classList.add('hidden');
@@ -1869,44 +1891,55 @@ async function processVaultToolCalls(messageContent) {
 // ─── Auto Vault Note ───────────────────────────────────────────────────────────
 
 async function saveAutoVaultNote() {
-  const conversationText = buildConversationText();
-  if (!conversationText.trim()) return;
-
-  const date = new Date();
-  const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-  const timeStr = `${String(date.getHours()).padStart(2, '0')}-${String(date.getMinutes()).padStart(2, '0')}`;
+  if (!state.autoVault || !state.vaultConnected) return;
   const filename = getOrCreateSessionFilename();
+  if (!filename) return;
+
+  // Determine which messages to save — only new ones since last save
+  const isFirstSave = state.vaultSavedCount === 0;
+  const newMessages = state.messages.slice(state.vaultSavedCount);
+  if (newMessages.length === 0) return;
+
   const pageUrl = state.pageContext?.metadata?.url || state.pageContext?.url || '';
 
-  const content = `# Session — ${dateStr} ${timeStr}\n\n` +
-    (pageUrl ? `**URL:** ${pageUrl}\n` : '') +
-    `\n---\n\n` +
-    conversationText +
-    `\n\n---\n*OpenAgent Chrome Extension*`;
-
-  const result = await vaultWrite(filename, content, true);
-  if (result?.error) {
-    console.error('[SP] auto-vault failed:', result.error);
+  let content;
+  if (isFirstSave) {
+    // First save: full header + all messages
+    const date = new Date();
+    const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    const timeStr = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+    const lines = [`# Session — ${dateStr} ${timeStr}`, pageUrl ? `**URL:** ${pageUrl}` : ''];
+    for (const msg of newMessages) {
+      const role = msg.role === 'user' ? '**You**' : '**OpenAgent**';
+      let text = (msg.content || '').replace(/<vault_write[^>]*>[\s\S]*?<\/vault_write>/gi, '').replace(/<vault_read[^>]*\/>/gi, '').replace(/\*\*From vault:\*\*[\s\S]*/gi, '').replace(/^✓ Saved:.*$/gm, '').trim();
+      if (text) lines.push(`\n${role}:\n${text}`);
+    }
+    lines.push('\n---\n*OpenAgent Chrome Extension*');
+    content = lines.join('\n');
+    const result = await vaultWrite(filename, content, false);
+    if (result?.error) {
+      console.error('[SP] auto-vault failed:', result.error);
+      return;
+    }
   } else {
-    console.log('[SP] auto-vault saved:', filename, 'bytes:', content.length);
-  }
-}
-
-function buildConversationText() {
-  const lines = [];
-  for (const msg of state.messages) {
-    const role = msg.role === 'user' ? '**You**' : '**OpenAgent**';
-    let content = msg.content || '';
-    content = content.replace(/<vault_write[^>]*>[\s\S]*?<\/vault_write>/gi, '');
-    content = content.replace(/<vault_read[^>]*\/>/gi, '');
-    content = content.replace(/\*\*From vault:\*\*[\s\S]*/gi, '');
-    content = content.replace(/^✓ Saved:.*$/gm, '');
-    content = content.trim();
-    if (content) {
-      lines.push(`${role}:\n${content}\n`);
+    // Subsequent saves: append only new messages
+    const lines = [];
+    for (const msg of newMessages) {
+      const role = msg.role === 'user' ? '**You**' : '**OpenAgent**';
+      let text = (msg.content || '').replace(/<vault_write[^>]*>[\s\S]*?<\/vault_write>/gi, '').replace(/<vault_read[^>]*\/>/gi, '').replace(/\*\*From vault:\*\*[\s\S]*/gi, '').replace(/^✓ Saved:.*$/gm, '').trim();
+      if (text) lines.push(`${role}:\n${text}`);
+    }
+    if (lines.length === 0) return;
+    content = lines.join('\n\n');
+    const result = await vaultWrite(filename, content, true);
+    if (result?.error) {
+      console.error('[SP] auto-vault append failed:', result.error);
+      return;
     }
   }
-  return lines.join('\n');
+
+  state.vaultSavedCount = state.messages.length;
+  console.log('[SP] auto-vault saved:', filename, 'msg count:', newMessages.length, 'isFirst:', isFirstSave);
 }
 
 // ─── Start ─────────────────────────────────────────────────────────────────────

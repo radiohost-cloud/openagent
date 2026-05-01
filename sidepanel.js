@@ -1682,13 +1682,12 @@ function updateCurrentModelDisplay() {
 }
 
 function updateBadge() {
-  const count = state.messages.length;
-  if (count === 0) {
-    chrome.action.setBadgeText({ text: '' });
-  } else {
-    chrome.action.setBadgeText({ text: String(count) });
-    chrome.action.setBadgeBackgroundColor({ color: '#9f7aea' });
-  }
+  // Update toolbar icon color based on vault connection
+  const iconPath = state.vaultConnected
+    ? chrome.runtime.getURL('icons/openagent-purple-16.png')
+    : null;
+  chrome.action.setIcon({ path: { '16': iconPath || 'icons/openagent-16.png', '24': iconPath || 'icons/openagent-24.png', '32': iconPath || 'icons/openagent-32.png', '48': iconPath || 'icons/openagent-48.png', '128': iconPath || 'icons/openagent-128.png' } });
+  chrome.action.setBadgeText({ text: '' });
 }
 
 function toggleModal(open) {

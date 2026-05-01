@@ -643,6 +643,7 @@ function toggleVaultOnBtn() {
   saveAutoVault();
   updateVaultBtn();
   updateBadge();
+  if (state.autoVault && !state.currentVaultFilename) getOrCreateSessionFilename();
   updateVaultNoteIndicator();
   setStatus(state.autoVault ? i18n('statusVaultReady') : i18n('btnVaultOff'), state.autoVault ? 'success' : 'info');
 }
@@ -791,6 +792,7 @@ function bindEvents() {
           state.vaultConnected = true;
           updateVaultBtn();
           updateBadge();
+          if (state.autoVault && !state.currentVaultFilename) getOrCreateSessionFilename();
           updateVaultNoteIndicator();
         } else {
           dom.vaultApiStatus.textContent = `${i18n('settingsVaultApiTestFail')}: ${result?.error || 'Unknown'}`;
@@ -860,6 +862,10 @@ async function loadSettings() {
       if (state.vaultConnected && !autoData?.autoVault) {
         state.autoVault = true;
       }
+      // Create vault filename immediately so it shows in status bar
+      if (state.vaultConnected && state.autoVault && !state.currentVaultFilename) {
+        getOrCreateSessionFilename();
+      }
     }
 
     updateVaultBtn();
@@ -895,6 +901,7 @@ async function handleSaveSettings() {
     updateModelBadge();
     updateVaultBtn();
     updateBadge();
+    if (state.autoVault && !state.currentVaultFilename) getOrCreateSessionFilename();
     updateVaultNoteIndicator();
   } catch (err) {
     dom.settingsStatus.textContent = 'Error: ' + err.message;

@@ -62,5 +62,18 @@
   "settingsVaultPathPlaceholder": { "message": "Нажмите Выбрать папку, чтобы выбрать хранилище" },
   "settingsVaultPathHint": { "message": "Заметки сохраняются напрямую в хранилище." },
   "settingsSelectFolder": { "message": "Выбрать папку" },
-  "settingsChangeFolder": { "message": "Изменить папку" }
+  "settingsChangeFolder": { "message": "Изменить папку" },
+  "settingsVaultModeLocal": { "message": "Локальная папка" },
+  "settingsVaultModeApi": { "message": "REST API" },
+  "settingsVaultLocalDesc": { "message": "Выберите папку хранилища прямо из файловой системы. Заметки сохраняются локально." },
+  "settingsVaultApiDesc": { "message": "Подключение через Obsidian Local REST API. Работает удалённо, без выбора папки." },
+  "settingsVaultApiUrl": { "message": "URL API" },
+  "settingsVaultApiUrlPlaceholder": { "message": "http://127.0.0.1:27124" },
+  "settingsVaultApiToken": { "message": "Токен API" },
+  "settingsVaultApiTokenPlaceholder": { "message": "Токен из плагина Local REST API" },
+  "settingsVaultApiTest": { "message": "Тест соединения" },
+  "settingsVaultApiTestOk": { "message": "Подключено" },
+  "settingsVaultApiTestFail": { "message": "Ошибка подключения" },
+  "settingsVaultApiHint": { "message": "Требуется плагин Local REST API в Obsidian." },
+  "statusConnected": { "message": "Подключено" }
 }

@@ -62,5 +62,18 @@
   "settingsVaultPathPlaceholder": { "message": "Haz clic en Seleccionar carpeta para elegir tu bóveda" },
   "settingsVaultPathHint": { "message": "Las notas se guardan directamente en tu bóveda." },
   "settingsSelectFolder": { "message": "Seleccionar carpeta" },
-  "settingsChangeFolder": { "message": "Cambiar carpeta" }
+  "settingsChangeFolder": { "message": "Cambiar carpeta" },
+  "settingsVaultModeLocal": { "message": "Carpeta local" },
+  "settingsVaultModeApi": { "message": "REST API" },
+  "settingsVaultLocalDesc": { "message": "Selecciona una carpeta de bóveda directamente de tu sistema. Notas guardadas localmente." },
+  "settingsVaultApiDesc": { "message": "Conéctate mediante Obsidian Local REST API. Funciona de forma remota, sin selector de carpeta." },
+  "settingsVaultApiUrl": { "message": "URL de la API" },
+  "settingsVaultApiUrlPlaceholder": { "message": "http://127.0.0.1:27124" },
+  "settingsVaultApiToken": { "message": "Token de API" },
+  "settingsVaultApiTokenPlaceholder": { "message": "Token del plugin Local REST API" },
+  "settingsVaultApiTest": { "message": "Probar conexión" },
+  "settingsVaultApiTestOk": { "message": "Conectado" },
+  "settingsVaultApiTestFail": { "message": "Error de conexión" },
+  "settingsVaultApiHint": { "message": "Requiere el plugin Local REST API en Obsidian." },
+  "statusConnected": { "message": "Conectado" }
 }

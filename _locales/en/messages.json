@@ -62,5 +62,18 @@
   "settingsVaultPathPlaceholder": { "message": "Click Select folder to choose your vault" },
   "settingsVaultPathHint": { "message": "Notes are saved directly to your vault." },
   "settingsSelectFolder": { "message": "Select folder" },
-  "settingsChangeFolder": { "message": "Change folder" }
+  "settingsChangeFolder": { "message": "Change folder" },
+  "settingsVaultModeLocal": { "message": "Local folder" },
+  "settingsVaultModeApi": { "message": "REST API" },
+  "settingsVaultLocalDesc": { "message": "Select a vault folder directly from your file system. Notes saved locally." },
+  "settingsVaultApiDesc": { "message": "Connect via Obsidian Local REST API. Works remotely, no folder picker needed." },
+  "settingsVaultApiUrl": { "message": "API URL" },
+  "settingsVaultApiUrlPlaceholder": { "message": "http://127.0.0.1:27124" },
+  "settingsVaultApiToken": { "message": "API Token" },
+  "settingsVaultApiTokenPlaceholder": { "message": "Token from Local REST API plugin" },
+  "settingsVaultApiTest": { "message": "Test connection" },
+  "settingsVaultApiTestOk": { "message": "Connected" },
+  "settingsVaultApiTestFail": { "message": "Connection failed" },
+  "settingsVaultApiHint": { "message": "Requires Local REST API plugin in Obsidian." },
+  "statusConnected": { "message": "Connected" }
 }

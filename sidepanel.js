@@ -491,14 +491,16 @@ const dom = {
   vaultPathInput: $('#vaultPathInput'),
   vaultSelectBtn: $('#vaultSelectBtn'),
   vaultStatus: $('#vaultStatusDot'),
-  vaultModeLocal: $('#vaultModeLocal'),
-  vaultModeApi: $('#vaultModeApi'),
+  vaultCardLocal: $('#vaultCardLocal'),
+  vaultCardApi: $('#vaultCardApi'),
+  vaultCardLocalStatus: $('#vaultCardLocalStatus'),
+  vaultCardApiStatus: $('#vaultCardApiStatus'),
   vaultApiPanel: $('#vaultApiPanel'),
   vaultApiUrlInput: $('#vaultApiUrlInput'),
   vaultApiTokenInput: $('#vaultApiTokenInput'),
   vaultApiTestBtn: $('#vaultApiTestBtn'),
   vaultApiStatus: $('#vaultApiStatus'),
-  vaultLocalPanel: null, // set dynamically
+  vaultLocalPanel: $('#vaultLocalPanel'),
 };
 
 // ─── i18n ────────────────────────────────────────────────────────────────────
@@ -851,11 +853,11 @@ function bindEvents() {
     dom.vaultSelectBtn.addEventListener('click', () => pickVaultFolder());
   }
 
-  if (dom.vaultModeLocal) {
-    dom.vaultModeLocal.addEventListener('click', () => {
+  if (dom.vaultCardLocal) {
+    dom.vaultCardLocal.addEventListener('click', () => {
       state.settings.vaultMode = 'local';
-      dom.vaultModeLocal.classList.add('active');
-      dom.vaultModeApi.classList.remove('active');
+      dom.vaultCardLocal.classList.add('selected');
+      dom.vaultCardApi.classList.remove('selected');
       dom.vaultApiPanel.classList.add('hidden');
       if (dom.vaultLocalPanel) dom.vaultLocalPanel.classList.remove('hidden');
       updateVaultBtn();
@@ -863,11 +865,11 @@ function bindEvents() {
     });
   }
 
-  if (dom.vaultModeApi) {
-    dom.vaultModeApi.addEventListener('click', () => {
+  if (dom.vaultCardApi) {
+    dom.vaultCardApi.addEventListener('click', () => {
       state.settings.vaultMode = 'api';
-      dom.vaultModeApi.classList.add('active');
-      dom.vaultModeLocal.classList.remove('active');
+      dom.vaultCardApi.classList.add('selected');
+      dom.vaultCardLocal.classList.remove('selected');
       dom.vaultApiPanel.classList.remove('hidden');
       if (dom.vaultLocalPanel) dom.vaultLocalPanel.classList.add('hidden');
       updateVaultBtn();
@@ -964,15 +966,20 @@ async function loadSettings() {
     if (dom.vaultApiUrlInput) dom.vaultApiUrlInput.value = state.settings.vaultApiUrl || '';
     if (dom.vaultApiTokenInput) dom.vaultApiTokenInput.value = state.settings.vaultApiToken || '';
 
-    // Vault mode toggle
-    const mode = state.settings.vaultMode || 'local';
-    if (dom.vaultModeLocal && dom.vaultModeApi) {
-      dom.vaultModeLocal.classList.toggle('active', mode === 'local');
-      dom.vaultModeApi.classList.toggle('active', mode === 'api');
-      const localPanel = document.getElementById('vaultLocalPanel');
-      const apiPanel = dom.vaultApiPanel;
-      if (apiPanel) apiPanel.classList.toggle('hidden', mode !== 'api');
-      if (localPanel) localPanel.classList.toggle('hidden', mode !== 'local');
+    // Vault mode card UI
+    if (dom.vaultCardLocal && dom.vaultCardApi) {
+      dom.vaultCardLocal.classList.toggle('selected', mode === 'local');
+      dom.vaultCardApi.classList.toggle('selected', mode === 'api');
+      if (dom.vaultLocalPanel) dom.vaultLocalPanel.classList.toggle('hidden', mode !== 'local');
+      if (dom.vaultApiPanel) dom.vaultApiPanel.classList.toggle('hidden', mode !== 'api');
+
+      // Update card status indicators
+      if (dom.vaultCardLocalStatus) {
+        dom.vaultCardLocalStatus.textContent = mode === 'local' && state.vaultDirHandle ? i18n('statusConnected') : '';
+      }
+      if (dom.vaultCardApiStatus) {
+        dom.vaultCardApiStatus.textContent = mode === 'api' && state.vaultApiConnected ? i18n('statusConnected') : '';
+      }
     }
 
     // vaultDirHandle is session-only (FileSystemDirectoryHandle not serializable).
@@ -984,7 +991,6 @@ async function loadSettings() {
     state.autoVault = autoData?.autoVault || false;
 
     // For API mode, auto-enable vault if URL+token are configured
-    const mode = state.settings.vaultMode || 'local';
     if (mode === 'api' && state.settings.vaultApiUrl && state.settings.vaultApiToken && !autoData?.autoVault) {
       state.autoVault = true;
     }

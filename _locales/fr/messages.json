@@ -62,5 +62,18 @@
   "settingsVaultPathPlaceholder": { "message": "Cliquez sur Sélectionner un dossier pour choisir votre coffre" },
   "settingsVaultPathHint": { "message": "Les notes sont enregistrées directement dans votre coffre." },
   "settingsSelectFolder": { "message": "Sélectionner un dossier" },
-  "settingsChangeFolder": { "message": "Modifier le dossier" }
+  "settingsChangeFolder": { "message": "Changer de dossier" },
+  "settingsVaultModeLocal": { "message": "Dossier local" },
+  "settingsVaultModeApi": { "message": "REST API" },
+  "settingsVaultLocalDesc": { "message": "Sélectionnez un dossier de coffre directement depuis votre système. Notes enregistrées localement." },
+  "settingsVaultApiDesc": { "message": "Connexion via Obsidian Local REST API. Fonctionne à distance, sans sélecteur de dossier." },
+  "settingsVaultApiUrl": { "message": "URL de l'API" },
+  "settingsVaultApiUrlPlaceholder": { "message": "http://127.0.0.1:27124" },
+  "settingsVaultApiToken": { "message": "Jeton API" },
+  "settingsVaultApiTokenPlaceholder": { "message": "Jeton du plugin Local REST API" },
+  "settingsVaultApiTest": { "message": "Tester la connexion" },
+  "settingsVaultApiTestOk": { "message": "Connecté" },
+  "settingsVaultApiTestFail": { "message": "Échec de la connexion" },
+  "settingsVaultApiHint": { "message": "Nécessite le plugin Local REST API dans Obsidian." },
+  "statusConnected": { "message": "Connecté" }
 }

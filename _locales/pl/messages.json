@@ -62,5 +62,18 @@
   "settingsVaultPathPlaceholder": { "message": "Kliknij Wybierz folder aby wybrać magazyn" },
   "settingsVaultPathHint": { "message": "Notatki są zapisywane bezpośrednio w magazynie." },
   "settingsSelectFolder": { "message": "Wybierz folder" },
-  "settingsChangeFolder": { "message": "Zmień folder" }
+  "settingsChangeFolder": { "message": "Zmień folder" },
+  "settingsVaultModeLocal": { "message": "Folder lokalny" },
+  "settingsVaultModeApi": { "message": "REST API" },
+  "settingsVaultLocalDesc": { "message": "Wybierz folder magazynu bezpośrednio z systemu plików. Notatki zapisywane lokalnie." },
+  "settingsVaultApiDesc": { "message": "Połącz się przez Local REST API. Działa zdalnie, bez wyboru folderu." },
+  "settingsVaultApiUrl": { "message": "URL API" },
+  "settingsVaultApiUrlPlaceholder": { "message": "http://127.0.0.1:27124" },
+  "settingsVaultApiToken": { "message": "Token API" },
+  "settingsVaultApiTokenPlaceholder": { "message": "Token z wtyczki Local REST API" },
+  "settingsVaultApiTest": { "message": "Testuj połączenie" },
+  "settingsVaultApiTestOk": { "message": "Połączono" },
+  "settingsVaultApiTestFail": { "message": "Błąd połączenia" },
+  "settingsVaultApiHint": { "message": "Wymaga wtyczki Local REST API w Obsidian." },
+  "statusConnected": { "message": "Połączono" }
 }

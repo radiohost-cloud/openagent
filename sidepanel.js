@@ -73,6 +73,12 @@ const i18nStrings = {
     settingsVaultApiToken: 'API Token',
     settingsVaultApiTokenPlaceholder: 'Token from Local REST API plugin',
     settingsVaultApiHint: 'Requires Local REST API plugin in Obsidian.',
+    settingsVaultApiTest: 'Test connection',
+    settingsVaultApiTestOk: 'Connected',
+    settingsVaultApiTestFail: 'Connection failed',
+    settingsVaultApiTest: 'Test connection',
+    settingsVaultApiTestOk: 'Connected',
+    settingsVaultApiTestFail: 'Connection failed',
     settingsSelectFolder: 'Select folder',
     settingsChangeFolder: 'Change folder',
     settingsFontSize: 'Font size',
@@ -142,6 +148,12 @@ const i18nStrings = {
     settingsVaultApiToken: 'Token API',
     settingsVaultApiTokenPlaceholder: 'Token z wtyczki Local REST API',
     settingsVaultApiHint: 'Wymaga wtyczki Local REST API w Obsidian.',
+    settingsVaultApiTest: 'Testuj połączenie',
+    settingsVaultApiTestOk: 'Połączono',
+    settingsVaultApiTestFail: 'Błąd połączenia',
+    settingsVaultApiTest: 'Testuj połączenie',
+    settingsVaultApiTestOk: 'Połączono',
+    settingsVaultApiTestFail: 'Błąd połączenia',
     settingsSelectFolder: 'Wybierz folder',
     settingsChangeFolder: 'Zmień folder',
     settingsFontSize: 'Wielkość czcionki',
@@ -210,6 +222,9 @@ const i18nStrings = {
     settingsVaultApiToken: 'Token de API',
     settingsVaultApiTokenPlaceholder: 'Token del plugin Local REST API',
     settingsVaultApiHint: 'Requiere el plugin Local REST API en Obsidian.',
+    settingsVaultApiTest: 'Probar conexión',
+    settingsVaultApiTestOk: 'Conectado',
+    settingsVaultApiTestFail: 'Error de conexión',
     settingsSelectFolder: 'Seleccionar carpeta',
     settingsChangeFolder: 'Cambiar carpeta',
     settingsFontSize: 'Tamaño de fuente',
@@ -278,6 +293,9 @@ const i18nStrings = {
     settingsVaultApiToken: "Jeton d'API",
     settingsVaultApiTokenPlaceholder: "Jeton du plugin Local REST API",
     settingsVaultApiHint: "Nécessite le plugin Local REST API dans Obsidian.",
+    settingsVaultApiTest: 'Tester la connexion',
+    settingsVaultApiTestOk: 'Connecté',
+    settingsVaultApiTestFail: 'Erreur de connexion',
     settingsSelectFolder: 'Sélectionner un dossier',
     settingsChangeFolder: 'Modifier le dossier',
     settingsFontSize: 'Taille de police',
@@ -345,6 +363,9 @@ const i18nStrings = {
     settingsVaultApiToken: 'API-Token',
     settingsVaultApiTokenPlaceholder: 'Token vom Local REST API Plugin',
     settingsVaultApiHint: 'Erfordert das Local REST API Plugin in Obsidian.',
+    settingsVaultApiTest: 'Verbindung testen',
+    settingsVaultApiTestOk: 'Verbunden',
+    settingsVaultApiTestFail: 'Verbindungsfehler',
     settingsSelectFolder: 'Ordner auswählen',
     settingsChangeFolder: 'Ordner ändern',
     settingsFontSize: 'Schriftgröße',
@@ -413,6 +434,9 @@ const i18nStrings = {
     settingsVaultApiToken: 'Токен API',
     settingsVaultApiTokenPlaceholder: 'Токен из плагина Local REST API',
     settingsVaultApiHint: 'Требуется плагин Local REST API в Obsidian.',
+    settingsVaultApiTest: 'Проверить соединение',
+    settingsVaultApiTestOk: 'Подключено',
+    settingsVaultApiTestFail: 'Ошибка соединения',
     settingsSelectFolder: 'Выбрать папку',
     settingsChangeFolder: 'Изменить папку',
     settingsFontSize: 'Размер шрифта',
@@ -472,6 +496,8 @@ const dom = {
   vaultApiPanel: $('#vaultApiPanel'),
   vaultApiUrlInput: $('#vaultApiUrlInput'),
   vaultApiTokenInput: $('#vaultApiTokenInput'),
+  vaultApiTestBtn: $('#vaultApiTestBtn'),
+  vaultApiStatus: $('#vaultApiStatus'),
   vaultLocalPanel: null, // set dynamically
 };
 
@@ -928,6 +954,36 @@ function bindEvents() {
       state.settings.vaultApiToken = dom.vaultApiTokenInput.value.trim();
       updateVaultBtn();
       sendBgMessage({ type: 'settings.save', data: { ...state.settings } }).catch(() => {});
+    });
+  }
+
+  if (dom.vaultApiTestBtn) {
+    dom.vaultApiTestBtn.addEventListener('click', async () => {
+      if (!dom.vaultApiStatus) return;
+      dom.vaultApiStatus.textContent = '...';
+      dom.vaultApiStatus.className = 'form-hint';
+      const url = (dom.vaultApiUrlInput?.value || state.settings.vaultApiApiUrl || '').replace(/\/$/, '');
+      const token = dom.vaultApiTokenInput?.value || state.settings.vaultApiToken || '';
+      if (!url || !token) {
+        dom.vaultApiStatus.textContent = i18n('settingsVaultApiTestFail') + ': URL or token empty';
+        dom.vaultApiStatus.className = 'form-hint error';
+        return;
+      }
+      try {
+        const resp = await fetch(url + '/vault', {
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+        if (resp.ok) {
+          dom.vaultApiStatus.textContent = i18n('settingsVaultApiTestOk');
+          dom.vaultApiStatus.className = 'form-hint ok';
+        } else {
+          dom.vaultApiStatus.textContent = `${i18n('settingsVaultApiTestFail')}: ${resp.status}`;
+          dom.vaultApiStatus.className = 'form-hint error';
+        }
+      } catch (err) {
+        dom.vaultApiStatus.textContent = `${i18n('settingsVaultApiTestFail')}: ${err.message}`;
+        dom.vaultApiStatus.className = 'form-hint error';
+      }
     });
   }
 
@@ -1901,7 +1957,8 @@ async function processVaultToolCalls(messageContent) {
   const writeResults = [];
   const errors = [];
 
-  const readMatches = [...messageContent.matchAll(/<vault_read\s+query="([^"]*)"\s*\/>/gi)];
+  // Support both query= and path= attributes for vault_read
+  const readMatches = [...messageContent.matchAll(/<vault_read\s+(?:query|path)="([^"]*)"\s*\/>/gi)];
 
   for (const match of readMatches) {
     const query = match[1] || '';

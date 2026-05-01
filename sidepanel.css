@@ -1658,8 +1658,28 @@ details[open] .vault-summary::before {
   margin-bottom: 12px;
 }
 
-#vaultApiPanel .form-group:last-child {
+#vaultApiPanel .form-group:last-of-type {
   margin-bottom: 0;
+}
+
+.vault-api-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+#vaultApiStatus {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+#vaultApiStatus.ok {
+  color: #6fcf97;
+}
+
+#vaultApiStatus.error {
+  color: #cc6666;
 }
 
 #vaultApiPanel input {

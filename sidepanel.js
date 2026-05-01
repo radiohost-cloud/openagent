@@ -556,7 +556,7 @@ function getOrCreateSessionFilename() {
   if (state.currentVaultFilename) return state.currentVaultFilename;
   const date = new Date();
   const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-  const domain = state.pageContext?.metadata?.domain || state.pageContext?.url ? (() => { try { return new URL(state.pageContext?.metadata?.url || state.pageContext?.url).hostname.replace(/\./g, '-'); } catch { return 'openagent'; } })() : 'openagent';
+  const domain = state.pageContext?.metadata?.domain || state.pageContext?.url ? (() => { try { return new URL(state.pageContext?.metadata?.url || state.pageContext?.url).hostname.replace(/^www\./, '').replace(/\./g, '-'); } catch { return 'openagent'; } })() : 'openagent';
   state.currentVaultFilename = `${domain}-${dateStr}.md`;
   state.vaultSavedCount = 0;
   return state.currentVaultFilename;

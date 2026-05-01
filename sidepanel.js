@@ -737,7 +737,7 @@ function bindEvents() {
     sendBgMessage({ type: 'settings.save', data: { ...state.settings } }).catch(() => {});
   });
 
-  dom.collectBtn.addEventListener('click', collectPageContext);
+  dom.collectBtn.addEventListener('click', () => { lastTabUrl = ''; collectPageContext(); });
   dom.screenshotBtn.addEventListener('click', takeScreenshot);
   dom.historyBtn.addEventListener('click', toggleHistory);
   dom.clearBtn.addEventListener('click', clearConversation);

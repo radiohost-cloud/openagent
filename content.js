@@ -15,7 +15,7 @@
     try {
       if (location.href !== lastUrl) {
         lastUrl = location.href;
-        chrome.runtime.sendMessage({ type: 'context.refresh' }).catch(() => {});
+        if (chrome?.runtime?.sendMessage) if (chrome?.runtime?.sendMessage) chrome.runtime.sendMessage({ type: 'context.refresh' }).catch(() => {});
       }
     } catch (e) {}
   }, 1000);
@@ -27,7 +27,7 @@
       _pushState.apply(this, args);
       if (location.href !== lastUrl) {
         lastUrl = location.href;
-        chrome.runtime.sendMessage({ type: 'context.refresh' }).catch(() => {});
+        if (chrome?.runtime?.sendMessage) chrome.runtime.sendMessage({ type: 'context.refresh' }).catch(() => {});
       }
     } catch (e) {}
   };
@@ -38,7 +38,7 @@
       _replaceState.apply(this, args);
       if (location.href !== lastUrl) {
         lastUrl = location.href;
-        chrome.runtime.sendMessage({ type: 'context.refresh' }).catch(() => {});
+        if (chrome?.runtime?.sendMessage) chrome.runtime.sendMessage({ type: 'context.refresh' }).catch(() => {});
       }
     } catch (e) {}
   };
@@ -47,7 +47,7 @@
     try {
       if (location.href !== lastUrl) {
         lastUrl = location.href;
-        chrome.runtime.sendMessage({ type: 'context.refresh' }).catch(() => {});
+        if (chrome?.runtime?.sendMessage) chrome.runtime.sendMessage({ type: 'context.refresh' }).catch(() => {});
       }
     } catch (e) {}
   });

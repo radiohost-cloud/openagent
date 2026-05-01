@@ -637,7 +637,7 @@ function updateVaultBtn() {
   const isOn = state.autoVault;
 
   dom.vaultBtn.classList.remove('active');
-  dom.vaultBtn.classList.toggle('vault-api-active', hasApiUrl && isOn && state.vaultConnected);
+  dom.vaultBtn.classList.toggle('vault-active', hasApiUrl && isOn && state.vaultConnected);
   if (!hasApiUrl) {
     dom.vaultBtn.title = i18n('btnVaultNotSet');
   } else {
@@ -1143,6 +1143,8 @@ async function handleSend() {
       pageContext: state.pageContext,
       pageScreenshot: state.pageScreenshot,
       autoVault: state.autoVault,
+      vaultConnected: state.vaultConnected,
+      vaultApiUrl: state.settings.vaultApiUrl,
       memoryContext: state.memoryContext,
     });
 

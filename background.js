@@ -272,8 +272,8 @@ async function handlePromptSend(message, sendResponse) {
     return;
   }
 
-  const { conversationHistory, pageContext, pageScreenshot, autoVault, memoryContext } = message;
-  const msgs = await buildMessages(conversationHistory, pageContext, pageScreenshot, settings.systemPrompt, autoVault, memoryContext);
+  const { conversationHistory, pageContext, pageScreenshot, autoVault, vaultConnected, memoryContext } = message;
+  const msgs = await buildMessages(conversationHistory, pageContext, pageScreenshot, settings.systemPrompt, autoVault, vaultConnected, memoryContext);
 
   try {
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -305,7 +305,7 @@ async function handlePromptSend(message, sendResponse) {
   }
 }
 
-async function buildMessages(history, pageContext, pageScreenshot, systemPrompt, autoVault, memoryContext) {
+async function buildMessages(history, pageContext, pageScreenshot, systemPrompt, autoVault, vaultConnected, memoryContext) {
   const msgs = [];
 
   // Default system prompt if none set
@@ -349,7 +349,9 @@ async function buildMessages(history, pageContext, pageScreenshot, systemPrompt,
   }
 
   if (autoVault) {
-    const note = `\n\n[NOTE: AUTO-VAULT ENABLED — After responding, proactively identify important information discussed in this conversation and save a concise summary note to the Obsidian vault using <vault_write filename="topic-date.md">...</vault_write>. Focus on key facts, decisions, URLs, code snippets, or anything the user would want to remember.]`;
+    const note = vaultConnected
+      ? `\n\n[NOTE: AUTO-VAULT ENABLED — Obsidian vault is connected via Local REST API. After responding, proactively identify important information discussed in this conversation and save a concise summary note to the Obsidian vault using <vault_write filename="topic-date.md">...</vault_write>. Focus on key facts, decisions, URLs, code snippets, or anything the user would want to remember.]`
+      : `\n\n[NOTE: AUTO-VAULT ENABLED — No Obsidian vault connection detected. Set up Obsidian Local REST API in Settings to enable vault features.]`;
     for (let i = msgs.length - 1; i >= 0; i--) {
       if (msgs[i].role === 'user') {
         msgs[i].content += note;
@@ -370,8 +372,8 @@ async function startStream(message, sendResponse) {
     return;
   }
 
-  const { conversationHistory, pageContext, pageScreenshot, autoVault, memoryContext } = message;
-  const msgs = await buildMessages(conversationHistory, pageContext, pageScreenshot, settings.systemPrompt, autoVault, memoryContext);
+  const { conversationHistory, pageContext, pageScreenshot, autoVault, vaultConnected, memoryContext } = message;
+  const msgs = await buildMessages(conversationHistory, pageContext, pageScreenshot, settings.systemPrompt, autoVault, vaultConnected, memoryContext);
 
   try {
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {

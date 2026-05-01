@@ -545,10 +545,8 @@ function getOrCreateSessionFilename() {
   if (state.currentVaultFilename) return state.currentVaultFilename;
   const date = new Date();
   const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-  const timeStr = `${String(date.getHours()).padStart(2, '0')}-${String(date.getMinutes()).padStart(2, '0')}`;
-  const pageTitle = state.pageContext?.metadata?.title || state.pageContext?.title || 'OpenAgent';
-  const safeTitle = pageTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').substring(0, 40);
-  state.currentVaultFilename = `openagent-${safeTitle}-${dateStr}-${timeStr}.md`;
+  const domain = state.pageContext?.metadata?.domain || state.pageContext?.url ? (() => { try { return new URL(state.pageContext?.metadata?.url || state.pageContext?.url).hostname.replace(/\./g, '-'); } catch { return 'openagent'; } })() : 'openagent';
+  state.currentVaultFilename = `${domain}-${dateStr}.md`;
   return state.currentVaultFilename;
 }
 
@@ -1331,6 +1329,7 @@ function saveConversation() {
     messages: state.messages,
     bodyText: state.pageContext?.bodyText || '',
     images: state.pageContext?.images || [],
+    vaultFilename: state.currentVaultFilename || null,
   };
   if (state.currentConversationId !== null) {
     // Update existing conversation in place
@@ -1414,6 +1413,7 @@ function restoreConversation(id) {
   if (!conv) return;
 
   state.currentConversationId = id;
+  state.currentVaultFilename = conv.vaultFilename || null;
 
   // Append to current messages (continue conversation)
   state.messages.push(...conv.messages);
@@ -1826,10 +1826,7 @@ async function saveAutoVaultNote() {
   const content = `# Session — ${dateStr} ${timeStr}\n\n` +
     (pageUrl ? `**URL:** ${pageUrl}\n` : '') +
     `\n---\n\n` +
-    conversationText +
-    `\n\n---\n*OpenAgent Chrome Extension*`;
-
-  const result = await vaultWrite(filename, content, false);
+    const result = await vaultWrite(filename, content, true);
   if (result?.error) {
     console.error('[SP] auto-vault failed:', result.error);
   }

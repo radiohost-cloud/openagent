@@ -275,8 +275,8 @@ async function handlePromptSend(message, sendResponse) {
     return;
   }
 
-  const { conversationHistory, pageContext, pageScreenshot, autoVault, vaultConnected, vaultName, memoryContext } = message;
-  const msgs = await buildMessages(conversationHistory, pageContext, pageScreenshot, settings.systemPrompt, autoVault, vaultConnected, vaultName, memoryContext);
+  const { conversationHistory, pageContext, pageScreenshot, autoVault, vaultConnected, vaultName, vaultFilename, memoryContext } = message;
+  const msgs = await buildMessages(conversationHistory, pageContext, pageScreenshot, settings.systemPrompt, autoVault, vaultConnected, vaultName, vaultFilename, memoryContext);
 
   try {
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -308,7 +308,7 @@ async function handlePromptSend(message, sendResponse) {
   }
 }
 
-async function buildMessages(history, pageContext, pageScreenshot, systemPrompt, autoVault, vaultConnected, vaultName, memoryContext) {
+async function buildMessages(history, pageContext, pageScreenshot, systemPrompt, autoVault, vaultConnected, vaultName, vaultFilename, memoryContext) {
   const msgs = [];
 
   // Default system prompt if none set
@@ -317,6 +317,40 @@ async function buildMessages(history, pageContext, pageScreenshot, systemPrompt,
 
   if (systemContent) {
     msgs.push({ role: 'system', content: systemContent });
+  }
+
+  // Obsidian vault capabilities — always available when connected
+  if (vaultConnected) {
+    const vaultDisplayName = vaultName ? vaultName.split('/').filter(Boolean).pop() : 'Obsidian';
+    const sessionFile = vaultFilename || '(not set)';
+    msgs.push({
+      role: 'system',
+      content: `[OBSIDIAN VAULT: connected]
+- Vault path: ${vaultName || 'root'}
+- Session file: ${sessionFile}
+
+## Your Vault Capabilities
+You have access to the user's Obsidian vault. Use these tools proactively throughout the conversation:
+
+READ notes: <vault_read query="search terms" />
+  Searches vault for .md files matching the query and returns their contents.
+  Use this to recall previous notes, context, or referenced materials.
+  Example: <vault_read query="project notes" />
+
+WRITE to session file: <vault_write>content</vault_write>
+  Appends content to the ongoing session file (${sessionFile}).
+  Use for notes, reminders, links, key facts, or anything worth saving.
+  The file grows across the conversation — use it as a running log.
+
+WRITE to new note: <vault_write filename="topic-name.md">content</vault_write>
+  Creates a separate .md note for structured, topic-specific content.
+  Example: <vault_write filename="meeting-notes.md">...</vault_write>
+
+## Auto-save
+${autoVault ? 'Auto-save is ON — after each response, the full conversation will be appended to the session file automatically.' : 'Auto-save is OFF — save important content manually using the tools above.'}
+
+[END VAULT INFO]`,
+    });
   }
   if (memoryContext) {
     const mem = await getMemoryModule();
@@ -351,22 +385,6 @@ async function buildMessages(history, pageContext, pageScreenshot, systemPrompt,
     msgs.push({ role: msg.role, content: msg.content });
   }
 
-  if (autoVault) {
-    let note;
-    if (vaultConnected) {
-      const vaultDisplayName = vaultName ? vaultName.split('/').filter(Boolean).pop() : 'Obsidian';
-      note = `\n\n[NOTE: AUTO-VAULT ENABLED — Obsidian vault "${vaultDisplayName}" is connected via Local REST API${vaultName ? ` (path: ${vaultName})` : ''}. After responding, proactively identify important information discussed in this conversation and save a concise summary note to the Obsidian vault using <vault_write filename="topic-date.md">...</vault_write>. Focus on key facts, decisions, URLs, code snippets, or anything the user would want to remember.]`;
-    } else {
-      note = `\n\n[NOTE: AUTO-VAULT ENABLED — No Obsidian vault connection detected. Set up Obsidian Local REST API in Settings to enable vault features.]`;
-    }
-    for (let i = msgs.length - 1; i >= 0; i--) {
-      if (msgs[i].role === 'user') {
-        msgs[i].content += note;
-        break;
-      }
-    }
-  }
-
   return msgs;
 }
 
@@ -379,8 +397,8 @@ async function startStream(message, sendResponse) {
     return;
   }
 
-  const { conversationHistory, pageContext, pageScreenshot, autoVault, vaultConnected, vaultName, memoryContext } = message;
-  const msgs = await buildMessages(conversationHistory, pageContext, pageScreenshot, settings.systemPrompt, autoVault, vaultConnected, vaultName, memoryContext);
+  const { conversationHistory, pageContext, pageScreenshot, autoVault, vaultConnected, vaultName, vaultFilename, memoryContext } = message;
+  const msgs = await buildMessages(conversationHistory, pageContext, pageScreenshot, settings.systemPrompt, autoVault, vaultConnected, vaultName, vaultFilename, memoryContext);
 
   try {
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {

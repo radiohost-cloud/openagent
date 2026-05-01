@@ -75,5 +75,9 @@
   "settingsVaultApiTestOk": { "message": "Connected" },
   "settingsVaultApiTestFail": { "message": "Connection failed" },
   "settingsVaultApiHint": { "message": "Requires Local REST API plugin in Obsidian." },
+  "settingsVaultSelect": { "message": "Select vault" },
+  "settingsVaultNotSelected": { "message": "No vault selected" },
+  "vaultSelectorInvalid": { "message": "Invalid vault file — no vaults found" },
+  "vaultSelectorNoVaults": { "message": "No vaults found in obsidian.json" },
   "statusConnected": { "message": "Connected" }
 }

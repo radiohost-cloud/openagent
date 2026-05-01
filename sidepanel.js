@@ -2,7 +2,7 @@
 
 const state = {
   messages: [],
-  settings: { apiKey: '', provider: 'openrouter', model: '', systemPrompt: '', theme: 'dark', preset: 'default', language: 'en', vaultApiUrl: '', vaultApiToken: '', fontSize: 'medium' },
+  settings: { apiKey: '', provider: 'openrouter', model: '', systemPrompt: '', theme: 'dark', preset: 'default', language: 'en', vaultPath: '', vaultApiUrl: '', vaultApiToken: '', fontSize: 'medium' },
   pageContext: null,
   pageScreenshot: null,
   visionModels: [],
@@ -74,10 +74,10 @@ const i18nStrings = {
     settingsVaultApiTest: 'Test connection',
     settingsVaultApiTestOk: 'Connected',
     settingsVaultApiTestFail: 'Connection failed',
-    settingsVaultApiTest: 'Test connection',
-    settingsVaultApiTestOk: 'Connected',
-    settingsVaultApiTestFail: 'Connection failed',
-    settingsSelectFolder: 'Select folder',
+    settingsVaultSelect: 'Select vault',
+    settingsVaultNotSelected: 'No vault selected',
+    vaultSelectorInvalid: 'Invalid vault file — no vaults found',
+    vaultSelectorNoVaults: 'No vaults found in obsidian.json',
     settingsChangeFolder: 'Change folder',
     settingsFontSize: 'Font size',
     settingsCurrentModel: 'Current Model',
@@ -149,10 +149,10 @@ const i18nStrings = {
     settingsVaultApiTest: 'Testuj połączenie',
     settingsVaultApiTestOk: 'Połączono',
     settingsVaultApiTestFail: 'Błąd połączenia',
-    settingsVaultApiTest: 'Testuj połączenie',
-    settingsVaultApiTestOk: 'Połączono',
-    settingsVaultApiTestFail: 'Błąd połączenia',
-    settingsSelectFolder: 'Wybierz folder',
+    settingsVaultSelect: 'Wybierz sejf',
+    settingsVaultNotSelected: 'Nie wybrano sejfu',
+    vaultSelectorInvalid: 'Nieprawidłowy plik — nie znaleziono sejfów',
+    vaultSelectorNoVaults: 'Nie znaleziono sejfów w obsidian.json',
     settingsChangeFolder: 'Zmień folder',
     settingsFontSize: 'Wielkość czcionki',
     settingsCurrentModel: 'Aktualny model',
@@ -490,6 +490,11 @@ const dom = {
   vaultApiTokenInput: $('#vaultApiTokenInput'),
   vaultApiTestBtn: $('#vaultApiTestBtn'),
   vaultApiStatus: $('#vaultApiStatus'),
+  vaultSelectorBtn: $('#vaultSelectorBtn'),
+  vaultListContainer: $('#vaultListContainer'),
+  vaultList: $('#vaultList'),
+  vaultSelectedName: $('#vaultSelectedName'),
+  vaultSelectedPath: $('#vaultSelectedPath'),
 };
 
 // ─── i18n ────────────────────────────────────────────────────────────────────
@@ -591,6 +596,77 @@ async function vaultApiTest() {
     return result;
   } catch (err) {
     return { error: err.message };
+  }
+}
+
+// ─── Vault Selector ───────────────────────────────────────────────────────────
+
+function getVaultNameFromPath(path) {
+  const parts = path.replace(/\\/g, '/').split('/');
+  return parts[parts.length - 1] || 'Unknown';
+}
+
+async function selectObsidianJsonFile() {
+  try {
+    const [fileHandle] = await window.showOpenFilePicker({
+      types: [{ description: 'JSON', accept: { 'application/json': ['.json'] } }],
+      excludeAcceptAllOption: false,
+    });
+    const file = await fileHandle.getFile();
+    const text = await file.text();
+    const data = JSON.parse(text);
+
+    if (!data.vaults || typeof data.vaults !== 'object') {
+      setStatus(i18n('vaultSelectorInvalid'), 'error');
+      return;
+    }
+
+    const vaults = Object.entries(data.vaults).map(([id, info]) => ({
+      id,
+      name: getVaultNameFromPath(info.path),
+      path: info.path,
+      open: info.open || false,
+      ts: info.ts || 0,
+    }));
+
+    vaults.sort((a, b) => b.ts - a.ts);
+
+    if (vaults.length === 0) {
+      setStatus(i18n('vaultSelectorNoVaults'), 'error');
+      return;
+    }
+
+    dom.vaultList.innerHTML = vaults.map(v => `
+      <div class="vault-list-item${state.settings.vaultPath === v.path ? ' selected' : ''}" data-path="${escapeHtml(v.path)}" data-name="${escapeHtml(v.name)}">
+        <div class="vault-list-item-name">
+          ${escapeHtml(v.name)}
+          ${v.open ? '<span class="vault-list-item-open">●</span>' : ''}
+        </div>
+        <div class="vault-list-item-path">${escapeHtml(v.path)}</div>
+      </div>
+    `).join('');
+
+    dom.vaultListContainer.classList.remove('hidden');
+
+    dom.vaultList.querySelectorAll('.vault-list-item').forEach(item => {
+      item.addEventListener('click', async () => {
+        const path = item.dataset.path;
+        const name = item.dataset.name;
+        state.settings.vaultPath = path;
+        dom.vaultSelectedName.textContent = name;
+        dom.vaultSelectedName.classList.remove('not-selected');
+        dom.vaultSelectedPath.textContent = path;
+        dom.vaultListContainer.classList.add('hidden');
+        dom.vaultList.querySelectorAll('.vault-list-item').forEach(i => i.classList.remove('selected'));
+        item.classList.add('selected');
+        await sendBgMessage({ type: 'settings.save', data: { vaultPath: path } }).catch(() => {});
+        updateVaultBtn();
+      });
+    });
+  } catch (err) {
+    if (err.name !== 'AbortError') {
+      setStatus('Error: ' + err.message, 'error');
+    }
   }
 }
 
@@ -750,6 +826,10 @@ function bindEvents() {
 
   dom.vaultBtn.addEventListener('click', toggleVaultOnBtn);
 
+  if (dom.vaultSelectorBtn) {
+    dom.vaultSelectorBtn.addEventListener('click', selectObsidianJsonFile);
+  }
+
   if (dom.vaultApiUrlInput) {
     dom.vaultApiUrlInput.addEventListener('change', () => {
       state.settings.vaultApiUrl = dom.vaultApiUrlInput.value.trim();
@@ -831,6 +911,19 @@ async function loadSettings() {
       loadModels();
     });
 
+    // Vault path display
+    if (dom.vaultSelectedName && dom.vaultSelectedPath) {
+      if (state.settings.vaultPath) {
+        dom.vaultSelectedName.textContent = getVaultNameFromPath(state.settings.vaultPath);
+        dom.vaultSelectedName.classList.remove('not-selected');
+        dom.vaultSelectedPath.textContent = state.settings.vaultPath;
+      } else {
+        dom.vaultSelectedName.textContent = i18n('settingsVaultNotSelected');
+        dom.vaultSelectedName.classList.add('not-selected');
+        dom.vaultSelectedPath.textContent = '';
+      }
+    }
+
     // Vault API settings
     if (dom.vaultApiUrlInput) dom.vaultApiUrlInput.value = state.settings.vaultApiUrl || '';
     if (dom.vaultApiTokenInput) dom.vaultApiTokenInput.value = state.settings.vaultApiToken || '';
@@ -872,14 +965,15 @@ async function handleSaveSettings() {
   const language = state.settings.language;
   const vaultApiUrl = dom.vaultApiUrlInput ? dom.vaultApiUrlInput.value.trim() : state.settings.vaultApiUrl;
   const vaultApiToken = dom.vaultApiTokenInput ? dom.vaultApiTokenInput.value.trim() : state.settings.vaultApiToken;
+  const vaultPath = state.settings.vaultPath;
   const fontSize = dom.fontSizeSelect.value;
 
   try {
     await sendBgMessage({
       type: 'settings.save',
-      data: { apiKey, provider: 'openrouter', model, systemPrompt, theme, preset, language, vaultApiUrl, vaultApiToken, fontSize },
+      data: { apiKey, provider: 'openrouter', model, systemPrompt, theme, preset, language, vaultApiUrl, vaultApiToken, vaultPath, fontSize },
     });
-    state.settings = { ...state.settings, apiKey, provider: 'openrouter', model, systemPrompt, theme, preset, language, vaultApiUrl, vaultApiToken, fontSize };
+    state.settings = { ...state.settings, apiKey, provider: 'openrouter', model, systemPrompt, theme, preset, language, vaultApiUrl, vaultApiToken, vaultPath, fontSize };
     dom.settingsStatus.textContent = i18n('settingsSaved');
     dom.settingsStatus.className = 'settings-status';
     toggleModal(false);
@@ -1145,6 +1239,7 @@ async function handleSend() {
       autoVault: state.autoVault,
       vaultConnected: state.vaultConnected,
       vaultApiUrl: state.settings.vaultApiUrl,
+      vaultPath: state.settings.vaultPath,
       memoryContext: state.memoryContext,
     });
 

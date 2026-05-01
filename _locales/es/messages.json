@@ -75,5 +75,9 @@
   "settingsVaultApiTestOk": { "message": "Conectado" },
   "settingsVaultApiTestFail": { "message": "Error de conexión" },
   "settingsVaultApiHint": { "message": "Requiere el plugin Local REST API en Obsidian." },
+  "settingsVaultSelect": { "message": "Seleccionar bóveda" },
+  "settingsVaultNotSelected": { "message": "No hay bóveda seleccionada" },
+  "vaultSelectorInvalid": { "message": "Archivo inválido — no se encontraron bóvedas" },
+  "vaultSelectorNoVaults": { "message": "No se encontraron bóvedas en obsidian.json" },
   "statusConnected": { "message": "Conectado" }
 }

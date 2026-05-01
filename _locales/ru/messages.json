@@ -75,5 +75,9 @@
   "settingsVaultApiTestOk": { "message": "Подключено" },
   "settingsVaultApiTestFail": { "message": "Ошибка подключения" },
   "settingsVaultApiHint": { "message": "Требуется плагин Local REST API в Obsidian." },
+  "settingsVaultSelect": { "message": "Выбрать хранилище" },
+  "settingsVaultNotSelected": { "message": "Хранилище не выбрано" },
+  "vaultSelectorInvalid": { "message": "Неверный файл — хранилища не найдены" },
+  "vaultSelectorNoVaults": { "message": "Хранилища не найдены в obsidian.json" },
   "statusConnected": { "message": "Подключено" }
 }

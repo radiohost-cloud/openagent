@@ -172,6 +172,23 @@
           <details class="vault-section">
             <summary class="vault-summary" data-i18n="settingsVaultTitle">Obsidian Vault</summary>
             <div class="vault-body">
+              <div id="vaultSelectorPanel">
+                <div class="vault-selector-row">
+                  <div class="vault-selector-info">
+                    <div id="vaultSelectedDisplay" class="vault-selected-display">
+                      <span id="vaultSelectedName" class="vault-selected-name" data-i18n="settingsVaultNotSelected">No vault selected</span>
+                      <span id="vaultSelectedPath" class="vault-selected-path"></span>
+                    </div>
+                  </div>
+                  <div class="vault-selector-actions">
+                    <button id="vaultSelectorBtn" class="vault-action-btn" data-i18n="settingsVaultSelect">Select vault</button>
+                  </div>
+                </div>
+                <div id="vaultListContainer" class="vault-list-container hidden">
+                  <div id="vaultList" class="vault-list"></div>
+                </div>
+              </div>
+              <div class="vault-divider"></div>
               <div class="form-group">
                 <label data-i18n="settingsVaultApiUrl">API URL</label>
                 <input type="text" id="vaultApiUrlInput" class="settings-select" data-i18n-placeholder="settingsVaultApiUrlPlaceholder" placeholder="http://127.0.0.1:27124" />
@@ -181,7 +198,7 @@
                 <input type="password" id="vaultApiTokenInput" class="settings-select" data-i18n-placeholder="settingsVaultApiTokenPlaceholder" placeholder="Token from Local REST API plugin" />
               </div>
               <div class="vault-api-actions">
-                <button id="vaultApiTestBtn" class="vault-select-btn" data-i18n="settingsVaultApiTest">Test connection</button>
+                <button id="vaultApiTestBtn" data-i18n="settingsVaultApiTest">Test connection</button>
                 <span id="vaultApiStatus" class="form-hint"></span>
               </div>
               <div class="form-hint" data-i18n="settingsVaultApiHint">Requires Local REST API plugin in Obsidian.</div>

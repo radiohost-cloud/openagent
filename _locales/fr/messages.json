@@ -75,5 +75,9 @@
   "settingsVaultApiTestOk": { "message": "Connecté" },
   "settingsVaultApiTestFail": { "message": "Échec de la connexion" },
   "settingsVaultApiHint": { "message": "Nécessite le plugin Local REST API dans Obsidian." },
+  "settingsVaultSelect": { "message": "Sélectionner le coffre" },
+  "settingsVaultNotSelected": { "message": "Aucun coffre sélectionné" },
+  "vaultSelectorInvalid": { "message": "Fichier invalide — aucun coffre trouvé" },
+  "vaultSelectorNoVaults": { "message": "Aucun coffre trouvé dans obsidian.json" },
   "statusConnected": { "message": "Connecté" }
 }

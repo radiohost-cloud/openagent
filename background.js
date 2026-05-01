@@ -9,6 +9,7 @@ const STORAGE_KEYS = {
   THEME: 'claude_theme',
   PRESET: 'claude_preset',
   LANGUAGE: 'claude_language',
+  VAULT_PATH: 'openagent_vault_path',
   VAULT_API_URL: 'openagent_vault_api_url',
   VAULT_API_TOKEN: 'openagent_vault_api_token',
   AUTO_VAULT: 'openagent_auto_vault',
@@ -240,6 +241,7 @@ async function loadSettings() {
     theme: result[STORAGE_KEYS.THEME] || 'dark',
     preset: result[STORAGE_KEYS.PRESET] || 'default',
     language: result[STORAGE_KEYS.LANGUAGE] || 'en',
+    vaultPath: result[STORAGE_KEYS.VAULT_PATH] || '',
     vaultApiUrl: result[STORAGE_KEYS.VAULT_API_URL] || '',
     vaultApiToken: result[STORAGE_KEYS.VAULT_API_TOKEN] || '',
     autoVault: result[STORAGE_KEYS.AUTO_VAULT] || false,
@@ -256,6 +258,7 @@ async function saveSettings(data) {
     [STORAGE_KEYS.THEME]: data.theme || 'dark',
     [STORAGE_KEYS.PRESET]: data.preset || 'default',
     [STORAGE_KEYS.LANGUAGE]: data.language || 'en',
+    [STORAGE_KEYS.VAULT_PATH]: data.vaultPath || '',
     [STORAGE_KEYS.VAULT_API_URL]: data.vaultApiUrl || '',
     [STORAGE_KEYS.VAULT_API_TOKEN]: data.vaultApiToken || '',
     [STORAGE_KEYS.FONT_SIZE]: data.fontSize || 'medium',
@@ -272,8 +275,8 @@ async function handlePromptSend(message, sendResponse) {
     return;
   }
 
-  const { conversationHistory, pageContext, pageScreenshot, autoVault, vaultConnected, memoryContext } = message;
-  const msgs = await buildMessages(conversationHistory, pageContext, pageScreenshot, settings.systemPrompt, autoVault, vaultConnected, memoryContext);
+  const { conversationHistory, pageContext, pageScreenshot, autoVault, vaultConnected, vaultPath, memoryContext } = message;
+  const msgs = await buildMessages(conversationHistory, pageContext, pageScreenshot, settings.systemPrompt, autoVault, vaultConnected, vaultPath, memoryContext);
 
   try {
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -305,7 +308,7 @@ async function handlePromptSend(message, sendResponse) {
   }
 }
 
-async function buildMessages(history, pageContext, pageScreenshot, systemPrompt, autoVault, vaultConnected, memoryContext) {
+async function buildMessages(history, pageContext, pageScreenshot, systemPrompt, autoVault, vaultConnected, vaultPath, memoryContext) {
   const msgs = [];
 
   // Default system prompt if none set
@@ -349,9 +352,13 @@ async function buildMessages(history, pageContext, pageScreenshot, systemPrompt,
   }
 
   if (autoVault) {
-    const note = vaultConnected
-      ? `\n\n[NOTE: AUTO-VAULT ENABLED — Obsidian vault is connected via Local REST API. After responding, proactively identify important information discussed in this conversation and save a concise summary note to the Obsidian vault using <vault_write filename="topic-date.md">...</vault_write>. Focus on key facts, decisions, URLs, code snippets, or anything the user would want to remember.]`
-      : `\n\n[NOTE: AUTO-VAULT ENABLED — No Obsidian vault connection detected. Set up Obsidian Local REST API in Settings to enable vault features.]`;
+    let note;
+    if (vaultConnected) {
+      const vaultName = vaultPath ? vaultPath.split('/').filter(Boolean).pop() : 'Obsidian';
+      note = `\n\n[NOTE: AUTO-VAULT ENABLED — Obsidian vault "${vaultName}" is connected via Local REST API${vaultPath ? ` at ${vaultPath}` : ''}. After responding, proactively identify important information discussed in this conversation and save a concise summary note to the Obsidian vault using <vault_write filename="topic-date.md">...</vault_write>. Focus on key facts, decisions, URLs, code snippets, or anything the user would want to remember.]`;
+    } else {
+      note = `\n\n[NOTE: AUTO-VAULT ENABLED — No Obsidian vault connection detected. Set up Obsidian Local REST API in Settings to enable vault features.]`;
+    }
     for (let i = msgs.length - 1; i >= 0; i--) {
       if (msgs[i].role === 'user') {
         msgs[i].content += note;
@@ -372,8 +379,8 @@ async function startStream(message, sendResponse) {
     return;
   }
 
-  const { conversationHistory, pageContext, pageScreenshot, autoVault, vaultConnected, memoryContext } = message;
-  const msgs = await buildMessages(conversationHistory, pageContext, pageScreenshot, settings.systemPrompt, autoVault, vaultConnected, memoryContext);
+  const { conversationHistory, pageContext, pageScreenshot, autoVault, vaultConnected, vaultPath, memoryContext } = message;
+  const msgs = await buildMessages(conversationHistory, pageContext, pageScreenshot, settings.systemPrompt, autoVault, vaultConnected, vaultPath, memoryContext);
 
   try {
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {

@@ -75,5 +75,9 @@
   "settingsVaultApiTestOk": { "message": "Verbunden" },
   "settingsVaultApiTestFail": { "message": "Verbindung fehlgeschlagen" },
   "settingsVaultApiHint": { "message": "Benötigt das Local REST API Plugin in Obsidian." },
+  "settingsVaultSelect": { "message": "Tresor auswählen" },
+  "settingsVaultNotSelected": { "message": "Kein Tresor ausgewählt" },
+  "vaultSelectorInvalid": { "message": "Ungültige Datei — keine Tresore gefunden" },
+  "vaultSelectorNoVaults": { "message": "Keine Tresore in obsidian.json gefunden" },
   "statusConnected": { "message": "Verbunden" }
 }

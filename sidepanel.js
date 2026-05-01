@@ -1243,6 +1243,7 @@ async function collectPageContext() {
     if (state.autoVault && state.vaultConnected && state.currentVaultFilename) {
       const newFilename = getOrCreateSessionFilename();
       if (newFilename !== state.currentVaultFilename) {
+        state.currentVaultFilename = null;
         state.currentVaultFilename = newFilename;
         updateVaultNoteIndicator();
       }
@@ -1271,6 +1272,7 @@ async function loadCachedContext() {
         const prevDomain = (() => { try { return new URL(prevUrl).hostname; } catch { return ''; } })();
         const newDomain = (() => { try { return new URL(cached.url).hostname; } catch { return ''; } })();
         if (prevDomain !== newDomain) {
+          state.currentVaultFilename = null;
           state.currentVaultFilename = getOrCreateSessionFilename();
           updateVaultNoteIndicator();
         }

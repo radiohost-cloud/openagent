@@ -20,8 +20,11 @@ const STORAGE_KEYS = {
 
 const injectedTabs = new Set();
 
+// Inject on tab activation only if not already injected
 chrome.tabs.onActivated.addListener(async (activeInfo) => {
-  await injectIntoTab(activeInfo.tabId);
+  if (!injectedTabs.has(activeInfo.tabId)) {
+    await injectIntoTab(activeInfo.tabId);
+  }
   const tab = await chrome.tabs.get(activeInfo.tabId).catch(() => null);
   await notifyContextRefresh(activeInfo.tabId, tab?.url);
 });
@@ -34,20 +37,17 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
 
 if (chrome.webNavigation && chrome.webNavigation.onCompleted) {
   chrome.webNavigation.onCompleted.addListener(async (details) => {
-    if (!details.frameId) {
+    if (!details.frameId && !injectedTabs.has(details.tabId)) {
       await injectIntoTab(details.tabId);
       await notifyContextRefresh(details.tabId, details.url);
     }
   }, { url: [{ schemes: ['http', 'https'] }] });
 
-  // CRITICAL: on SPA navigation, re-inject content script to get fresh page data
-  // This is the key fix for YouTube — the old content script instance is stuck
-  // on the previous video, so we force a reload
+  // SPA navigation: notify side panel to refresh context
+  // Don't re-inject content script here — the content script already polls
+  // for URL changes and sends context.refresh on its own.
   chrome.webNavigation.onHistoryStateUpdated.addListener(async (details) => {
     if (!details.frameId) {
-      // Remove from injected set so next collectPageContext will re-inject
-      injectedTabs.delete(details.tabId);
-      await injectIntoTab(details.tabId);
       await notifyContextRefresh(details.tabId, details.url);
     }
   });

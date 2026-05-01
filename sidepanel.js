@@ -703,7 +703,8 @@ function updateVaultBtn() {
   const isOn = state.autoVault;
 
   if (isApi) {
-    dom.vaultBtn.classList.toggle('active', hasApiUrl && isOn);
+    dom.vaultBtn.classList.remove('active');
+    dom.vaultBtn.classList.toggle('vault-api-active', hasApiUrl && isOn);
     if (dom.vaultStatus) dom.vaultStatus.classList.toggle('ready', hasApiUrl);
     if (!hasApiUrl) {
       dom.vaultBtn.title = i18n('btnVaultNotSet');
@@ -711,6 +712,7 @@ function updateVaultBtn() {
       dom.vaultBtn.title = isOn ? i18n('btnVaultOn') : i18n('btnVaultOff');
     }
   } else {
+    dom.vaultBtn.classList.remove('vault-api-active');
     dom.vaultBtn.classList.toggle('active', hasHandle && isOn);
     if (dom.vaultStatus) dom.vaultStatus.classList.toggle('ready', hasHandle);
     if (!hasPath) {
@@ -906,14 +908,12 @@ function bindEvents() {
       }
 
       // Pass URL and token directly to bypass storage timing issues
-      console.log('[OpenAgent] Testing vault API:', { url, token: token ? '***' : 'empty' });
       try {
         const result = await sendBgMessage({
           type: 'vault.api.test',
           url,
           token,
         });
-        console.log('[OpenAgent] vaultApiTest result:', result);
         if (result && !result.error) {
           dom.vaultApiStatus.textContent = i18n('settingsVaultApiTestOk');
           dom.vaultApiStatus.className = 'form-hint ok';
@@ -982,6 +982,13 @@ async function loadSettings() {
 
     const autoData = await sendBgMessage({ type: 'autovault.load' });
     state.autoVault = autoData?.autoVault || false;
+
+    // For API mode, auto-enable vault if URL+token are configured
+    const mode = state.settings.vaultMode || 'local';
+    if (mode === 'api' && state.settings.vaultApiUrl && state.settings.vaultApiToken && !autoData?.autoVault) {
+      state.autoVault = true;
+    }
+
     updateVaultBtn();
   } catch (err) {
     console.error('Failed to load settings:', err);

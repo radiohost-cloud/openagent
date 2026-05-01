@@ -166,9 +166,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   const handler = handlers[message.type];
   if (!handler) return false;
-  if (message.type.startsWith('vault.api')) {
-    console.log('[OpenAgent] handler:', message.type, message);
-  }
 
   const result = handler();
   if (result instanceof Promise) {

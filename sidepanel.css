@@ -162,6 +162,14 @@ html, body {
   stroke: currentColor;
 }
 
+#vaultBtn.vault-api-active {
+  color: #4ade80;
+}
+
+#vaultBtn.vault-api-active svg path:first-child {
+  fill: currentColor;
+}
+
 /* ─── Messages ───────────────────────────────────────────── */
 
 .messages {

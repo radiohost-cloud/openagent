@@ -637,6 +637,7 @@ function toggleVaultOnBtn() {
   state.autoVault = !state.autoVault;
   saveAutoVault();
   updateVaultBtn();
+  updateBadge();
   setStatus(state.autoVault ? i18n('statusVaultReady') : i18n('btnVaultOff'), state.autoVault ? 'success' : 'info');
 }
 
@@ -741,6 +742,7 @@ function bindEvents() {
     dom.vaultApiUrlInput.addEventListener('change', () => {
       state.settings.vaultApiUrl = dom.vaultApiUrlInput.value.trim();
       updateVaultBtn();
+      updateBadge();
       sendBgMessage({ type: 'settings.save', data: { ...state.settings } }).catch(() => {});
     });
   }
@@ -749,6 +751,7 @@ function bindEvents() {
     dom.vaultApiTokenInput.addEventListener('change', () => {
       state.settings.vaultApiToken = dom.vaultApiTokenInput.value.trim();
       updateVaultBtn();
+      updateBadge();
       sendBgMessage({ type: 'settings.save', data: { ...state.settings } }).catch(() => {});
     });
   }
@@ -779,11 +782,13 @@ function bindEvents() {
           dom.vaultApiStatus.className = 'form-hint ok';
           state.vaultConnected = true;
           updateVaultBtn();
+          updateBadge();
         } else {
           dom.vaultApiStatus.textContent = `${i18n('settingsVaultApiTestFail')}: ${result?.error || 'Unknown'}`;
           dom.vaultApiStatus.className = 'form-hint error';
           state.vaultConnected = false;
           updateVaultBtn();
+          updateBadge();
         }
       } catch (err) {
         dom.vaultApiStatus.textContent = `${i18n('settingsVaultApiTestFail')}: ${err.message}`;
@@ -848,6 +853,7 @@ async function loadSettings() {
     }
 
     updateVaultBtn();
+    updateBadge();
   } catch (err) {
     console.error('Failed to load settings:', err);
   }
@@ -877,6 +883,7 @@ async function handleSaveSettings() {
     loadModels();
     updateModelBadge();
     updateVaultBtn();
+    updateBadge();
   } catch (err) {
     dom.settingsStatus.textContent = 'Error: ' + err.message;
     dom.settingsStatus.className = 'settings-status error';
@@ -1682,8 +1689,9 @@ function updateCurrentModelDisplay() {
 }
 
 function updateBadge() {
-  // Update toolbar icon color based on vault connection
-  const iconPath = state.vaultConnected
+  const hasApiUrl = !!(state.settings.vaultApiUrl && state.settings.vaultApiToken);
+  const isVaultActive = hasApiUrl && state.autoVault && state.vaultConnected;
+  const iconPath = isVaultActive
     ? chrome.runtime.getURL('icons/openagent-purple-16.png')
     : null;
   chrome.action.setIcon({ path: { '16': iconPath || 'icons/openagent-16.png', '24': iconPath || 'icons/openagent-24.png', '32': iconPath || 'icons/openagent-32.png', '48': iconPath || 'icons/openagent-48.png', '128': iconPath || 'icons/openagent-128.png' } });

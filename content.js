@@ -1,8 +1,10 @@
 // content.js - Chrome Extension Content Script
 // Collects page context and performs browser automation
 
+const HTTPS_RE = /^https?:\/\//;
 (function () {
   const domElementRefs = new Map();
+  window.addEventListener('unload', () => { domElementRefs.clear(); });
 
   function safeSend(msg) {
     try {
@@ -296,7 +298,7 @@ async function performDomAction(step) {
         return { ok: true, message: `Scrolled ${step.direction || 'down'}` };
       case 'navigate':
         if (!step.url) return { ok: false, message: 'No URL provided' };
-        if (!/^https?:\/\//.test(step.url)) return { ok: false, message: 'Only HTTP(S) navigation supported' };
+        if (!HTTPS_RE.test(step.url)) return { ok: false, message: 'Only HTTP(S) navigation supported' };
         window.location.href = step.url;
         return { ok: true, message: `Navigated to: ${step.url}` };
       case 'select':

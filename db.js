@@ -263,11 +263,9 @@ async function getRelevantContext(domain, topics = [], limit = 3) {
   ]);
 
   // Also search by topics
-  const topicMemories = [];
-  for (const topic of topics.slice(0, 3)) {
-    const found = await searchMemories(topic, domain, 5);
-    topicMemories.push(...found);
-  }
+  const topicMemories = (await Promise.all(
+    topics.slice(0, 3).map(topic => searchMemories(topic, domain, 5))
+  )).flat();
 
   // Dedupe and combine
   const seen = new Set();

@@ -12,12 +12,20 @@ const STORAGE_KEYS = {
   VAULT_NAME: 'openagent_vault_name',
   VAULT_API_URL: 'openagent_vault_api_url',
   VAULT_API_TOKEN: 'openagent_vault_api_token',
+  VAULT_HANDLE: 'openagent_vault_handle',
   AUTO_VAULT: 'openagent_auto_vault',
   FONT_SIZE: 'openagent_font_size',
   WEB_SEARCH: 'openagent_web_search',
 };
 
+const HTTPS_RE = /^https?:\/\//;
 const injectedTabs = new Set();
+
+chrome.tabs.onRemoved.addListener((tabId) => {
+  injectedTabs.delete(tabId);
+});
+
+const DEFAULT_SYSTEM_PROMPT = "You are OpenAgent, an AI browser assistant. Your primary purpose is to help users with the currently open webpage. When a user asks a question, use the page context provided. You can read page content, execute browser actions, and help with web-related tasks. If no page context is provided, explain that you work best when viewing a webpage. NEVER offer to save information, NEVER ask if something should be saved, and NEVER list \"save options\" at the end of responses. The conversation is saved automatically when Obsidian is connected. Focus entirely on answering the user's question.";
 
 chrome.tabs.onActivated.addListener(async (activeInfo) => {
   if (!injectedTabs.has(activeInfo.tabId)) {
@@ -112,7 +120,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     'vault.api.test': () => vaultApiTest(message),
     'vault.api.read': () => vaultApiRead(message),
     'vault.api.write': () => vaultApiWrite(message),
-    'context.refresh': () => { chrome.runtime.sendMessage({ type: 'context.refresh' }).catch(() => {}); return { ok: true }; },
+    'context.refresh': () => ({ ok: true }),
   };
 
   const handler = handlers[message.type];
@@ -330,9 +338,7 @@ async function handlePromptSend(message, sendResponse) {
 async function buildMessages(history, pageContext, pageScreenshot, systemPrompt, autoVault, vaultConnected, vaultName, vaultFilename, memoryContext, webSearch) {
   const msgs = [];
 
-  // Default system prompt if none set
-  const defaultSystem = 'You are OpenAgent, an AI browser assistant. Your primary purpose is to help users with the currently open webpage. When a user asks a question, use the page context provided. You can read page content, execute browser actions, and help with web-related tasks. If no page context is provided, explain that you work best when viewing a webpage. NEVER offer to save information, NEVER ask if something should be saved, and NEVER list "save options" at the end of responses. The conversation is saved automatically when Obsidian is connected. Focus entirely on answering the user\'s question.';
-  const systemContent = systemPrompt || defaultSystem;
+  const systemContent = systemPrompt || DEFAULT_SYSTEM_PROMPT;
 
   if (systemContent) {
     msgs.push({ role: 'system', content: systemContent });
@@ -725,8 +731,8 @@ async function vaultApiWrite(message) {
     }
 
     const writeContent = existing && append ? (existing + '\n\n---\n\n' + content) : content;
-    const method = existing ? 'PUT' : 'PUT';
     const writeResp = await fetch(url + '/vault/' + encodeURIComponent(fullPath), {
+      method: 'PUT',
       method,
       headers: {
         'Authorization': `Bearer ${token}`,

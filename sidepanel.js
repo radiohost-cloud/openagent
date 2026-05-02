@@ -16,11 +16,18 @@ const state = {
   historyOpen: false,
   currentConversationId: null,
   memoryContext: null,
-  contextDebounce: null,
   vaultSavedCount: 0,
   vaultWritten: false,
   webSearch: false,
 };
+
+// Shared utilities
+const HTTPS_RE = /^https?:\/\//;
+const formatDate = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const formatTime = (d) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+const HTML_ESCAPE = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+const HTML_ESCAPE_RE = /[&<>"']/g;
+const escapeHtml = (str) => String(str).replace(HTML_ESCAPE_RE, (m) => HTML_ESCAPE[m]);
 
 const i18nStrings = {
   en: {
@@ -598,7 +605,7 @@ async function vaultApiWrite(filename, content, append) {
 function getOrCreateSessionFilename() {
   if (state.currentVaultFilename) return state.currentVaultFilename;
   const date = new Date();
-  const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  const dateStr = formatDate(date);
   const domain = state.pageContext?.metadata?.domain || state.pageContext?.url ? (() => { try { return new URL(state.pageContext?.metadata?.url || state.pageContext?.url).hostname.replace(/^www\./, '').replace(/\./g, '-'); } catch { return 'openagent'; } })() : 'openagent';
   state.currentVaultFilename = `${domain}-${dateStr}.md`;
   state.vaultSavedCount = 0;
@@ -709,9 +716,6 @@ async function saveAutoVault() {
 // ─── Events ──────────────────────────────────────────────────────────────────
 
 function bindEvents() {
-  // Load context only when side panel opens (not continuously)
-  loadCachedContext();
-
   chrome.runtime.onMessage.addListener((message) => {
     if (message.type === 'context.refresh') {
       const now = Date.now();
@@ -1168,7 +1172,7 @@ function extractNavigationIntent(text) {
   const match = trimmed.match(NAV_PATTERNS[0]);
   if (match) {
     let url = match[1].trim();
-    if (!/^https?:\/\//i.test(url)) {
+    if (!HTTPS_RE.test(url)) {
       url = 'https://' + url;
     }
     return url;
@@ -1177,7 +1181,7 @@ function extractNavigationIntent(text) {
   const bareMatch = trimmed.match(NAV_PATTERNS[1]);
   if (bareMatch) {
     const url = bareMatch[1];
-    if (!/^https?:\/\//i.test(url)) {
+    if (!HTTPS_RE.test(url)) {
       return 'https://' + url;
     }
     return url;
@@ -1472,7 +1476,7 @@ function prependPageContext(metadata) {
       if (!url) return 'openagent';
       try {
         const date = new Date();
-        const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        const dateStr = formatDate(date);
         const domain = new URL(url).hostname.replace(/^www\./, '').replace(/\./g, '-');
         return `${domain}-${dateStr}.md`;
       } catch {
@@ -1518,7 +1522,7 @@ function saveConversation() {
     try { return new URL(url).hostname.replace(/^www\./, '').replace(/\./g, '-'); } catch { return 'openagent'; }
   })();
   const date = new Date();
-  const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  const dateStr = formatDate(date);
   const convId = `${domain}-${dateStr}`;
 
   // Only save messages that belong to this conversation's domain
@@ -1646,11 +1650,6 @@ function restoreConversation(id) {
   const conv = state.conversations.find((c) => c.id === id);
   if (!conv) return;
 
-  state.currentConversationId = id;
-  state.currentVaultFilename = conv.vaultFilename || null;
-  state.vaultWritten = !!conv.vaultFilename;
-
-  // Restore conversation from history
   state.currentConversationId = id;
   state.currentVaultFilename = conv.vaultFilename || null;
   state.vaultWritten = !!conv.vaultFilename;
@@ -1948,12 +1947,6 @@ function sendBgMessage(message) {
   });
 }
 
-function escapeHtml(str) {
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
-}
-
 function extractDomain(url) {
   try {
     const u = new URL(url);
@@ -2073,8 +2066,8 @@ async function saveAutoVaultNote() {
   } else {
     // First save for this session: full header + all messages
     const date = new Date();
-    const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-    const timeStr = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+    const dateStr = formatDate(date);
+    const timeStr = formatTime(date);
     const lines = [`# Session — ${dateStr} ${timeStr}`, pageUrl ? `**URL:** ${pageUrl}` : ''];
     for (const msg of newMessages) {
       const role = msg.role === 'user' ? '**You**' : '**OpenAgent**';

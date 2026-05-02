@@ -331,10 +331,6 @@ html, body {
   color: #6fcf97;
 }
 
-body.light .copy-code-btn {
-  background: transparent;
-}
-
 /* Markdown inside messages */
 .message h2 { font-size: 15px; margin: 10px 0 6px; color: var(--user-text); }
 .message h3 { font-size: 13px; margin: 8px 0 4px; color: var(--user-text); }
@@ -673,7 +669,6 @@ body.light .copy-code-btn {
   border-radius: 8px;
   padding: 6px 8px 6px 12px;
   transition: border-color 0.15s;
-  --search-glow: rgba(0, 0, 0, 0);
 }
 
 .input-wrapper.web-search-active {

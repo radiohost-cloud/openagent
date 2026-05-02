@@ -554,6 +554,32 @@ body.light .copy-code-btn {
 
 .history-drawer-close:hover { color: var(--text); }
 
+.history-drawer-search-wrap {
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.history-drawer-search {
+  width: 100%;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 12px;
+  padding: 6px 10px;
+  outline: none;
+}
+
+.history-drawer-search:focus {
+  border-color: var(--accent);
+}
+
+.history-drawer-search::placeholder {
+  color: var(--muted);
+}
+
 .history-drawer-list {
   flex: 1;
   overflow-y: auto;
@@ -566,6 +592,10 @@ body.light .copy-code-btn {
   font-size: 12px;
   color: var(--muted);
   font-family: var(--font);
+}
+
+.history-drawer-empty.hidden {
+  display: none;
 }
 
 .history-drawer-item {

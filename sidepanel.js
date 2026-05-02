@@ -94,6 +94,7 @@ const i18nStrings = {
     btnHistory: 'Chat history',
     btnCopy: 'Copy',
     btnDelete: 'Delete',
+    historySearchPlaceholder: 'Search conversations...',
     emptyStateUrl: 'or just type a URL to open it',
   },
   pl: {
@@ -166,6 +167,7 @@ const i18nStrings = {
     btnHistory: 'Historia rozmów',
     btnCopy: 'Kopiuj',
     btnDelete: 'Usuń',
+    historySearchPlaceholder: 'Szukaj rozmów...',
     emptyStateUrl: 'lub wpisz adres URL, aby go otworzyć',
   },
   es: {
@@ -241,6 +243,7 @@ const i18nStrings = {
     btnHistory: 'Historial de chat',
     btnCopy: 'Copiar',
     btnDelete: 'Eliminar',
+    historySearchPlaceholder: 'Buscar conversaciones...',
     emptyStateUrl: 'o escribe una URL para abrirla',
   },
   fr: {
@@ -315,6 +318,7 @@ const i18nStrings = {
     historyEmpty: 'Aucune conversation sauvegardée',
     btnHistory: 'Historique du chat',
     btnDelete: 'Supprimer',
+    historySearchPlaceholder: 'Rechercher des conversations...',
     emptyStateUrl: "ou tapez une URL pour l'ouvrir",
   },
   de: {
@@ -390,6 +394,7 @@ const i18nStrings = {
     btnHistory: 'Chat-Verlauf',
     btnCopy: 'Kopieren',
     btnDelete: 'Löschen',
+    historySearchPlaceholder: 'Gespräche suchen...',
     emptyStateUrl: 'oder URL eingeben zum Öffnen',
   },
   ru: {
@@ -465,6 +470,7 @@ const i18nStrings = {
     btnHistory: 'История чата',
     btnCopy: 'Копировать',
     btnDelete: 'Удалить',
+    historySearchPlaceholder: 'Поиск разговоров...',
     emptyStateUrl: 'или введите URL для открытия',
   },
 };
@@ -497,6 +503,7 @@ const dom = {
   headerCtx: $('#headerCtx'),
   historyDrawerList: $('#historyDrawerList'),
   historyDrawerClose: $('#historyDrawerClose'),
+  historySearch: $('#historySearch'),
   systemPromptInput: $('#systemPromptInput'),
   settingsStatus: $('#settingsStatus'),
   status: $('#status'),
@@ -802,6 +809,10 @@ function bindEvents() {
   });
 
   dom.historyDrawerClose.addEventListener('click', toggleHistory);
+
+  dom.historySearch.addEventListener('input', (e) => {
+    filterHistory(e.target.value);
+  });
 
   dom.vaultBtn.addEventListener('click', toggleVaultOnBtn);
 
@@ -1527,8 +1538,21 @@ function toggleHistory() {
   }
 }
 
+function filterHistory(query) {
+  const term = query.toLowerCase().trim();
+  const items = document.querySelectorAll('.history-drawer-item');
+  items.forEach((el) => {
+    const id = el.dataset.id || '';
+    const messages = state.conversations.find((c) => c.id === id)?.messages || [];
+    const contentMatch = messages.some((m) => (m.content || '').toLowerCase().includes(term));
+    const titleMatch = id.toLowerCase().includes(term);
+    el.style.display = (!term || titleMatch || contentMatch) ? '' : 'none';
+  });
+}
+
 function renderHistoryPanel() {
   dom.historyDrawerClose.textContent = '×';
+  dom.historySearch.value = '';
   if (state.conversations.length === 0) {
     dom.historyDrawerList.innerHTML = `<div class="history-drawer-empty">${i18n('historyEmpty')}</div>`;
   } else {

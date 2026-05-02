@@ -679,7 +679,7 @@ async function vaultApiRead(message) {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
+            'Content-Type': 'text/plain',
           },
           body: JSON.stringify({ query }),
         })

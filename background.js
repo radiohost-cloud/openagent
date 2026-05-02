@@ -670,17 +670,25 @@ async function vaultApiRead(message) {
 
   try {
     console.log('[OA] vault search:', `${url}/search/`, { query });
-    const jsonLogic = JSON.stringify({ "glob": [`*${query}*`, "*.md"] });
-    let resp = await fetch(`${url}/search/`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/vnd.olrapi.jsonlogic+json',
-        'Accept': 'application/json',
-      },
-      body: jsonLogic,
+    // Try /search/simple/ with plain query param first (no Content-Type needed)
+    let resp = await fetch(`${url}/search/simple/?query=${encodeURIComponent(query)}`, {
+      headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
     });
     console.log('[OA] vault search resp:', resp.status, resp.statusText);
+    if (!resp.ok) {
+      // Fallback: JsonLogic glob search
+      const jsonLogic = JSON.stringify({ "glob": [`*${query}*`, "*.md"] });
+      resp = await fetch(`${url}/search/`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/vnd.olrapi.jsonlogic+json',
+          'Accept': 'application/json',
+        },
+        body: jsonLogic,
+      });
+      console.log('[OA] vault search fallback resp:', resp.status, resp.statusText);
+    }
 
     if (!resp.ok) {
       const body = await resp.text();

@@ -675,13 +675,8 @@ async function vaultApiRead(message) {
 
     console.log('[OA] vault search:', searchUrl, { query, token: token ? '***' : 'empty' });
     const resp = query
-      ? await fetch(searchUrl, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'text/plain',
-          },
-          body: JSON.stringify({ query }),
+      ? await fetch(`${url}/search/simple/?query=${encodeURIComponent(query)}`, {
+          headers: { 'Authorization': `Bearer ${token}` },
         })
       : await fetch(searchUrl, {
           headers: { 'Authorization': `Bearer ${token}` },
@@ -695,6 +690,7 @@ async function vaultApiRead(message) {
     }
 
     const data = await resp.json();
+    console.log('[OA] vault search data:', JSON.stringify(data).slice(0, 200));
     const files = data.files || data || [];
     const notes = [];
 

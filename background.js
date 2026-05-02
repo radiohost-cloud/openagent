@@ -669,15 +669,21 @@ async function vaultApiRead(message) {
   const vaultPath = vaultPrefix ? `/${vaultPrefix}` : '';
 
   try {
-    const searchUrl = query
-      ? `${url}/search/`
-      : `${url}/vault${vaultPath}?limit=${limit || 20}`;
-
-    console.log('[OA] vault search:', `${url}/search/simple/?query=${encodeURIComponent(query)}`);
-    const resp = await fetch(`${url}/search/simple/?query=${encodeURIComponent(query)}`, {
+    console.log('[OA] vault search:', `${url}/search/`, { query });
+    // Try without Content-Type first
+    let resp = await fetch(`${url}/search/`, {
+      method: 'POST',
       headers: { 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ query }),
     });
     console.log('[OA] vault search resp:', resp.status, resp.statusText);
+    if (!resp.ok) {
+      // Try GET /search/simple/ as fallback
+      resp = await fetch(`${url}/search/simple/?query=${encodeURIComponent(query)}`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      console.log('[OA] vault search fallback resp:', resp.status, resp.statusText);
+    }
 
     if (!resp.ok) {
       const body = await resp.text();
@@ -686,8 +692,8 @@ async function vaultApiRead(message) {
     }
 
     const data = await resp.json();
-    console.log('[OA] vault search data:', JSON.stringify(data).slice(0, 200));
-    const files = data.files || data || [];
+    console.log('[OA] vault search data:', JSON.stringify(data).slice(0, 300));
+    const files = Array.isArray(data) ? data : (data.files || data.results || []);
     const notes = [];
 
     for (const item of files) {

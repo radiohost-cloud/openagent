@@ -670,20 +670,17 @@ async function vaultApiRead(message) {
 
   try {
     console.log('[OA] vault search:', `${url}/search/`, { query });
-    // Try without Content-Type first
+    const dql = `TABLE file.path, file.ctime FROM "" WHERE contains(file.path, "${query.replace(/"/g, '\\"')}") LIMIT 50`;
     let resp = await fetch(`${url}/search/`, {
       method: 'POST',
-      headers: { 'Authorization': `Bearer ${token}` },
-      body: JSON.stringify({ query }),
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/vnd.olrapi.dataview.dql+txt',
+        'Accept': 'application/json',
+      },
+      body: dql,
     });
     console.log('[OA] vault search resp:', resp.status, resp.statusText);
-    if (!resp.ok) {
-      // Try GET /search/simple/ as fallback
-      resp = await fetch(`${url}/search/simple/?query=${encodeURIComponent(query)}`, {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
-      console.log('[OA] vault search fallback resp:', resp.status, resp.statusText);
-    }
 
     if (!resp.ok) {
       const body = await resp.text();

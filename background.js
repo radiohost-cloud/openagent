@@ -669,11 +669,9 @@ async function vaultApiRead(message) {
   const vaultPath = vaultPrefix ? `/${vaultPrefix}` : '';
 
   try {
-    console.log('[OA] vault search:', `${url}/search/simple/`, { query });
-    let resp = await fetch(`${url}/search/simple/`, {
-      method: 'POST',
+    console.log('[OA] vault search:', `${url}/search/simple/?query=${encodeURIComponent(query)}`);
+    let resp = await fetch(`${url}/search/simple/?query=${encodeURIComponent(query)}`, {
       headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
-      body: query,
     });
     console.log('[OA] vault search resp:', resp.status, resp.statusText);
 

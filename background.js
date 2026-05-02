@@ -680,7 +680,7 @@ async function vaultApiRead(message) {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ query, type: 'file', ext: 'md', limit: limit || 20 }),
+          body: JSON.stringify({ query }),
         })
       : await fetch(searchUrl, {
           headers: { 'Authorization': `Bearer ${token}` },

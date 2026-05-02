@@ -669,9 +669,15 @@ async function vaultApiRead(message) {
   const vaultPath = vaultPrefix ? `/${vaultPrefix}` : '';
 
   try {
-    console.log('[OA] vault search:', `${url}/search/simple/?query=${encodeURIComponent(query)}`);
-    let resp = await fetch(`${url}/search/simple/?query=${encodeURIComponent(query)}`, {
-      headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
+    console.log('[OA] vault search:', `${url}/search/simple/`, { query });
+    let resp = await fetch(`${url}/search/simple/`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({ query }),
     });
     console.log('[OA] vault search resp:', resp.status, resp.statusText);
 
@@ -683,17 +689,17 @@ async function vaultApiRead(message) {
 
     const data = await resp.json();
     console.log('[OA] vault search data FULL:', JSON.stringify(data));
-    const files = Array.isArray(data) ? data : (data.files || data.results || []);
+    const files = Array.isArray(data) ? data : [];
     const notes = [];
 
     for (const item of files) {
       if (notes.length >= (limit || 20)) break;
-      const path = item.path || item;
-      const filename = path.split('/').pop() || path;
-      if (!filename.endsWith('.md')) continue;
+      const filename = item.filename || '';
+      const path = filename;
+      if (!filename || !filename.endsWith('.md')) continue;
 
       try {
-        const fileResp = await fetch(url + '/vault/' + encodeURIComponent(path), {
+        const fileResp = await fetch(url + '/vault/' + encodeURIComponent(filename), {
           headers: { 'Authorization': `Bearer ${token}` },
         });
         if (fileResp.ok) {

@@ -871,6 +871,7 @@ function bindEvents() {
           dom.vaultApiStatus.textContent = i18n('settingsVaultApiTestOk');
           dom.vaultApiStatus.className = 'form-hint ok';
           state.vaultConnected = true;
+          state.autoVault = true;
           updateVaultBtn();
           updateBadge();
           if (state.autoVault && !state.currentVaultFilename) getOrCreateSessionFilename();

@@ -237,7 +237,7 @@ async function handlePromptSend(message, sendResponse) {
     {
       type: 'function',
       function: {
-        name: 'web_search',
+        name: 'openrouter_web_search',
         description: 'Search the web for current information. Use when the user asks about news, weather, current events, or anything that requires up-to-date information from the internet.',
         parameters: {
           type: 'object',
@@ -290,7 +290,7 @@ async function handlePromptSend(message, sendResponse) {
         const toolName = toolCall.function?.name;
         const args = (() => { try { return JSON.parse(toolCall.function?.arguments || '{}'); } catch { return {}; } })();
 
-        if (toolName === 'web_search') {
+        if (toolName === 'openrouter_web_search') {
           const query = args.query || '';
           if (query) {
             const searchResult = await performWebSearch(query);

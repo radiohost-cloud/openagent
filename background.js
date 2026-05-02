@@ -670,12 +670,22 @@ async function vaultApiRead(message) {
 
   try {
     const searchUrl = query
-      ? `${url}/search?q=${encodeURIComponent(query)}&type=file&ext=md&limit=${limit || 20}`
+      ? `${url}/search/`
       : `${url}/vault${vaultPath}?limit=${limit || 20}`;
 
-    const resp = await fetch(searchUrl, {
-      headers: { 'Authorization': `Bearer ${token}` },
-    });
+    const resp = query
+      ? await fetch(searchUrl, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ query, type: 'file', ext: 'md', limit: limit || 20 }),
+        })
+      : await fetch(searchUrl, {
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+
     if (!resp.ok) return { error: `API error: ${resp.status}`, notes: [] };
 
     const data = await resp.json();

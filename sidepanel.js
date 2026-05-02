@@ -1588,7 +1588,9 @@ function filterHistory(query) {
   const words = term.split(/\s+/).filter(Boolean);
   const items = document.querySelectorAll('.history-drawer-item');
   items.forEach((el) => {
-    const conv = state.conversations.find((c) => c.id === el.dataset.id);
+    const elId = el.dataset.id;
+    const conv = state.conversations.find((c) => c.id === elId);
+    console.log('[OA] filter:', elId, 'search:', term, 'found:', !!conv);
     if (!conv) { el.style.display = 'none'; return; }
     // Check title (domain-date id)
     const titleText = (conv.id || '').toLowerCase();

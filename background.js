@@ -14,6 +14,7 @@ const STORAGE_KEYS = {
   VAULT_API_TOKEN: 'openagent_vault_api_token',
   AUTO_VAULT: 'openagent_auto_vault',
   FONT_SIZE: 'openagent_font_size',
+  WEB_SEARCH: 'openagent_web_search',
 };
 
 const injectedTabs = new Set();
@@ -198,6 +199,7 @@ async function loadSettings() {
     vaultApiToken: result[STORAGE_KEYS.VAULT_API_TOKEN] || '',
     autoVault: result[STORAGE_KEYS.AUTO_VAULT] || false,
     fontSize: result[STORAGE_KEYS.FONT_SIZE] || 'medium',
+    webSearch: result[STORAGE_KEYS.WEB_SEARCH] || false,
   };
 }
 
@@ -214,6 +216,7 @@ async function saveSettings(data) {
     [STORAGE_KEYS.VAULT_API_URL]: data.vaultApiUrl || '',
     [STORAGE_KEYS.VAULT_API_TOKEN]: data.vaultApiToken || '',
     [STORAGE_KEYS.FONT_SIZE]: data.fontSize || 'medium',
+    [STORAGE_KEYS.WEB_SEARCH]: data.webSearch || false,
   });
   return { ok: true };
 }
@@ -227,10 +230,31 @@ async function handlePromptSend(message, sendResponse) {
     return;
   }
 
-  const { conversationHistory, pageContext, pageScreenshot, autoVault, vaultConnected, vaultName, vaultFilename, memoryContext } = message;
+  const { conversationHistory, pageContext, pageScreenshot, autoVault, vaultConnected, vaultName, vaultFilename, memoryContext, webSearch } = message;
   const msgs = await buildMessages(conversationHistory, pageContext, pageScreenshot, settings.systemPrompt, autoVault, vaultConnected, vaultName, vaultFilename, memoryContext);
 
+  const tools = webSearch ? [
+    {
+      type: 'function',
+      function: {
+        name: 'web_search',
+        description: 'Search the web for current information. Use when the user asks about news, weather, current events, or anything that requires up-to-date information from the internet.',
+        parameters: {
+          type: 'object',
+          properties: {
+            query: {
+              type: 'string',
+              description: 'The search query to find current information.',
+            },
+          },
+          required: ['query'],
+        },
+      },
+    },
+  ] : [];
+
   try {
+    // First API call
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -242,6 +266,8 @@ async function handlePromptSend(message, sendResponse) {
       body: JSON.stringify({
         model: settings.model || 'openai/gpt-4o',
         messages: msgs,
+        tools: tools.length > 0 ? tools : undefined,
+        tool_choice: webSearch ? 'auto' : undefined,
       }),
     });
 
@@ -252,15 +278,67 @@ async function handlePromptSend(message, sendResponse) {
       return;
     }
 
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content || '';
+    let data = await response.json();
+    let message = data.choices?.[0]?.message;
+
+    // Handle tool calls in a loop (model can call multiple tools)
+    let maxIterations = 5;
+    while (message?.tool_calls && message.tool_calls.length > 0 && maxIterations > 0) {
+      maxIterations--;
+
+      for (const toolCall of message.tool_calls) {
+        const toolName = toolCall.function?.name;
+        const args = (() => { try { return JSON.parse(toolCall.function?.arguments || '{}'); } catch { return {}; } })();
+
+        if (toolName === 'web_search') {
+          const query = args.query || '';
+          if (query) {
+            const searchResult = await performWebSearch(query);
+            msgs.push(message);
+            msgs.push({
+              role: 'tool',
+              tool_call_id: toolCall.id,
+              content: searchResult,
+            });
+          }
+        }
+      }
+
+      // Follow-up call with tool results
+      const followUp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${settings.apiKey}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': chrome.runtime.getURL('/'),
+          'X-Title': 'OpenAgent Chrome Extension',
+        },
+        body: JSON.stringify({
+          model: settings.model || 'openai/gpt-4o',
+          messages: msgs,
+          tools: tools.length > 0 ? tools : undefined,
+        }),
+      });
+
+      if (!followUp.ok) {
+        const text = await followUp.text();
+        const errJson = (() => { try { return JSON.parse(text); } catch { return null; } })();
+        sendResponse({ error: `API error (${followUp.status}): ${errJson?.error?.message || text}` });
+        return;
+      }
+
+      data = await followUp.json();
+      message = data.choices?.[0]?.message;
+    }
+
+    const content = message?.content || '';
     sendResponse({ content });
   } catch (err) {
     sendResponse({ error: `Request failed: ${err.message}` });
   }
 }
 
-async function buildMessages(history, pageContext, pageScreenshot, systemPrompt, autoVault, vaultConnected, vaultName, vaultFilename, memoryContext) {
+async function buildMessages(history, pageContext, pageScreenshot, systemPrompt, autoVault, vaultConnected, vaultName, vaultFilename, memoryContext, webSearch) {
   const msgs = [];
 
   // Default system prompt if none set
@@ -330,7 +408,47 @@ ${autoVault ? '' : '- When auto-save is off, only write to vault if the user ask
     msgs.push({ role: msg.role, content: msg.content });
   }
 
+  if (webSearch) {
+    msgs.push({
+      role: 'system',
+      content: '## Web Search\nWhen the user asks about current events, news, weather, live sports scores, stock prices, or anything that requires up-to-date information from the internet, use the web_search tool.',
+    });
+  }
+
   return msgs;
+}
+
+// ─── Web Search ───────────────────────────────────────────────────────────────
+
+async function performWebSearch(query) {
+  try {
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${(await loadSettings()).apiKey}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': chrome.runtime.getURL('/'),
+        'X-Title': 'OpenAgent Chrome Extension',
+      },
+      body: JSON.stringify({
+        model: 'openai/gpt-4o',
+        messages: [
+          { role: 'system', content: 'You are a web search result formatter. Given a query, provide a brief summary of the top 5 search results. Format as: Query: <query>\n\nResults:\n1. Title - URL - Brief description\n2. ...\n\nIf no results found, say "No results found."' },
+          { role: 'user', content: `Search for: ${query}` },
+        ],
+        max_tokens: 1000,
+      }),
+    });
+
+    if (!response.ok) {
+      return `Search failed: HTTP ${response.status}`;
+    }
+
+    const data = await response.json();
+    return data.choices?.[0]?.message?.content || 'No search results returned.';
+  } catch (err) {
+    return `Search error: ${err.message}`;
+  }
 }
 
 // ─── Streaming ────────────────────────────────────────────────────────────────

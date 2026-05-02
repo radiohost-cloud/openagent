@@ -19,6 +19,7 @@ const state = {
   contextDebounce: null,
   vaultSavedCount: 0,
   vaultWritten: false,
+  webSearch: false,
 };
 
 const i18nStrings = {
@@ -79,6 +80,10 @@ const i18nStrings = {
     settingsChangeFolder: 'Change folder',
     settingsFontSize: 'Font size',
     settingsCurrentModel: 'Current Model',
+    settingsWebSearch: 'Web Search',
+    settingsWebSearchHint: 'Uses OpenRouter web search to find current information online.',
+    settingsOff: 'Off',
+    settingsOn: 'On',
     emptyStateSearch: '/g Google · /y YouTube · /x X.com · /w Wiki · /r Reddit · /gh GitHub · /d DuckDuckGo',
     statusScreenshotAttached: 'Screenshot attached',
     statusScreenshotFailed: 'Screenshot failed',
@@ -147,6 +152,10 @@ const i18nStrings = {
     settingsVaultApiTestFail: 'Błąd połączenia',
     settingsFontSize: 'Wielkość czcionki',
     settingsCurrentModel: 'Aktualny model',
+    settingsWebSearch: 'Wyszukiwanie w sieci',
+    settingsWebSearchHint: 'Używa wyszukiwania OpenRouter do znajdowania aktualnych informacji online.',
+    settingsOff: 'Wył',
+    settingsOn: 'Wł',
     emptyStateSearch: '/g Google · /y YouTube · /x X.com · /w Wiki · /r Reddit · /gh GitHub · /d DuckDuckGo',
     statusScreenshotAttached: 'Zrzut ekranu załączony',
     statusScreenshotFailed: 'Zrzut ekranu nieudany',
@@ -218,6 +227,10 @@ const i18nStrings = {
     settingsChangeFolder: 'Cambiar carpeta',
     settingsFontSize: 'Tamaño de fuente',
     settingsCurrentModel: 'Modelo actual',
+    settingsWebSearch: 'Búsqueda web',
+    settingsWebSearchHint: 'Usa la búsqueda web de OpenRouter para encontrar información actual en línea.',
+    settingsOff: 'Off',
+    settingsOn: 'On',
     emptyStateSearch: '/g Google · /y YouTube · /x X.com · /w Wiki · /r Reddit · /gh GitHub · /d DuckDuckGo',
     statusScreenshotAttached: 'Captura adjunta',
     statusScreenshotFailed: 'Captura fallida',
@@ -289,6 +302,10 @@ const i18nStrings = {
     settingsChangeFolder: 'Modifier le dossier',
     settingsFontSize: 'Taille de police',
     settingsCurrentModel: 'Modèle actuel',
+    settingsWebSearch: 'Recherche web',
+    settingsWebSearchHint: 'Utilise la recherche web OpenRouter pour trouver des informations actuelles en ligne.',
+    settingsOff: 'Off',
+    settingsOn: 'On',
     emptyStateSearch: '/g Google · /y YouTube · /x X.com · /w Wiki · /r Reddit · /gh GitHub · /d DuckDuckGo',
     statusScreenshotAttached: 'Capture jointe',
     statusScreenshotFailed: 'Capture échouée',
@@ -359,6 +376,10 @@ const i18nStrings = {
     settingsChangeFolder: 'Ordner ändern',
     settingsFontSize: 'Schriftgröße',
     settingsCurrentModel: 'Aktuelles Modell',
+    settingsWebSearch: 'Websuche',
+    settingsWebSearchHint: 'Nutzt die OpenRouter-Websuche um aktuelle Informationen online zu finden.',
+    settingsOff: 'Aus',
+    settingsOn: 'An',
     emptyStateSearch: '/g Google · /y YouTube · /x X.com · /w Wiki · /r Reddit · /gh GitHub · /d DuckDuckGo',
     statusScreenshotAttached: 'Screenshot angehängt',
     statusScreenshotFailed: 'Screenshot fehlgeschlagen',
@@ -430,6 +451,10 @@ const i18nStrings = {
     settingsChangeFolder: 'Изменить папку',
     settingsFontSize: 'Размер шрифта',
     settingsCurrentModel: 'Текущая модель',
+    settingsWebSearch: 'Веб-поиск',
+    settingsWebSearchHint: 'Использует веб-поиск OpenRouter для поиска актуальной информации онлайн.',
+    settingsOff: 'Выкл',
+    settingsOn: 'Вкл',
     emptyStateSearch: '/g Google · /y YouTube · /x X.com · /w Wiki · /r Reddit · /gh GitHub · /d DuckDuckGo',
     statusScreenshotAttached: 'Скриншот прикреплён',
     statusScreenshotFailed: 'Скриншот не удался',
@@ -465,6 +490,8 @@ const dom = {
   currentModelDisplay: $('#currentModelDisplay'),
   modelList: $('#modelList'),
   modelSearch: $('#modelSearch'),
+  webSearchOff: $('#webSearchOff'),
+  webSearchOn: $('#webSearchOn'),
   modelHint: $('#modelHint'),
   headerCtx: $('#headerCtx'),
   historyDrawerList: $('#historyDrawerList'),
@@ -729,6 +756,20 @@ function bindEvents() {
     sendBgMessage({ type: 'settings.save', data: { ...state.settings } }).catch(() => {});
   });
 
+  dom.webSearchOn.addEventListener('click', () => {
+    state.webSearch = true;
+    dom.webSearchOn.classList.add('active');
+    dom.webSearchOff.classList.remove('active');
+    sendBgMessage({ type: 'settings.save', data: { ...state.settings, webSearch: true } }).catch(() => {});
+  });
+
+  dom.webSearchOff.addEventListener('click', () => {
+    state.webSearch = false;
+    dom.webSearchOff.classList.add('active');
+    dom.webSearchOn.classList.remove('active');
+    sendBgMessage({ type: 'settings.save', data: { ...state.settings, webSearch: false } }).catch(() => {});
+  });
+
   dom.langSelect.addEventListener('change', () => {
     state.settings.language = dom.langSelect.value;
     applyI18n();
@@ -860,6 +901,16 @@ async function loadSettings() {
 
     const autoData = await sendBgMessage({ type: 'autovault.load' });
     state.autoVault = autoData?.autoVault || false;
+    state.webSearch = data.webSearch || false;
+
+    // Apply web search toggle UI
+    if (state.webSearch) {
+      dom.webSearchOn.classList.add('active');
+      dom.webSearchOff.classList.remove('active');
+    } else {
+      dom.webSearchOff.classList.add('active');
+      dom.webSearchOn.classList.remove('active');
+    }
 
     // Auto-connect vault if URL+token are configured
     if (state.settings.vaultApiUrl && state.settings.vaultApiToken) {
@@ -907,7 +958,7 @@ async function handleSaveSettings() {
   try {
     await sendBgMessage({
       type: 'settings.save',
-      data: { apiKey, provider: 'openrouter', model, systemPrompt, theme, preset, language, vaultApiUrl, vaultApiToken, vaultName, fontSize },
+      data: { apiKey, provider: 'openrouter', model, systemPrompt, theme, preset, language, vaultApiUrl, vaultApiToken, vaultName, fontSize, webSearch: state.webSearch },
     });
     state.settings = { ...state.settings, apiKey, provider: 'openrouter', model, systemPrompt, theme, preset, language, vaultApiUrl, vaultApiToken, vaultName, fontSize };
     dom.settingsStatus.textContent = i18n('settingsSaved');
@@ -1187,6 +1238,7 @@ async function handleSend() {
       vaultName: state.settings.vaultName,
       vaultFilename: state.currentVaultFilename,
       memoryContext: state.memoryContext,
+      webSearch: state.webSearch,
     });
 
     removeTyping();

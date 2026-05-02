@@ -90,7 +90,7 @@
 2. Enable the plugin in Obsidian settings
 3. In OpenAgent settings, expand **Obsidian Vault**
 4. Enter:
-   - **Vault name** — subfolder path within your vault (e.g. `/obsidian/` or leave empty for root)
+   - **Vault name** — subfolder path within your vault (e.g. `/obsidian`, no trailing slash — or leave empty for root)
    - **API URL** — `http://127.0.0.1:27124` (default)
    - **API Token** — from the Local REST API plugin settings
 5. Click **Test connection** — green "Connected" means it's working

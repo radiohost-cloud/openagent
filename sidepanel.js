@@ -76,7 +76,7 @@ const i18nStrings = {
     settingsVaultModeLocal: 'Local folder',
     settingsVaultName: 'Vault name',
     settingsVaultNamePlaceholder: '/obsidian/',
-    settingsVaultNameHint: 'Subfolder path within your Obsidian vault, e.g. /obsidian/',
+    settingsVaultNameHint: 'Subfolder path within your Obsidian vault, e.g. /obsidian (no trailing slash)',
     settingsVaultApiUrl: 'API URL',
     settingsVaultApiUrlPlaceholder: 'http://127.0.0.1:27124',
     settingsVaultApiToken: 'API Token',

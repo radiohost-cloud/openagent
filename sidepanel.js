@@ -672,10 +672,10 @@ function bindEvents() {
   loadCachedContext();
 
   chrome.runtime.onMessage.addListener((message) => {
-    // Only respond to context.refresh when panel is visible and tab actually changed
     if (message.type === 'context.refresh') {
       const now = Date.now();
-      if (now - lastContextTime > 3000) {
+      // Always load if no recent load (>1.5s), or if URL is different
+      if (now - lastContextTime > 1500 || message.force) {
         lastTabUrl = '';
         collectPageContext();
         lastContextTime = now;

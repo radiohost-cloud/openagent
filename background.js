@@ -17,7 +17,6 @@ const STORAGE_KEYS = {
 };
 
 const injectedTabs = new Set();
-let lastInjectedUrl = '';
 
 chrome.tabs.onActivated.addListener(async (activeInfo) => {
   if (!injectedTabs.has(activeInfo.tabId)) {
@@ -29,10 +28,7 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
 
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   if (changeInfo.status === 'complete' && tab.active && tab.url?.startsWith('http')) {
-    if (tab.url !== lastInjectedUrl) {
-      lastInjectedUrl = tab.url;
-      await notifyContextRefresh(tabId, tab.url);
-    }
+    await notifyContextRefresh(tabId, tab.url);
   }
 });
 
@@ -67,13 +63,15 @@ async function injectIntoTab(tabId) {
   injectedTabs.add(tabId);
   try {
     const tab = await chrome.tabs.get(tabId);
-    if (!tab.url || !tab.url.startsWith('http') || tab.url.startsWith('chrome')) return;
+    if (!tab.url || !tab.url.startsWith('http')) return;
+    // Don't inject into Chrome internal pages (webstore, settings, etc.)
+    if (tab.url.includes('chrome://') || tab.url.includes('chrome.google.com/webstore')) return;
     await chrome.scripting.executeScript({
       target: { tabId },
       files: ['content.js'],
     });
   } catch (err) {
-    if (err.message && !err.message.includes('Cannot access contents')) {
+    if (err.message && !err.message.includes('Cannot access contents') && !err.message.includes('gallery')) {
       console.warn('[OpenAgent] injectIntoTab: failed', tabId, err.message);
     }
   }

@@ -1228,6 +1228,7 @@ async function handleObsidianSearch(query) {
   } catch (err) {
     renderMessage('assistant', `Vault search error: ${err.message}`);
   }
+  removeTyping();
   state.isLoading = false;
 }
 

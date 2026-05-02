@@ -1581,13 +1581,23 @@ function toggleHistory() {
 
 function filterHistory(query) {
   const term = query.toLowerCase().trim();
+  if (!term) {
+    document.querySelectorAll('.history-drawer-item').forEach((el) => { el.style.display = ''; });
+    return;
+  }
+  const words = term.split(/\s+/).filter(Boolean);
   const items = document.querySelectorAll('.history-drawer-item');
   items.forEach((el) => {
-    const id = el.dataset.id || '';
-    const messages = state.conversations.find((c) => c.id === id)?.messages || [];
-    const contentMatch = messages.some((m) => (m.content || '').toLowerCase().includes(term));
-    const titleMatch = id.toLowerCase().includes(term);
-    el.style.display = (!term || titleMatch || contentMatch) ? '' : 'none';
+    const conv = state.conversations.find((c) => c.id === el.dataset.id);
+    if (!conv) { el.style.display = 'none'; return; }
+    // Check title (domain-date id)
+    const titleText = (conv.id || '').toLowerCase();
+    const titleWordMatch = words.every((w) => titleText.includes(w));
+    // Check messages
+    const msgText = (conv.messages || []).map((m) => m.content || '').join(' ').toLowerCase();
+    const msgWordMatch = words.every((w) => msgText.includes(w));
+    // Show only if ALL words match in title OR in messages
+    el.style.display = (titleWordMatch || msgWordMatch) ? '' : 'none';
   });
 }
 

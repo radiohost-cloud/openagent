@@ -670,15 +670,15 @@ async function vaultApiRead(message) {
 
   try {
     console.log('[OA] vault search:', `${url}/search/`, { query });
-    const dql = `TABLE file.path, file.ctime FROM "" WHERE contains(file.path, "${query.replace(/"/g, '\\"')}") LIMIT 50`;
+    const jsonLogic = JSON.stringify({ "glob": [`*${query}*`, "*.md"] });
     let resp = await fetch(`${url}/search/`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/vnd.olrapi.dataview.dql+txt',
+        'Content-Type': 'application/vnd.olrapi.jsonlogic+json',
         'Accept': 'application/json',
       },
-      body: dql,
+      body: jsonLogic,
     });
     console.log('[OA] vault search resp:', resp.status, resp.statusText);
 

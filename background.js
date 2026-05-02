@@ -16,11 +16,9 @@ const STORAGE_KEYS = {
   FONT_SIZE: 'openagent_font_size',
 };
 
-// ─── Auto-inject content script on page load ───────────────────────────────────
-
 const injectedTabs = new Set();
+let lastInjectedUrl = '';
 
-// Inject on tab activation only if not already injected
 chrome.tabs.onActivated.addListener(async (activeInfo) => {
   if (!injectedTabs.has(activeInfo.tabId)) {
     await injectIntoTab(activeInfo.tabId);
@@ -31,7 +29,10 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
 
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   if (changeInfo.status === 'complete' && tab.active && tab.url?.startsWith('http')) {
-    await notifyContextRefresh(tabId, tab.url);
+    if (tab.url !== lastInjectedUrl) {
+      lastInjectedUrl = tab.url;
+      await notifyContextRefresh(tabId, tab.url);
+    }
   }
 });
 
@@ -43,20 +44,8 @@ if (chrome.webNavigation && chrome.webNavigation.onCompleted) {
     }
   }, { url: [{ schemes: ['http', 'https'] }] });
 
-  // SPA navigation: notify side panel to refresh context
-  // Don't re-inject content script here — the content script already polls
-  // for URL changes and sends context.refresh on its own.
-  chrome.webNavigation.onHistoryStateUpdated.addListener(async (details) => {
-    if (!details.frameId) {
-      await notifyContextRefresh(details.tabId, details.url);
-    }
-  });
-
-  chrome.webNavigation.onReferenceFragmentUpdated.addListener(async (details) => {
-    if (!details.frameId) {
-      await notifyContextRefresh(details.tabId, details.url);
-    }
-  });
+  // SPA URL changes are detected by the content script via history API interception.
+  // It sends context.refresh on its own. No need for duplicate listeners here.
 }
 
 async function notifyContextRefresh(tabId, newUrl) {

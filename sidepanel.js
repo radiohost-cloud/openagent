@@ -672,9 +672,14 @@ function bindEvents() {
   loadCachedContext();
 
   chrome.runtime.onMessage.addListener((message) => {
+    // Only respond to context.refresh when panel is visible and tab actually changed
     if (message.type === 'context.refresh') {
-      lastTabUrl = '';
-      setTimeout(() => collectPageContext(), 800);
+      const now = Date.now();
+      if (now - lastContextTime > 3000) {
+        lastTabUrl = '';
+        collectPageContext();
+        lastContextTime = now;
+      }
     }
   });
 
@@ -1234,6 +1239,7 @@ async function handleSend() {
 // ─── Page Context ──────────────────────────────────────────────────────────────
 
 let lastTabUrl = '';
+let lastContextTime = 0;
 
 async function collectPageContext() {
   const tab = await chrome.tabs.query({ active: true, lastFocusedWindow: true }).then(t => t[0]).catch(() => null);

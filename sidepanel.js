@@ -1220,7 +1220,7 @@ async function handleObsidianSearch(query) {
     if (result?.error) {
       renderMessage('assistant', `Vault search failed: ${result.error}`);
     } else if (result?.notes?.length > 0) {
-      const lines = result.notes.map((n) => `**${n.filename}**\n${(n.content || '').slice(0, 500)}`).join('\n\n---\n\n');
+      const lines = result.notes.map((n) => `**${n.displayFilename || n.filename}**\n${(n.content || '').slice(0, 500)}`).join('\n\n---\n\n');
       renderMessage('assistant', `Found ${result.notes.length} note(s):\n\n${lines}`);
     } else {
       renderMessage('assistant', `No results found for "${query}" in vault.`);

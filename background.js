@@ -691,8 +691,10 @@ async function vaultApiRead(message) {
     for (const item of files) {
       if (notes.length >= (limit || 20)) break;
       const filename = item.filename || '';
-      const path = filename;
       if (!filename || !filename.endsWith('.md')) continue;
+      const displayFilename = vaultPrefix && filename.startsWith(vaultPrefix + '/')
+        ? filename.slice(vaultPrefix.length + 1)
+        : filename;
 
       try {
         const fileResp = await fetch(url + '/vault/' + encodeURIComponent(filename), {
@@ -700,7 +702,7 @@ async function vaultApiRead(message) {
         });
         if (fileResp.ok) {
           const fileContent = await fileResp.text();
-          notes.push({ filename, content: fileContent || '' });
+          notes.push({ filename, displayFilename, content: fileContent || '' });
         }
       } catch {}
     }

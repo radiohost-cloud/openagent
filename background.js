@@ -673,14 +673,10 @@ async function vaultApiRead(message) {
       ? `${url}/search/`
       : `${url}/vault${vaultPath}?limit=${limit || 20}`;
 
-    console.log('[OA] vault search:', searchUrl, { query, token: token ? '***' : 'empty' });
-    const resp = query
-      ? await fetch(`${url}/search/simple/?query=${encodeURIComponent(query)}`, {
-          headers: { 'Authorization': `Bearer ${token}` },
-        })
-      : await fetch(searchUrl, {
-          headers: { 'Authorization': `Bearer ${token}` },
-        });
+    console.log('[OA] vault search:', `${url}/search/simple/?query=${encodeURIComponent(query)}`);
+    const resp = await fetch(`${url}/search/simple/?query=${encodeURIComponent(query)}`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
     console.log('[OA] vault search resp:', resp.status, resp.statusText);
 
     if (!resp.ok) {

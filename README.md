@@ -38,6 +38,7 @@
   - `/r query` — Reddit
   - `/gh query` — GitHub
   - `/d query` — DuckDuckGo
+  - `/o query` — Obsidian vault (searches your vault notes)
 
 ### 🤖 Browser Automation
 - **Instruct the AI** to click, type, scroll, or navigate — the AI controls the browser for you

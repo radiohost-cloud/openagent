@@ -1590,7 +1590,6 @@ function filterHistory(query) {
   items.forEach((el) => {
     const elId = el.dataset.id;
     const conv = state.conversations.find((c) => c.id === elId);
-    console.log('[OA] filter:', elId, 'search:', term, 'found:', !!conv);
     if (!conv) { el.style.display = 'none'; return; }
     // Check title (domain-date id)
     const titleText = (conv.id || '').toLowerCase();

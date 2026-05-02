@@ -689,7 +689,7 @@ async function vaultApiRead(message) {
     }
 
     const data = await resp.json();
-    console.log('[OA] vault search data:', JSON.stringify(data).slice(0, 300));
+    console.log('[OA] vault search data FULL:', JSON.stringify(data));
     const files = Array.isArray(data) ? data : (data.files || data.results || []);
     const notes = [];
 

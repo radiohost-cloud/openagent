@@ -33,6 +33,7 @@ const i18nStrings = {
     statusPageContextLoaded: 'Page context loaded',
     statusVaultReady: 'Vault ready',
     statusVaultNotSet: 'Select vault folder in Settings',
+    statusVaultDisconnected: 'Obsidian vault not connected',
     settingsTitle: 'Settings',
     settingsApiKey: 'API Key',
     settingsApiKeyPlaceholder: 'sk-or-...',
@@ -84,7 +85,7 @@ const i18nStrings = {
     settingsWebSearchHint: 'Uses OpenRouter web search to find current information online.',
     settingsOff: 'Off',
     settingsOn: 'On',
-    emptyStateSearch: '/g Google · /y YouTube · /x X.com · /w Wiki · /r Reddit · /gh GitHub · /d DuckDuckGo',
+    emptyStateSearch: '/g Google · /y YouTube · /x X.com · /w Wiki · /r Reddit · /gh GitHub · /d DuckDuckGo · /o Obsidian',
     statusScreenshotAttached: 'Screenshot attached',
     statusScreenshotFailed: 'Screenshot failed',
     statusScreenshotSkipped: 'Screenshot skipped',
@@ -108,6 +109,7 @@ const i18nStrings = {
     statusPageContextLoaded: 'Kontekst strony wczytany',
     statusVaultReady: 'Magazyn gotowy',
     statusVaultNotSet: 'Wybierz folder magazynu w Ustawieniach',
+    statusVaultDisconnected: 'Magazyn Obsidian nie jest połączony',
     settingsTitle: 'Ustawienia',
     settingsApiKey: 'Klucz API',
     settingsApiKeyPlaceholder: 'sk-or-...',
@@ -157,7 +159,7 @@ const i18nStrings = {
     settingsWebSearchHint: 'Używa wyszukiwania OpenRouter do znajdowania aktualnych informacji online.',
     settingsOff: 'Wył',
     settingsOn: 'Wł',
-    emptyStateSearch: '/g Google · /y YouTube · /x X.com · /w Wiki · /r Reddit · /gh GitHub · /d DuckDuckGo',
+    emptyStateSearch: '/g Google · /y YouTube · /x X.com · /w Wiki · /r Reddit · /gh GitHub · /d DuckDuckGo · /o Obsidian',
     statusScreenshotAttached: 'Zrzut ekranu załączony',
     statusScreenshotFailed: 'Zrzut ekranu nieudany',
     statusScreenshotSkipped: 'Zrzut ekranu pominięty',
@@ -180,6 +182,7 @@ const i18nStrings = {
     statusPageContextLoaded: 'Contexto de página cargado',
     statusVaultReady: 'Almacén listo',
     statusVaultNotSet: 'Selecciona carpeta del almacén en Ajustes',
+    statusVaultDisconnected: 'Almacén de Obsidian no conectado',
     settingsTitle: 'Ajustes',
     settingsApiKey: 'Clave API',
     settingsApiKeyPlaceholder: 'sk-or-...',
@@ -233,7 +236,7 @@ const i18nStrings = {
     settingsWebSearchHint: 'Usa la búsqueda web de OpenRouter para encontrar información actual en línea.',
     settingsOff: 'Off',
     settingsOn: 'On',
-    emptyStateSearch: '/g Google · /y YouTube · /x X.com · /w Wiki · /r Reddit · /gh GitHub · /d DuckDuckGo',
+    emptyStateSearch: '/g Google · /y YouTube · /x X.com · /w Wiki · /r Reddit · /gh GitHub · /d DuckDuckGo · /o Obsidian',
     statusScreenshotAttached: 'Captura adjunta',
     statusScreenshotFailed: 'Captura fallida',
     statusScreenshotSkipped: 'Captura omitida',
@@ -256,6 +259,7 @@ const i18nStrings = {
     statusPageContextLoaded: 'Contexte de la page chargé',
     statusVaultReady: 'Coffre prêt',
     statusVaultNotSet: 'Sélectionnez le dossier du coffre dans les Paramètres',
+    statusVaultDisconnected: "Coffre Obsidian non connecté",
     settingsTitle: 'Paramètres',
     settingsApiKey: 'Clé API',
     settingsApiKeyPlaceholder: 'sk-or-...',
@@ -309,7 +313,7 @@ const i18nStrings = {
     settingsWebSearchHint: 'Utilise la recherche web OpenRouter pour trouver des informations actuelles en ligne.',
     settingsOff: 'Off',
     settingsOn: 'On',
-    emptyStateSearch: '/g Google · /y YouTube · /x X.com · /w Wiki · /r Reddit · /gh GitHub · /d DuckDuckGo',
+    emptyStateSearch: '/g Google · /y YouTube · /x X.com · /w Wiki · /r Reddit · /gh GitHub · /d DuckDuckGo · /o Obsidian',
     statusScreenshotAttached: 'Capture jointe',
     statusScreenshotFailed: 'Capture échouée',
     statusScreenshotSkipped: 'Capture omise',
@@ -331,6 +335,7 @@ const i18nStrings = {
     statusPageContextLoaded: 'Seitenkontext geladen',
     statusVaultReady: 'Tresor bereit',
     statusVaultNotSet: 'Tresor-Ordner in Einstellungen auswählen',
+    statusVaultDisconnected: 'Obsidian-Tresor nicht verbunden',
     settingsTitle: 'Einstellungen',
     settingsApiKey: 'API-Schlüssel',
     settingsApiKeyPlaceholder: 'sk-or-...',
@@ -384,7 +389,7 @@ const i18nStrings = {
     settingsWebSearchHint: 'Nutzt die OpenRouter-Websuche um aktuelle Informationen online zu finden.',
     settingsOff: 'Aus',
     settingsOn: 'An',
-    emptyStateSearch: '/g Google · /y YouTube · /x X.com · /w Wiki · /r Reddit · /gh GitHub · /d DuckDuckGo',
+    emptyStateSearch: '/g Google · /y YouTube · /x X.com · /w Wiki · /r Reddit · /gh GitHub · /d DuckDuckGo · /o Obsidian',
     statusScreenshotAttached: 'Screenshot angehängt',
     statusScreenshotFailed: 'Screenshot fehlgeschlagen',
     statusScreenshotSkipped: 'Screenshot übersprungen',
@@ -407,6 +412,7 @@ const i18nStrings = {
     statusPageContextLoaded: 'Контекст страницы загружен',
     statusVaultReady: 'Хранилище готово',
     statusVaultNotSet: 'Выберите папку хранилища в Настройках',
+    statusVaultDisconnected: 'Хранилище Obsidian не подключено',
     settingsTitle: 'Настройки',
     settingsApiKey: 'API-ключ',
     settingsApiKeyPlaceholder: 'sk-or-...',
@@ -460,7 +466,7 @@ const i18nStrings = {
     settingsWebSearchHint: 'Использует веб-поиск OpenRouter для поиска актуальной информации онлайн.',
     settingsOff: 'Выкл',
     settingsOn: 'Вкл',
-    emptyStateSearch: '/g Google · /y YouTube · /x X.com · /w Wiki · /r Reddit · /gh GitHub · /d DuckDuckGo',
+    emptyStateSearch: '/g Google · /y YouTube · /x X.com · /w Wiki · /r Reddit · /gh GitHub · /d DuckDuckGo · /o Obsidian',
     statusScreenshotAttached: 'Скриншот прикреплён',
     statusScreenshotFailed: 'Скриншот не удался',
     statusScreenshotSkipped: 'Скриншот пропущен',
@@ -1192,6 +1198,34 @@ function extractSearchIntent(text) {
   return null;
 }
 
+async function handleObsidianSearch(query) {
+  if (!state.vaultConnected) {
+    setStatus(i18n('statusVaultDisconnected'), 'error');
+    return;
+  }
+  dom.input.value = '';
+  dom.input.style.height = 'auto';
+  state.messages.push({ role: 'user', content: `/o ${query}`, domain: state.currentDomain });
+  renderMessage('user', `/o ${query}`);
+  showTyping();
+  state.isLoading = true;
+
+  try {
+    const result = await vaultReadFiles(query, 10);
+    if (result?.error) {
+      renderMessage('assistant', `Vault search failed: ${result.error}`);
+    } else if (result?.notes?.length > 0) {
+      const lines = result.notes.map((n) => `**${n.filename}**\n${(n.content || '').slice(0, 500)}`).join('\n\n---\n\n');
+      renderMessage('assistant', `Found ${result.notes.length} note(s):\n\n${lines}`);
+    } else {
+      renderMessage('assistant', `No results found for "${query}" in vault.`);
+    }
+  } catch (err) {
+    renderMessage('assistant', `Vault search error: ${err.message}`);
+  }
+  state.isLoading = false;
+}
+
 async function handleSend() {
   const text = dom.input.value.trim();
   if (!text || state.isLoading) return;
@@ -1199,6 +1233,13 @@ async function handleSend() {
   if (!state.settings.apiKey) {
     toggleModal(true);
     setStatus(i18n('statusApiKeyNeeded'), 'error');
+    return;
+  }
+
+  // /o — search Obsidian vault
+  const obsidianMatch = text.trim().match(/^\/o\s+(.+)/i);
+  if (obsidianMatch) {
+    await handleObsidianSearch(obsidianMatch[1].trim());
     return;
   }
 

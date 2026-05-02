@@ -42,6 +42,13 @@
 ### 🤖 Browser Automation
 - **Instruct the AI** to click, type, scroll, or navigate — the AI controls the browser for you
 
+### 🌐 Web Search
+- **Real-time web search** — toggle Web Search in Settings to enable OpenRouter's server-side search tool
+- The AI decides when to search (news, weather, current events, live scores, stock prices, etc.)
+- Results come back with citations and are processed by the model in context
+- Visual indicator on the input field shows when Web Search is active (accent color glow)
+- Configurable via `tools: [{ type: "openrouter:web_search" }]` — no extra API keys needed
+
 ### 📁 Obsidian Integration
 - **Auto-save conversations** — every message is automatically appended to a session note in your vault
 - **Session notes** — notes are named after the website domain and date (e.g. `github-com-2026-05-01.md`)

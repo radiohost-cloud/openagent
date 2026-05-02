@@ -475,6 +475,7 @@ const $ = (sel) => document.querySelector(sel);
 
 const dom = {
   messages: $('#messages'),
+  inputWrapper: $('.input-wrapper'),
   input: $('#input'),
   sendBtn: $('#sendBtn'),
   collectBtn: $('#collectBtn'),
@@ -760,6 +761,7 @@ function bindEvents() {
     state.webSearch = true;
     dom.webSearchOn.classList.add('active');
     dom.webSearchOff.classList.remove('active');
+    dom.inputWrapper.classList.add('web-search-active');
     sendBgMessage({ type: 'settings.save', data: { ...state.settings, webSearch: true } }).catch(() => {});
   });
 
@@ -767,6 +769,7 @@ function bindEvents() {
     state.webSearch = false;
     dom.webSearchOff.classList.add('active');
     dom.webSearchOn.classList.remove('active');
+    dom.inputWrapper.classList.remove('web-search-active');
     sendBgMessage({ type: 'settings.save', data: { ...state.settings, webSearch: false } }).catch(() => {});
   });
 
@@ -907,9 +910,11 @@ async function loadSettings() {
     if (state.webSearch) {
       dom.webSearchOn.classList.add('active');
       dom.webSearchOff.classList.remove('active');
+      if (dom.inputWrapper) dom.inputWrapper.classList.add('web-search-active');
     } else {
       dom.webSearchOff.classList.add('active');
       dom.webSearchOn.classList.remove('active');
+      if (dom.inputWrapper) dom.inputWrapper.classList.remove('web-search-active');
     }
 
     // Auto-connect vault if URL+token are configured

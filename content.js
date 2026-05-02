@@ -1,9 +1,10 @@
 // content.js - Chrome Extension Content Script
 // Collects page context and performs browser automation
 
-const HTTPS_RE = /^https?:\/\//;
 (function () {
-  const domElementRefs = new Map();
+'use strict';
+const HTTPS_RE = /^https?:\/\//;
+const domElementRefs = new Map();
   window.addEventListener('unload', () => { domElementRefs.clear(); });
 
   function safeSend(msg) {

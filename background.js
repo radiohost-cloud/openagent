@@ -733,7 +733,6 @@ async function vaultApiWrite(message) {
     const writeContent = existing && append ? (existing + '\n\n---\n\n' + content) : content;
     const writeResp = await fetch(url + '/vault/' + encodeURIComponent(fullPath), {
       method: 'PUT',
-      method,
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'text/plain',

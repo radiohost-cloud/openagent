@@ -22,12 +22,12 @@ const state = {
 };
 
 // Shared utilities
-const HTTPS_RE = /^https?:\/\//;
 const formatDate = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 const formatTime = (d) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 const HTML_ESCAPE = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 const HTML_ESCAPE_RE = /[&<>"']/g;
 const escapeHtml = (str) => String(str).replace(HTML_ESCAPE_RE, (m) => HTML_ESCAPE[m]);
+const HTTPS_RE = /^https?:\/\//;
 
 const i18nStrings = {
   en: {

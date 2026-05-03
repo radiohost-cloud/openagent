@@ -767,10 +767,15 @@ async function vaultApiWrite(message) {
 
     if (needsFrontmatter || appending) {
       const date = new Date().toISOString().split('T')[0];
-      const modelTag = model ? model.split('/').pop().replace(/-(?:2024|2025)[0-9]*/g, '') : '';
-      const tags = ['#openagent', `#${provider || 'openrouter'}`, modelTag ? `#${modelTag}` : ''].filter(Boolean).join(' ');
+      const modelTag = model ? model.split('/').pop().replace(/-(?:2024|2025)[0-9]*/g, '').replace(/[^a-zA-Z0-9]/g, '-') : '';
+      const domainTag = domain ? domain.replace(/[^a-zA-Z0-9]/g, '-') : '';
+      const tagParts = ['openagent'];
+      if (domainTag) tagParts.push(domainTag);
+      tagParts.push(provider || 'openrouter');
+      if (modelTag) tagParts.push(modelTag);
+      const tags = tagParts.join(', ');
       const urlsYaml = urlsList.length > 0 ? '\nurls:\n' + urlsList.map(u => `  - ${u}`).join('\n') + '\n' : '';
-      frontmatter = `---\nurl: ${newUrl}\nmodel: ${model || 'unknown'}\nprovider: ${provider || 'openrouter'}\ndate: ${date}${urlsYaml}${tags ? `\ntags: ${tags}` : ''}\n---\n\n`;
+      frontmatter = `---\nurl: ${newUrl}\nmodel: ${model || 'unknown'}\nprovider: ${provider || 'openrouter'}\ndate: ${date}${urlsYaml}${tags ? `tags: [${tags}]\n` : ''}---\n\n`;
     }
 
     const writeContent = appending ? (frontmatter + existingBody + '\n\n---\n\n' + content) : (frontmatter + content);

@@ -734,14 +734,46 @@ async function vaultApiWrite(message) {
 
     let frontmatter = '';
     const needsFrontmatter = (!append || !existing) && sourceUrl && !existing?.startsWith('---');
-    if (needsFrontmatter) {
+    const appending = append && existing;
+
+    // Extract existing frontmatter fields
+    let existingUrl = '';
+    let existingUrls = [];
+    let existingBody = existing || '';
+    if (existing?.startsWith('---')) {
+      const endMatch = existing.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/);
+      if (endMatch) {
+        existingBody = endMatch[2];
+        const fmLines = endMatch[1].split('\n');
+        for (const line of fmLines) {
+          const urlMatch = line.match(/^url:\s*(.+)/);
+          if (urlMatch) existingUrl = urlMatch[1].trim();
+          const urlsMatch = line.match(/^urls:\s*$/);
+          if (urlsMatch) {
+            const idx = fmLines.indexOf(line);
+            for (let i = idx + 1; i < fmLines.length; i++) {
+              if (fmLines[i].match(/^\s+-/)) {
+                existingUrls.push(fmLines[i].replace(/^\s+-\s*/, '').trim());
+              } else break;
+            }
+          }
+        }
+      }
+    }
+
+    const domain = (() => { try { return new URL(sourceUrl).hostname.replace(/^www\./, ''); } catch { return ''; } })();
+    const newUrl = domain || existingUrl;
+    const urlsList = appending && sourceUrl ? [...new Set([...existingUrls, sourceUrl])] : (sourceUrl ? [sourceUrl] : existingUrls);
+
+    if (needsFrontmatter || appending) {
       const date = new Date().toISOString().split('T')[0];
       const modelTag = model ? model.split('/').pop().replace(/-(?:2024|2025)[0-9]*/g, '') : '';
       const tags = ['#openagent', `#${provider || 'openrouter'}`, modelTag ? `#${modelTag}` : ''].filter(Boolean).join(' ');
-      frontmatter = `---\nsource: ${sourceUrl}\nmodel: ${model || 'unknown'}\nprovider: ${provider || 'openrouter'}\ndate: ${date}\n${tags ? `tags: ${tags}\n` : ''}---\n\n`;
+      const urlsYaml = urlsList.length > 0 ? '\nurls:\n' + urlsList.map(u => `  - ${u}`).join('\n') + '\n' : '';
+      frontmatter = `---\nurl: ${newUrl}\nmodel: ${model || 'unknown'}\nprovider: ${provider || 'openrouter'}\ndate: ${date}${urlsYaml}${tags ? `\ntags: ${tags}` : ''}\n---\n\n`;
     }
 
-    const writeContent = existing && append ? (existing + '\n\n---\n\n' + content) : (frontmatter + content);
+    const writeContent = appending ? (frontmatter + existingBody + '\n\n---\n\n' + content) : (frontmatter + content);
     const writeResp = await fetch(url + '/vault/' + encodeURIComponent(fullPath), {
       method: 'PUT',
       headers: {

@@ -783,7 +783,6 @@ async function vaultApiWrite(message) {
       const tags = tagParts.join(', ');
       const urlsYaml = urlsList.length > 0 ? '\nurls:\n' + urlsList.map(u => `  - ${u}`).join('\n') + '\n' : '';
       const finalIntent = intent || existingIntent;
-      console.log('[BG] finalIntent:', finalIntent, '| intent:', intent, '| existingIntent:', existingIntent, '| append:', append, '| rewriteExisting:', rewriteExisting);
       frontmatter = `---\nurl: ${newUrl}\nmodel: ${model || 'unknown'}\nprovider: ${provider || 'openrouter'}\ndate: ${date}${finalIntent ? `\nintent: ${finalIntent}` : ''}${urlsYaml}${tags ? `tags: [${tags}]\n` : ''}---\n\n`;
     }
 

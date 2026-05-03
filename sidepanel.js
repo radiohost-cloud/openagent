@@ -798,6 +798,15 @@ function bindEvents() {
             dom.messages.scrollTop = dom.messages.scrollHeight;
           });
           setStatus(i18n('statusScreenshotAttached'), 'success');
+          // Create vault note immediately if this is the first message
+          if (state.autoVault && state.vaultConnected && !state.currentVaultFilename) {
+            state.currentVaultFilename = getOrCreateSessionFilename();
+          }
+          if (state.autoVault && state.vaultConnected && state.currentVaultFilename && !state.vaultWritten) {
+            forceCreateVaultNote().catch((err) => console.error('[SP] auto-vault error:', err));
+          } else if (state.autoVault && state.vaultConnected && state.currentVaultFilename) {
+            saveAutoVaultNote().catch((err) => console.error('[SP] auto-vault error:', err));
+          }
         };
         reader.onerror = () => {
           renderMessage('error', i18n('msgPasteImageError'));
@@ -1370,13 +1379,60 @@ async function handleSend() {
       state.pageScreenshot = null;
       state.pastedImage = null;
     } else if (screenshotToSend && !modelSupportsVision(model)) {
-      // Show info message but still send screenshot (it will be saved to vault)
+      // Model doesn't support vision — show info but send text without image
       const infoMsg = i18n('msgScreenshotSaved');
       removeTyping();
-      renderMessage('error', infoMsg);
+      renderMessage('info', infoMsg);
       state.isLoading = false;
       dom.sendBtn.disabled = false;
-      // Don't return — still proceed so screenshot gets saved to vault and history
+      // Send the message without the screenshot so AI can still respond
+      const textOnlyMessages = state.messages.map((m) => {
+        if (m.content === '[screenshot]') {
+          return { ...m, content: '[Screenshot omitted — model lacks vision support]' };
+        }
+        return m;
+      });
+      const response = await sendBgMessage({
+        type: 'prompt.send',
+        conversationHistory: textOnlyMessages,
+        pageContext: state.pageContext,
+        pageScreenshot: null, // Don't send image
+        autoVault: state.autoVault,
+        vaultConnected: state.vaultConnected,
+        vaultApiUrl: state.settings.vaultApiUrl,
+        vaultName: state.settings.vaultName,
+        vaultFilename: state.currentVaultFilename,
+        memoryContext: state.memoryContext,
+        webSearch: state.webSearch,
+        vaultIntent: state.vaultIntent,
+      });
+      removeTyping();
+      state.pageScreenshot = null;
+      state.pastedImage = null;
+      if (response.error) {
+        renderMessage('error', response.error);
+      } else {
+        const content = response.content || '';
+        const { readResults, writeResults, errors } = await processVaultToolCalls(content);
+        let finalContent = content;
+        if (errors.length > 0) finalContent += '\n\n**Vault errors:**\n' + errors.join('\n');
+        if (writeResults.length > 0) {
+          const confirmed = writeResults.map((p) => `✓ Saved: ${p.split('/').pop()}`).join('\n');
+          finalContent = content.replace(/<vault_write[^>]*>[\s\S]*?<\/vault_write>/gi, '');
+          finalContent += '\n\n' + confirmed;
+        }
+        if (readResults.length > 0) {
+          finalContent += '\n\n**From vault:**\n' + readResults.map((n) => `## ${n.filename}\n${n.content}`).join('\n\n---\n\n');
+        }
+        state.messages.push({ role: 'assistant', content: finalContent, domain: state.currentDomain });
+        renderMessage('assistant', finalContent);
+        if (state.autoVault && state.vaultConnected) saveAutoVaultNote().catch((err) => console.error('[SP] auto-vault error:', err));
+        saveConversation();
+        processConversationEnd().catch((err) => console.error('[SP] memory process error:', err));
+      }
+      state.isLoading = false;
+      dom.sendBtn.disabled = false;
+      return;
     }
 
     const response = await sendBgMessage({
@@ -1550,6 +1606,16 @@ async function takeScreenshot() {
     // Track screenshot as user message for history
     state.messages.push({ role: 'user', content: '[screenshot]', domain: state.currentDomain, imageData: data.dataUrl });
     dom.messages.scrollTop = dom.messages.scrollHeight;
+
+    // Create vault note immediately if this is the first message
+    if (state.autoVault && state.vaultConnected && !state.currentVaultFilename) {
+      state.currentVaultFilename = getOrCreateSessionFilename();
+    }
+    if (state.autoVault && state.vaultConnected && state.currentVaultFilename && !state.vaultWritten) {
+      forceCreateVaultNote().catch((err) => console.error('[SP] auto-vault error:', err));
+    } else if (state.autoVault && state.vaultConnected && state.currentVaultFilename) {
+      saveAutoVaultNote().catch((err) => console.error('[SP] auto-vault error:', err));
+    }
   } catch (err) {
     setStatus(i18n('statusScreenshotFailed') + ': ' + err.message, 'error');
   }
@@ -2153,6 +2219,35 @@ async function processVaultToolCalls(messageContent) {
 }
 
 // ─── Auto Vault Note ───────────────────────────────────────────────────────────
+
+// Creates or overwrites the vault note with current messages (for first-screenshot scenarios)
+async function forceCreateVaultNote() {
+  if (!state.autoVault || !state.vaultConnected || !state.currentVaultFilename) return;
+  if (state.messages.length === 0) return;
+
+  const pageUrl = state.pageContext?.metadata?.url || state.pageContext?.url || '';
+  const date = new Date();
+  const dateStr = formatDate(date);
+  const timeStr = formatTime(date);
+
+  const lines = [`# Session — ${dateStr} ${timeStr}`, pageUrl ? `**URL:** ${pageUrl}` : ''];
+  for (const msg of state.messages) {
+    if (msg.content === '[screenshot]' && msg.imageData) {
+      lines.push(`\n**You**:\n![screenshot](${msg.imageData})`);
+      continue;
+    }
+    const role = msg.role === 'user' ? '**You**' : '**OpenAgent**';
+    let text = (msg.content || '').replace(/<vault_write[^>]*>[\s\S]*?<\/vault_write>/gi, '').replace(/<vault_read[^>]*\/>/gi, '').replace(/\*\*From vault:\*\*[\s\S]*/gi, '').replace(/^✓ Saved:.*$/gm, '').trim();
+    if (text) lines.push(`\n${role}:\n${text}`);
+  }
+  lines.push('\n---\n*OpenAgent Chrome Extension*');
+
+  const content = lines.join('\n');
+  const result = await vaultWrite(state.currentVaultFilename, content);
+  if (result?.error) return;
+  state.vaultWritten = true;
+  state.vaultSavedCount = state.messages.length;
+}
 
 async function saveAutoVaultNote() {
   if (!state.autoVault || !state.vaultConnected) return;

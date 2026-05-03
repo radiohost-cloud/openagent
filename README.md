@@ -58,6 +58,29 @@
 - **Remote access** — works over Local REST API, no need to have Obsidian open on the same machine
 - **Requires:** Obsidian desktop app + [Local REST API plugin](https://obsidian.md/plugins?id=obsidian-local-rest-api)
 
+#### Intent Field
+
+Each session note includes an `intent` field in the YAML frontmatter. This is a short summary of your conversation purpose — auto-generated from your first message but also manually settable.
+
+- **Auto-generated** — The first message you send is automatically extracted (up to 200 characters) and saved as `intent:` in the note's frontmatter. For example, sending *"How do I use git rebase?"* creates `intent: How do I use git rebase`
+- **Update with /i** — Type `/i your new intent` in the chat to overwrite the intent without sending a message. The note updates immediately and the AI sees the new intent in context
+- **Persists across appends** — Within a session, subsequent messages append to the note without changing intent. The `/i` command is the only way to change it during conversation
+- **Obsidian filters** — Since `intent` is a frontmatter field, you can filter and search your vault by it (e.g., Dataview queries: `TABLE intent FROM "obsidian" WHERE intent`) to find notes by topic across your vault
+
+Example frontmatter:
+```yaml
+---
+url: github.com
+model: anthropic/claude-3.5-sonnet
+provider: openrouter
+date: 2026-05-03
+intent: How do I use git rebase
+urls:
+  - https://github.com/git/git
+tags: [openagent, github-com, openrouter, claude-3-5-sonnet]
+---
+```
+
 ### 🎨 Customization
 - **14 color presets** — dark and light themes
 - **Adjustable font size** — small, medium, large

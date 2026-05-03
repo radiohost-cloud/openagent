@@ -1270,11 +1270,12 @@ async function handleSend() {
     dom.input.style.height = 'auto';
     state.isLoading = false;
     dom.sendBtn.disabled = false;
-    // Rewrite frontmatter with new intent (read existing body, rewrite with new intent)
+    // Rewrite frontmatter with new intent (no new content)
     if (state.currentVaultFilename) {
-      console.log('[SP] /i updating intent:', state.vaultIntent, 'filename:', state.currentVaultFilename);
       vaultWrite(state.currentVaultFilename, '', false).catch(() => {});
     }
+    state.messages.push({ role: 'assistant', content: `Intent updated: ${state.vaultIntent}`, domain: state.currentDomain });
+    renderMessage('assistant', `Intent updated: ${state.vaultIntent}`);
     return;
   }
 

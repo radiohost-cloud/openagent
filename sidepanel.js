@@ -597,13 +597,15 @@ async function vaultApiWrite(filename, content, append) {
   // Route through background service worker to bypass CORS restrictions
   try {
     const sourceUrl = state.pageContext?.url || state.pageContext?.metadata?.url || '';
-    // Only set intent on first write (append=false); for appends, backend uses existingIntent from file
-    const intent = append ? undefined : (() => {
+    const intent = (() => {
       if (state.vaultIntent) return state.vaultIntent;
-      const firstUser = state.messages.find((m) => m.role === 'user');
-      const extracted = firstUser ? (firstUser.content || '').replace(/^<[^>]+>\s*/, '').replace(/\n.+$/s, '').trim().slice(0, 200) : '';
-      if (extracted) state.vaultIntent = extracted;
-      return extracted;
+      if (!append) {
+        const firstUser = state.messages.find((m) => m.role === 'user');
+        const extracted = firstUser ? (firstUser.content || '').replace(/^<[^>]+>\s*/, '').replace(/\n.+$/s, '').trim().slice(0, 200) : '';
+        if (extracted) state.vaultIntent = extracted;
+        return extracted;
+      }
+      return undefined;
     })();
     const result = await sendBgMessage({
       type: 'vault.api.write',

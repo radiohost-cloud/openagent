@@ -19,6 +19,7 @@ const state = {
   vaultSavedCount: 0,
   vaultWritten: false,
   webSearch: false,
+  vaultIntent: null,
 };
 
 // Shared utilities
@@ -92,7 +93,7 @@ const i18nStrings = {
     settingsWebSearchHint: 'Uses OpenRouter web search to find current information online.',
     settingsOff: 'Off',
     settingsOn: 'On',
-    emptyStateSearch: '/g Google · /y YouTube · /x X.com · /w Wiki · /r Reddit · /gh GitHub · /d DuckDuckGo · /o Obsidian',
+    emptyStateSearch: '/g Google · /y YouTube · /x X.com · /w Wiki · /r Reddit · /gh GitHub · /d DuckDuckGo · /o Obsidian · /i Intent',
     statusScreenshotAttached: 'Screenshot attached',
     statusScreenshotFailed: 'Screenshot failed',
     statusScreenshotSkipped: 'Screenshot skipped',
@@ -166,7 +167,7 @@ const i18nStrings = {
     settingsWebSearchHint: 'Używa wyszukiwania OpenRouter do znajdowania aktualnych informacji online.',
     settingsOff: 'Wył',
     settingsOn: 'Wł',
-    emptyStateSearch: '/g Google · /y YouTube · /x X.com · /w Wiki · /r Reddit · /gh GitHub · /d DuckDuckGo · /o Obsidian',
+    emptyStateSearch: '/g Google · /y YouTube · /x X.com · /w Wiki · /r Reddit · /gh GitHub · /d DuckDuckGo · /o Obsidian · /i Intent',
     statusScreenshotAttached: 'Zrzut ekranu załączony',
     statusScreenshotFailed: 'Zrzut ekranu nieudany',
     statusScreenshotSkipped: 'Zrzut ekranu pominięty',
@@ -243,7 +244,7 @@ const i18nStrings = {
     settingsWebSearchHint: 'Usa la búsqueda web de OpenRouter para encontrar información actual en línea.',
     settingsOff: 'Off',
     settingsOn: 'On',
-    emptyStateSearch: '/g Google · /y YouTube · /x X.com · /w Wiki · /r Reddit · /gh GitHub · /d DuckDuckGo · /o Obsidian',
+    emptyStateSearch: '/g Google · /y YouTube · /x X.com · /w Wiki · /r Reddit · /gh GitHub · /d DuckDuckGo · /o Obsidian · /i Intent',
     statusScreenshotAttached: 'Captura adjunta',
     statusScreenshotFailed: 'Captura fallida',
     statusScreenshotSkipped: 'Captura omitida',
@@ -320,7 +321,7 @@ const i18nStrings = {
     settingsWebSearchHint: 'Utilise la recherche web OpenRouter pour trouver des informations actuelles en ligne.',
     settingsOff: 'Off',
     settingsOn: 'On',
-    emptyStateSearch: '/g Google · /y YouTube · /x X.com · /w Wiki · /r Reddit · /gh GitHub · /d DuckDuckGo · /o Obsidian',
+    emptyStateSearch: '/g Google · /y YouTube · /x X.com · /w Wiki · /r Reddit · /gh GitHub · /d DuckDuckGo · /o Obsidian · /i Intent',
     statusScreenshotAttached: 'Capture jointe',
     statusScreenshotFailed: 'Capture échouée',
     statusScreenshotSkipped: 'Capture omise',
@@ -396,7 +397,7 @@ const i18nStrings = {
     settingsWebSearchHint: 'Nutzt die OpenRouter-Websuche um aktuelle Informationen online zu finden.',
     settingsOff: 'Aus',
     settingsOn: 'An',
-    emptyStateSearch: '/g Google · /y YouTube · /x X.com · /w Wiki · /r Reddit · /gh GitHub · /d DuckDuckGo · /o Obsidian',
+    emptyStateSearch: '/g Google · /y YouTube · /x X.com · /w Wiki · /r Reddit · /gh GitHub · /d DuckDuckGo · /o Obsidian · /i Intent',
     statusScreenshotAttached: 'Screenshot angehängt',
     statusScreenshotFailed: 'Screenshot fehlgeschlagen',
     statusScreenshotSkipped: 'Screenshot übersprungen',
@@ -473,7 +474,7 @@ const i18nStrings = {
     settingsWebSearchHint: 'Использует веб-поиск OpenRouter для поиска актуальной информации онлайн.',
     settingsOff: 'Выкл',
     settingsOn: 'Вкл',
-    emptyStateSearch: '/g Google · /y YouTube · /x X.com · /w Wiki · /r Reddit · /gh GitHub · /d DuckDuckGo · /o Obsidian',
+    emptyStateSearch: '/g Google · /y YouTube · /x X.com · /w Wiki · /r Reddit · /gh GitHub · /d DuckDuckGo · /o Obsidian · /i Intent',
     statusScreenshotAttached: 'Скриншот прикреплён',
     statusScreenshotFailed: 'Скриншот не удался',
     statusScreenshotSkipped: 'Скриншот пропущен',
@@ -590,10 +591,11 @@ async function vaultApiWrite(filename, content, append) {
   // Route through background service worker to bypass CORS restrictions
   try {
     const sourceUrl = state.pageContext?.url || state.pageContext?.metadata?.url || '';
-    const intent = (() => {
+    if (!state.vaultIntent) {
       const firstUser = state.messages.find((m) => m.role === 'user');
-      return firstUser ? (firstUser.content || '').replace(/^<[^>]+>\s*/, '').replace(/\n.+$/s, '').trim().slice(0, 200) : '';
-    })();
+      state.vaultIntent = firstUser ? (firstUser.content || '').replace(/^<[^>]+>\s*/, '').replace(/\n.+$/s, '').trim().slice(0, 200) : '';
+    }
+    const intent = state.vaultIntent;
     const result = await sendBgMessage({
       type: 'vault.api.write',
       filename,
@@ -618,6 +620,7 @@ function getOrCreateSessionFilename() {
   const domain = state.pageContext?.metadata?.domain || state.pageContext?.url ? (() => { try { return new URL(state.pageContext?.metadata?.url || state.pageContext?.url).hostname.replace(/^www\./, '').replace(/\./g, '-'); } catch { return 'openagent'; } })() : 'openagent';
   state.currentVaultFilename = `${domain}-${dateStr}.md`;
   state.vaultSavedCount = 0;
+  state.vaultIntent = null;
   return state.currentVaultFilename;
 }
 
@@ -708,6 +711,7 @@ function toggleVaultOnBtn() {
   if (!state.settings.vaultApiUrl || !state.settings.vaultApiToken) return;
   state.autoVault = !state.autoVault;
   state.vaultSavedCount = 0;
+  if (!state.autoVault) state.vaultIntent = null;
   saveAutoVault();
   updateVaultBtn();
   updateBadge();
@@ -1258,6 +1262,13 @@ async function handleSend() {
     return;
   }
 
+  // /i — update intent without calling agent
+  const intentMatch = text.trim().match(/^\/i\s+(.+)/i);
+  if (intentMatch) {
+    state.vaultIntent = intentMatch[1].trim().slice(0, 200);
+    return;
+  }
+
   const navUrl = extractNavigationIntent(text);
   if (navUrl) {
     await handleNavigation(navUrl, text);
@@ -1498,6 +1509,7 @@ function prependPageContext(metadata) {
       state.currentVaultFilename = candidateFilename;
       state.vaultSavedCount = 0;
       state.vaultWritten = false;
+      state.vaultIntent = null;
       updateVaultNoteIndicator();
     } else if (!state.currentVaultFilename) {
       state.currentVaultFilename = candidateFilename;
@@ -1516,6 +1528,7 @@ function clearConversation() {
   state.currentVaultFilename = null;
   state.vaultSavedCount = 0;
   state.vaultWritten = false;
+  state.vaultIntent = null;
   state.currentDomain = null;
   state.memoryContext = null;
   lastTabUrl = '';
@@ -1664,6 +1677,7 @@ function restoreConversation(id) {
   state.currentConversationId = id;
   state.currentVaultFilename = conv.vaultFilename || null;
   state.vaultWritten = !!conv.vaultFilename;
+  state.vaultIntent = null;
   state.messages = [...conv.messages];
   state.vaultSavedCount = conv.messages.length;
 

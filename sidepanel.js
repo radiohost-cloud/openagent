@@ -586,35 +586,26 @@ function applyFontSize(size) {
 
 // ─── Vault (Obsidian Local REST API) ─────────────────────────────────────────
 
-async function vaultWrite(filename, content, append = false) {
-  if (!state.vaultConnected) {
-    return { error: 'Obsidian vault not connected. Enter API URL and token in Settings.' };
-  }
-  return await vaultApiWrite(filename, content, append);
+async function vaultWrite(filename, content) {
+  if (!state.vaultConnected) return { error: 'Obsidian vault not connected.' };
+  return await vaultApiWrite(filename, content);
 }
 
-async function vaultApiWrite(filename, content, append) {
-  // Route through background service worker to bypass CORS restrictions
+async function vaultApiWrite(filename, content) {
   try {
     const sourceUrl = state.pageContext?.url || state.pageContext?.metadata?.url || '';
-    const intent = (() => {
-      if (state.vaultIntent) return state.vaultIntent;
-      const firstUser = state.messages.find((m) => m.role === 'user');
-      const extracted = firstUser ? (firstUser.content || '').replace(/^<[^>]+>\s*/, '').replace(/\n.+$/s, '').trim().slice(0, 200) : '';
-      if (extracted) state.vaultIntent = extracted;
-      return append ? undefined : extracted;
-    })();
-    const result = await sendBgMessage({
+    const firstUser = state.messages.find((m) => m.role === 'user');
+    const extracted = firstUser ? (firstUser.content || '').replace(/^<[^>]+>\s*/, '').replace(/\n.+$/s, '').trim().slice(0, 200) : '';
+    if (extracted) state.vaultIntent = extracted;
+    return await sendBgMessage({
       type: 'vault.api.write',
       filename,
       content,
-      append,
       sourceUrl,
-      intent,
+      intent: extracted,
       model: state.settings.model || '',
       provider: state.settings.provider || 'openrouter',
     });
-    return result;
   } catch (err) {
     console.error('[SP] vaultApiWrite error:', err);
     return { error: err.message };
@@ -628,11 +619,8 @@ function getOrCreateSessionFilename() {
   const domain = state.pageContext?.metadata?.domain || state.pageContext?.url ? (() => { try { return new URL(state.pageContext?.metadata?.url || state.pageContext?.url).hostname.replace(/^www\./, '').replace(/\./g, '-'); } catch { return 'openagent'; } })() : 'openagent';
   state.currentVaultFilename = `${domain}-${dateStr}.md`;
   state.vaultSavedCount = 0;
-  // vaultIntent stays null — will be read from existing file on first write
   return state.currentVaultFilename;
 }
-
-async function vaultReadFiles(query = '', limit = 20) {
   if (!state.vaultConnected) {
     return { error: 'Obsidian vault not connected', notes: [] };
   }
@@ -1280,7 +1268,7 @@ async function handleSend() {
     dom.sendBtn.disabled = false;
     // Rewrite frontmatter with new intent (no new content)
     if (state.currentVaultFilename) {
-      vaultWrite(state.currentVaultFilename, '', false).catch(() => {});
+      vaultWrite(state.currentVaultFilename, '').catch(() => {});
     }
     state.messages.push({ role: 'assistant', content: i18n('intentUpdated').replace('$1', state.vaultIntent), domain: state.currentDomain });
     renderMessage('assistant', i18n('intentUpdated').replace('$1', state.vaultIntent));
@@ -2056,7 +2044,7 @@ async function processVaultToolCalls(messageContent) {
   for (const match of explicitWrites) {
     const filename = match[1];
     const content = match[2].trim();
-    const result = await vaultWrite(filename, content, false);
+    const result = await vaultWrite(filename, content);
     if (result && !result.error) {
       writeResults.push(result.path);
     } else if (result?.error) {
@@ -2070,7 +2058,7 @@ async function processVaultToolCalls(messageContent) {
     const content = match[1].trim();
     if (!content) continue;
     const filename = getOrCreateSessionFilename();
-    const result = await vaultWrite(filename, content, true);
+    const result = await vaultWrite(filename, content);
     if (result && !result.error) {
       writeResults.push(result.path);
     } else if (result?.error) {
@@ -2104,7 +2092,7 @@ async function saveAutoVaultNote() {
     }
     if (lines.length === 0) return;
     content = lines.join('\n\n');
-    const result = await vaultWrite(filename, content, true);
+    const result = await vaultWrite(filename, content);
     if (result?.error) return;
   } else {
     // First save for this session: full header + all messages
@@ -2119,7 +2107,7 @@ async function saveAutoVaultNote() {
     }
     lines.push('\n---\n*OpenAgent Chrome Extension*');
     content = lines.join('\n');
-    const result = await vaultWrite(filename, content, false);
+    const result = await vaultWrite(filename, content);
     if (result?.error) return;
     state.vaultWritten = true;
   }

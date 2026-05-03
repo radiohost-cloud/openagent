@@ -727,72 +727,71 @@ async function vaultApiWrite(message) {
     const readResp = await fetch(url + '/vault/' + encodeURIComponent(fullPath), {
       headers: { 'Authorization': `Bearer ${token}` },
     });
-    let existing = '';
-    if (readResp.ok) {
-      existing = await readResp.text();
-    }
+    const existing = readResp.ok ? await readResp.text() : '';
+    const fileExists = readResp.ok && existing.length > 0;
 
-    let frontmatter = '';
-    const appending = append && existing;
-    const rewriteExisting = !append && existing; // /i case: append=false with existing file
-    const needsFrontmatter = !append && sourceUrl && (!existing?.startsWith('---') || rewriteExisting);
-
-    // Extract existing frontmatter fields
     let existingUrl = '';
     let existingUrls = [];
     let existingIntent = '';
     let existingTags = '';
-    let existingBody = existing || '';
-    if (existing?.startsWith('---')) {
-      const endMatch = existing.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/);
+    let existingBody = '';
+    if (fileExists && existing.startsWith('---')) {
+      const endMatch = existing.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/);
       if (endMatch) {
-        existingBody = endMatch[2];
+        existingBody = endMatch[2] || '';
         const fmLines = endMatch[1].split('\n');
-        for (const line of fmLines) {
+        for (let i = 0; i < fmLines.length; i++) {
+          const line = fmLines[i];
           const urlMatch = line.match(/^url:\s*(.+)/);
-          if (urlMatch) existingUrl = urlMatch[1].trim();
+          if (urlMatch) { existingUrl = urlMatch[1].trim(); continue; }
+          const intentMatch = line.match(/^intent:\s*(.+)/);
+          if (intentMatch) { existingIntent = intentMatch[1].trim(); continue; }
+          const tagsMatch = line.match(/^tags:\s*\[(.+)\]/);
+          if (tagsMatch) { existingTags = tagsMatch[1].trim(); continue; }
           const urlsMatch = line.match(/^urls:\s*$/);
           if (urlsMatch) {
-            const idx = fmLines.indexOf(line);
-            for (let i = idx + 1; i < fmLines.length; i++) {
-              if (fmLines[i].match(/^\s+-/)) {
-                existingUrls.push(fmLines[i].replace(/^\s+-\s*/, '').trim());
+            for (let j = i + 1; j < fmLines.length; j++) {
+              const urlLine = fmLines[j];
+              if (urlLine.match(/^\s+-/)) {
+                existingUrls.push(urlLine.replace(/^\s+-\s*/, '').trim());
+                i = j;
               } else break;
             }
           }
-          const intentMatch = line.match(/^intent:\s*(.+)/);
-          if (intentMatch) existingIntent = intentMatch[1].trim();
-          const tagsMatch = line.match(/^tags:\s*\[(.+)\]/);
-          if (tagsMatch) existingTags = tagsMatch[1].trim();
         }
       }
+    } else if (fileExists) {
+      existingBody = existing;
     }
 
-    const domain = (() => { try { return new URL(sourceUrl).hostname.replace(/^www\./, ''); } catch { return ''; } })();
-    const newUrl = domain || existingUrl;
-    const urlsList = sourceUrl ? [...new Set([...existingUrls, sourceUrl])] : existingUrls;
+    const domain = sourceUrl ? (() => { try { return new URL(sourceUrl).hostname.replace(/^www\./, ''); } catch { return ''; } })() : '';
+    const urlForFm = domain || existingUrl;
+    const mergedUrls = sourceUrl ? [...new Set([...existingUrls, sourceUrl])] : existingUrls;
+    const finalIntent = intent || existingIntent;
 
-    if (needsFrontmatter || appending) {
-      const date = new Date().toISOString().split('T')[0];
-      const modelTag = model ? model.split('/').pop().replace(/-(?:2024|2025)[0-9]*/g, '').replace(/[^a-zA-Z0-9]/g, '-') : '';
-      const domainTag = domain ? domain.replace(/[^a-zA-Z0-9]/g, '-') : '';
-      const tagParts = ['openagent'];
-      if (domainTag) tagParts.push(domainTag);
-      tagParts.push(provider || 'openrouter');
-      if (modelTag) tagParts.push(modelTag);
-      const tags = tagParts.join(', ');
-      const urlsYaml = urlsList.length > 0 ? '\nurls:\n' + urlsList.map(u => `  - ${u}`).join('\n') + '\n' : '';
-      const finalIntent = intent || existingIntent;
-      frontmatter = `---\nurl: ${newUrl}\nmodel: ${model || 'unknown'}\nprovider: ${provider || 'openrouter'}\ndate: ${date}${finalIntent ? `\nintent: ${finalIntent}` : ''}${urlsYaml}${tags ? `tags: [${tags}]\n` : ''}---\n\n`;
+    const date = new Date().toISOString().split('T')[0];
+    const modelTag = model ? model.split('/').pop().replace(/-(?:2024|2025)[0-9]*/g, '').replace(/[^a-zA-Z0-9]/g, '-') : '';
+    const domainTag = domain ? domain.replace(/[^a-zA-Z0-9]/g, '-') : '';
+    const tagParts = ['openagent'];
+    if (domainTag) tagParts.push(domainTag);
+    tagParts.push(provider || 'openrouter');
+    if (modelTag) tagParts.push(modelTag);
+    const tags = tagParts.join(', ');
+
+    let frontmatter = `---\nurl: ${urlForFm}\nmodel: ${model || 'unknown'}\nprovider: ${provider || 'openrouter'}\ndate: ${date}${finalIntent ? `\nintent: ${finalIntent}` : ''}${mergedUrls.length > 0 ? '\nurls:\n' + mergedUrls.map(u => `  - ${u}`).join('\n') + '\n' : ''}${tags ? `tags: [${tags}]\n` : ''}---\n\n`;
+
+    let writeContent;
+    if (fileExists) {
+      // Append new content after existing body
+      writeContent = frontmatter + existingBody + '\n\n---\n\n' + content;
+    } else {
+      // New file: frontmatter + content
+      writeContent = frontmatter + content;
     }
 
-    const writeContent = appending ? (frontmatter + existingBody + '\n\n---\n\n' + content) : (rewriteExisting ? (frontmatter + existingBody) : (frontmatter + content));
     const writeResp = await fetch(url + '/vault/' + encodeURIComponent(fullPath), {
       method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'text/plain',
-      },
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'text/plain' },
       body: writeContent,
     });
     if (!writeResp.ok) {

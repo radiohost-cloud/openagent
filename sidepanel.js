@@ -1272,6 +1272,7 @@ async function handleSend() {
     dom.sendBtn.disabled = false;
     // Rewrite frontmatter with new intent (read existing body, rewrite with new intent)
     if (state.currentVaultFilename) {
+      console.log('[SP] /i updating intent:', state.vaultIntent, 'filename:', state.currentVaultFilename);
       vaultWrite(state.currentVaultFilename, '', false).catch(() => {});
     }
     return;

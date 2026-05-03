@@ -733,10 +733,9 @@ async function vaultApiWrite(message) {
     }
 
     let frontmatter = '';
-    const existingFile = !!existing;
-    const needsFrontmatter = (!append || !existing) && sourceUrl && (!existing?.startsWith('---') || rewriteExisting);
     const appending = append && existing;
     const rewriteExisting = !append && existing; // /i case: append=false with existing file
+    const needsFrontmatter = (!append || !existing) && sourceUrl && (!existing?.startsWith('---') || rewriteExisting);
 
     // Extract existing frontmatter fields
     let existingUrl = '';
@@ -773,6 +772,7 @@ async function vaultApiWrite(message) {
     const newUrl = domain || existingUrl;
     const urlsList = appending && sourceUrl ? [...new Set([...existingUrls, sourceUrl])] : (sourceUrl ? [sourceUrl] : existingUrls);
 
+    console.log('[BG] vaultApiWrite debug:', { filename, append, sourceUrl, intent, model, provider, rewriteExisting, appending });
     if (needsFrontmatter || appending) {
       const date = new Date().toISOString().split('T')[0];
       const modelTag = model ? model.split('/').pop().replace(/-(?:2024|2025)[0-9]*/g, '').replace(/[^a-zA-Z0-9]/g, '-') : '';
@@ -784,7 +784,9 @@ async function vaultApiWrite(message) {
       const tags = tagParts.join(', ');
       const urlsYaml = urlsList.length > 0 ? '\nurls:\n' + urlsList.map(u => `  - ${u}`).join('\n') + '\n' : '';
       const finalIntent = intent || existingIntent;
+      console.log('[BG] finalIntent:', finalIntent, 'existingIntent:', existingIntent);
       frontmatter = `---\nurl: ${newUrl}\nmodel: ${model || 'unknown'}\nprovider: ${provider || 'openrouter'}\ndate: ${date}${finalIntent ? `\nintent: ${finalIntent}` : ''}${urlsYaml}${tags ? `tags: [${tags}]\n` : ''}---\n\n`;
+      console.log('[BG] frontmatter:', frontmatter);
     }
 
     const writeContent = appending ? (frontmatter + existingBody + '\n\n---\n\n' + content) : (rewriteExisting ? (frontmatter + existingBody) : (frontmatter + content));

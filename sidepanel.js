@@ -1270,6 +1270,10 @@ async function handleSend() {
     dom.input.style.height = 'auto';
     state.isLoading = false;
     dom.sendBtn.disabled = false;
+    // Rewrite frontmatter with new intent (read existing body, rewrite with new intent)
+    if (state.currentVaultFilename) {
+      vaultWrite(state.currentVaultFilename, '', false).catch(() => {});
+    }
     return;
   }
 

@@ -733,8 +733,10 @@ async function vaultApiWrite(message) {
     }
 
     let frontmatter = '';
-    const needsFrontmatter = (!append || !existing) && sourceUrl && !existing?.startsWith('---');
+    const existingFile = !!existing;
+    const needsFrontmatter = (!append || !existing) && sourceUrl && (!existing?.startsWith('---') || rewriteExisting);
     const appending = append && existing;
+    const rewriteExisting = !append && existing; // /i case: append=false with existing file
 
     // Extract existing frontmatter fields
     let existingUrl = '';
@@ -785,7 +787,7 @@ async function vaultApiWrite(message) {
       frontmatter = `---\nurl: ${newUrl}\nmodel: ${model || 'unknown'}\nprovider: ${provider || 'openrouter'}\ndate: ${date}${finalIntent ? `\nintent: ${finalIntent}` : ''}${urlsYaml}${tags ? `tags: [${tags}]\n` : ''}---\n\n`;
     }
 
-    const writeContent = appending ? (frontmatter + existingBody + '\n\n---\n\n' + content) : (frontmatter + content);
+    const writeContent = appending ? (frontmatter + existingBody + '\n\n---\n\n' + content) : (rewriteExisting ? (frontmatter + existingBody) : (frontmatter + content));
     const writeResp = await fetch(url + '/vault/' + encodeURIComponent(fullPath), {
       method: 'PUT',
       headers: {

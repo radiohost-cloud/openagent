@@ -733,9 +733,9 @@ async function vaultApiWrite(message) {
     }
 
     let frontmatter = '';
-    if (!append && sourceUrl) {
+    const needsFrontmatter = (!append || !existing) && sourceUrl && !existing?.startsWith('---');
+    if (needsFrontmatter) {
       const date = new Date().toISOString().split('T')[0];
-      const domain = sourceUrl ? (() => { try { return new URL(sourceUrl).hostname.replace(/^www\./, '').replace(/\./g, '-'); } catch { return 'unknown'; } })() : 'unknown';
       const modelTag = model ? model.split('/').pop().replace(/-(?:2024|2025)[0-9]*/g, '') : '';
       const tags = ['#openagent', `#${provider || 'openrouter'}`, modelTag ? `#${modelTag}` : ''].filter(Boolean).join(' ');
       frontmatter = `---\nsource: ${sourceUrl}\nmodel: ${model || 'unknown'}\nprovider: ${provider || 'openrouter'}\ndate: ${date}\n${tags ? `tags: ${tags}\n` : ''}---\n\n`;

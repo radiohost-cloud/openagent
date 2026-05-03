@@ -601,6 +601,7 @@ async function vaultApiWrite(filename, content, append) {
       const firstUser = state.messages.find((m) => m.role === 'user');
       state.vaultIntent = firstUser ? (firstUser.content || '').replace(/^<[^>]+>\s*/, '').replace(/\n.+$/s, '').trim().slice(0, 200) : '';
     }
+    console.log('[SP] vaultApiWrite:', { vaultIntent: state.vaultIntent, append, filename });
     const intent = state.vaultIntent;
     const result = await sendBgMessage({
       type: 'vault.api.write',

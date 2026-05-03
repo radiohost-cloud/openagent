@@ -739,6 +739,8 @@ async function vaultApiWrite(message) {
     // Extract existing frontmatter fields
     let existingUrl = '';
     let existingUrls = [];
+    let existingIntent = '';
+    let existingTags = '';
     let existingBody = existing || '';
     if (existing?.startsWith('---')) {
       const endMatch = existing.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/);
@@ -757,6 +759,10 @@ async function vaultApiWrite(message) {
               } else break;
             }
           }
+          const intentMatch = line.match(/^intent:\s*(.+)/);
+          if (intentMatch) existingIntent = intentMatch[1].trim();
+          const tagsMatch = line.match(/^tags:\s*\[(.+)\]/);
+          if (tagsMatch) existingTags = tagsMatch[1].trim();
         }
       }
     }
@@ -775,7 +781,8 @@ async function vaultApiWrite(message) {
       if (modelTag) tagParts.push(modelTag);
       const tags = tagParts.join(', ');
       const urlsYaml = urlsList.length > 0 ? '\nurls:\n' + urlsList.map(u => `  - ${u}`).join('\n') + '\n' : '';
-      frontmatter = `---\nurl: ${newUrl}\nmodel: ${model || 'unknown'}\nprovider: ${provider || 'openrouter'}\ndate: ${date}${intent ? `\nintent: ${intent}` : ''}${urlsYaml}${tags ? `tags: [${tags}]\n` : ''}---\n\n`;
+      const finalIntent = intent || existingIntent;
+      frontmatter = `---\nurl: ${newUrl}\nmodel: ${model || 'unknown'}\nprovider: ${provider || 'openrouter'}\ndate: ${date}${finalIntent ? `\nintent: ${finalIntent}` : ''}${urlsYaml}${tags ? `tags: [${tags}]\n` : ''}---\n\n`;
     }
 
     const writeContent = appending ? (frontmatter + existingBody + '\n\n---\n\n' + content) : (frontmatter + content);

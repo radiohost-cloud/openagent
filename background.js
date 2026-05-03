@@ -713,7 +713,7 @@ async function vaultApiRead(message) {
 }
 
 async function vaultApiWrite(message) {
-  const { filename, content, append, sourceUrl, model, provider } = message;
+  const { filename, content, append, sourceUrl, intent, model, provider } = message;
   const settings = await loadSettings();
   const url = (settings.vaultApiUrl || '').replace(/\/$/, '');
   const token = settings.vaultApiToken || '';
@@ -775,7 +775,7 @@ async function vaultApiWrite(message) {
       if (modelTag) tagParts.push(modelTag);
       const tags = tagParts.join(', ');
       const urlsYaml = urlsList.length > 0 ? '\nurls:\n' + urlsList.map(u => `  - ${u}`).join('\n') + '\n' : '';
-      frontmatter = `---\nurl: ${newUrl}\nmodel: ${model || 'unknown'}\nprovider: ${provider || 'openrouter'}\ndate: ${date}${urlsYaml}${tags ? `tags: [${tags}]\n` : ''}---\n\n`;
+      frontmatter = `---\nurl: ${newUrl}\nmodel: ${model || 'unknown'}\nprovider: ${provider || 'openrouter'}\ndate: ${date}${intent ? `\nintent: ${intent}` : ''}${urlsYaml}${tags ? `tags: [${tags}]\n` : ''}---\n\n`;
     }
 
     const writeContent = appending ? (frontmatter + existingBody + '\n\n---\n\n' + content) : (frontmatter + content);

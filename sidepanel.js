@@ -626,7 +626,7 @@ function getOrCreateSessionFilename() {
   const domain = state.pageContext?.metadata?.domain || state.pageContext?.url ? (() => { try { return new URL(state.pageContext?.metadata?.url || state.pageContext?.url).hostname.replace(/^www\./, '').replace(/\./g, '-'); } catch { return 'openagent'; } })() : 'openagent';
   state.currentVaultFilename = `${domain}-${dateStr}.md`;
   state.vaultSavedCount = 0;
-  state.vaultIntent = null;
+  // vaultIntent stays null — will be read from existing file on first write
   return state.currentVaultFilename;
 }
 
@@ -1525,7 +1525,7 @@ function prependPageContext(metadata) {
       state.currentVaultFilename = candidateFilename;
       state.vaultSavedCount = 0;
       state.vaultWritten = false;
-      state.vaultIntent = null;
+      // keep vaultIntent — it's per-file, not per-page
       updateVaultNoteIndicator();
     } else if (!state.currentVaultFilename) {
       state.currentVaultFilename = candidateFilename;

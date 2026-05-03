@@ -69,5 +69,6 @@
   "settingsVaultApiTestOk": { "message": "Conectado" },
   "settingsVaultApiTestFail": { "message": "Error de conexión" },
   "settingsVaultApiHint": { "message": "Requiere el plugin Local REST API en Obsidian." },
-  "statusConnected": { "message": "Conectado" }
+  "statusConnected": { "message": "" },
+  "intentUpdated": { "message": "Intent updated: $1" }
 }

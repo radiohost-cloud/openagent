@@ -69,5 +69,6 @@
   "settingsVaultApiTestOk": { "message": "Połączono" },
   "settingsVaultApiTestFail": { "message": "Błąd połączenia" },
   "settingsVaultApiHint": { "message": "Wymaga wtyczki Local REST API w Obsidian." },
-  "statusConnected": { "message": "Połączono" }
+  "statusConnected": { "message": "Połączono" },
+  "intentUpdated": { "message": "Intent zaktualizowany: $1" }
 }

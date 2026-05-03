@@ -105,6 +105,7 @@ const i18nStrings = {
     btnDelete: 'Delete',
     historySearchPlaceholder: 'Search conversations...',
     emptyStateUrl: 'or just type a URL to open it',
+    intentUpdated: 'Intent updated: $1',
   },
   pl: {
     msgLabelYou: 'Ty',
@@ -179,6 +180,7 @@ const i18nStrings = {
     btnDelete: 'Usuń',
     historySearchPlaceholder: 'Szukaj rozmów...',
     emptyStateUrl: 'lub wpisz adres URL, aby go otworzyć',
+    intentUpdated: 'Intent zaktualizowany: $1',
   },
   es: {
     msgLabelYou: 'Tú',
@@ -256,6 +258,7 @@ const i18nStrings = {
     btnDelete: 'Eliminar',
     historySearchPlaceholder: 'Buscar conversaciones...',
     emptyStateUrl: 'o escribe una URL para abrirla',
+    intentUpdated: 'Intent actualizado: $1',
   },
   fr: {
     msgLabelYou: 'Vous',
@@ -332,6 +335,7 @@ const i18nStrings = {
     btnDelete: 'Supprimer',
     historySearchPlaceholder: 'Rechercher des conversations...',
     emptyStateUrl: "ou tapez une URL pour l'ouvrir",
+    intentUpdated: 'Intention mise à jour: $1',
   },
   de: {
     msgLabelYou: 'Sie',
@@ -409,6 +413,7 @@ const i18nStrings = {
     btnDelete: 'Löschen',
     historySearchPlaceholder: 'Gespräche suchen...',
     emptyStateUrl: 'oder URL eingeben zum Öffnen',
+    intentUpdated: 'Absicht aktualisiert: $1',
   },
   ru: {
     msgLabelYou: 'Вы',
@@ -486,6 +491,7 @@ const i18nStrings = {
     btnDelete: 'Удалить',
     historySearchPlaceholder: 'Поиск разговоров...',
     emptyStateUrl: 'или введите URL для открытия',
+    intentUpdated: 'Намерение обновлено: $1',
   },
 };
 
@@ -1274,8 +1280,8 @@ async function handleSend() {
     if (state.currentVaultFilename) {
       vaultWrite(state.currentVaultFilename, '', false).catch(() => {});
     }
-    state.messages.push({ role: 'assistant', content: `Intent updated: ${state.vaultIntent}`, domain: state.currentDomain });
-    renderMessage('assistant', `Intent updated: ${state.vaultIntent}`);
+    state.messages.push({ role: 'assistant', content: i18n('intentUpdated').replace('$1', state.vaultIntent), domain: state.currentDomain });
+    renderMessage('assistant', i18n('intentUpdated').replace('$1', state.vaultIntent));
     return;
   }
 

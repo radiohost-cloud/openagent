@@ -69,5 +69,6 @@
   "settingsVaultApiTestOk": { "message": "Подключено" },
   "settingsVaultApiTestFail": { "message": "Ошибка подключения" },
   "settingsVaultApiHint": { "message": "Требуется плагин Local REST API в Obsidian." },
-  "statusConnected": { "message": "Подключено" }
+  "statusConnected": { "message": "Подключено" },
+  "intentUpdated": { "message": "Намерение обновлено: $1" }
 }

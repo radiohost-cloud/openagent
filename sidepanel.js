@@ -594,15 +594,18 @@ async function vaultWrite(filename, content) {
 async function vaultApiWrite(filename, content) {
   try {
     const sourceUrl = state.pageContext?.url || state.pageContext?.metadata?.url || '';
-    const firstUser = state.messages.find((m) => m.role === 'user');
-    const extracted = firstUser ? (firstUser.content || '').replace(/^<[^>]+>\s*/, '').replace(/\n.+$/s, '').trim().slice(0, 200) : '';
-    if (extracted) state.vaultIntent = extracted;
+    const intent = state.vaultIntent || (() => {
+      const firstUser = state.messages.find((m) => m.role === 'user');
+      const extracted = firstUser ? (firstUser.content || '').replace(/^<[^>]+>\s*/, '').replace(/\n.+$/s, '').trim().slice(0, 200) : '';
+      if (extracted) state.vaultIntent = extracted;
+      return extracted;
+    })();
     return await sendBgMessage({
       type: 'vault.api.write',
       filename,
       content,
       sourceUrl,
-      intent: extracted,
+      intent: intent,
       model: state.settings.model || '',
       provider: state.settings.provider || 'openrouter',
     });

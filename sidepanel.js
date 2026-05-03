@@ -589,11 +589,15 @@ async function vaultWrite(filename, content, append = false) {
 async function vaultApiWrite(filename, content, append) {
   // Route through background service worker to bypass CORS restrictions
   try {
+    const sourceUrl = state.pageContext?.url || state.pageContext?.metadata?.url || '';
     const result = await sendBgMessage({
       type: 'vault.api.write',
       filename,
       content,
       append,
+      sourceUrl,
+      model: state.settings.model || '',
+      provider: state.settings.provider || 'openrouter',
     });
     return result;
   } catch (err) {

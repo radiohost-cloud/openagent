@@ -713,7 +713,7 @@ async function vaultApiRead(message) {
 }
 
 async function vaultApiWrite(message) {
-  const { filename, content, append } = message;
+  const { filename, content, append, sourceUrl, model, provider } = message;
   const settings = await loadSettings();
   const url = (settings.vaultApiUrl || '').replace(/\/$/, '');
   const token = settings.vaultApiToken || '';
@@ -732,7 +732,16 @@ async function vaultApiWrite(message) {
       existing = await readResp.text();
     }
 
-    const writeContent = existing && append ? (existing + '\n\n---\n\n' + content) : content;
+    let frontmatter = '';
+    if (!append && sourceUrl) {
+      const date = new Date().toISOString().split('T')[0];
+      const domain = sourceUrl ? (() => { try { return new URL(sourceUrl).hostname.replace(/^www\./, '').replace(/\./g, '-'); } catch { return 'unknown'; } })() : 'unknown';
+      const modelTag = model ? model.split('/').pop().replace(/-(?:2024|2025)[0-9]*/g, '') : '';
+      const tags = ['#openagent', `#${provider || 'openrouter'}`, modelTag ? `#${modelTag}` : ''].filter(Boolean).join(' ');
+      frontmatter = `---\nsource: ${sourceUrl}\nmodel: ${model || 'unknown'}\nprovider: ${provider || 'openrouter'}\ndate: ${date}\n${tags ? `tags: ${tags}\n` : ''}---\n\n`;
+    }
+
+    const writeContent = existing && append ? (existing + '\n\n---\n\n' + content) : (frontmatter + content);
     const writeResp = await fetch(url + '/vault/' + encodeURIComponent(fullPath), {
       method: 'PUT',
       headers: {

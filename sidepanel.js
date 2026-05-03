@@ -602,8 +602,6 @@ async function vaultApiWrite(filename, content, append) {
       const firstUser = state.messages.find((m) => m.role === 'user');
       const extracted = firstUser ? (firstUser.content || '').replace(/^<[^>]+>\s*/, '').replace(/\n.+$/s, '').trim().slice(0, 200) : '';
       if (extracted) state.vaultIntent = extracted;
-      console.log('[SP] intent extract: append=' + append + ', firstUser=' + (firstUser ? firstUser.content.slice(0, 80) : 'null') + ', extracted=' + extracted);
-      // Only auto-extract on first write; preserve existing intent on appends
       return append ? undefined : extracted;
     })();
     const result = await sendBgMessage({

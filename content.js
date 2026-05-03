@@ -5,7 +5,7 @@
 'use strict';
 const HTTPS_RE = /^https?:\/\//;
 const domElementRefs = new Map();
-  window.addEventListener('unload', () => { domElementRefs.clear(); });
+  window.addEventListener('unload', () => { try { domElementRefs.clear(); } catch (_) {} });
 
   function safeSend(msg) {
     try {

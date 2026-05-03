@@ -597,9 +597,8 @@ async function vaultApiWrite(filename, content, append) {
   // Route through background service worker to bypass CORS restrictions
   try {
     const sourceUrl = state.pageContext?.url || state.pageContext?.metadata?.url || '';
-    // Only set intent from first message on first write (append=false)
-    // For appends, always use existing vaultIntent (new user messages don't reset intent)
-    const intent = (() => {
+    // Only set intent on first write (append=false); for appends, backend uses existingIntent from file
+    const intent = append ? undefined : (() => {
       if (state.vaultIntent) return state.vaultIntent;
       const firstUser = state.messages.find((m) => m.role === 'user');
       const extracted = firstUser ? (firstUser.content || '').replace(/^<[^>]+>\s*/, '').replace(/\n.+$/s, '').trim().slice(0, 200) : '';

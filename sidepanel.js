@@ -1266,6 +1266,10 @@ async function handleSend() {
   const intentMatch = text.trim().match(/^\/i\s+(.+)/i);
   if (intentMatch) {
     state.vaultIntent = intentMatch[1].trim().slice(0, 200);
+    dom.input.value = '';
+    dom.input.style.height = 'auto';
+    state.isLoading = false;
+    dom.sendBtn.disabled = false;
     return;
   }
 

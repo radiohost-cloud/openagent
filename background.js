@@ -238,7 +238,7 @@ async function handlePromptSend(message, sendResponse) {
     return;
   }
 
-  const { conversationHistory, pageContext, pageScreenshot, autoVault, vaultConnected, vaultName, vaultFilename, memoryContext, webSearch } = message;
+  const { conversationHistory, pageContext, pageScreenshot, autoVault, vaultConnected, vaultName, vaultFilename, memoryContext, webSearch, vaultIntent } = message;
   const msgs = await buildMessages(conversationHistory, pageContext, pageScreenshot, settings.systemPrompt, autoVault, vaultConnected, vaultName, vaultFilename, memoryContext);
 
   const tools = webSearch ? [

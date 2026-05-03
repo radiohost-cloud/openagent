@@ -20,6 +20,7 @@ const state = {
   vaultWritten: false,
   webSearch: false,
   vaultIntent: null,
+  pastedImage: null,
 };
 
 // Shared utilities
@@ -98,6 +99,8 @@ const i18nStrings = {
     statusScreenshotFailed: 'Screenshot failed',
     statusScreenshotSkipped: 'Screenshot skipped',
     msgScreenshotSkippedModel: 'Model does not support image input. Switch to a vision model and take a new screenshot.',
+    msgScreenshotSaved: 'Screenshot saved to note (model does not support images).',
+    msgPasteImageError: 'Failed to read pasted image.',
     historyTitle: 'Chat History',
     historyEmpty: 'No saved conversations',
     btnHistory: 'Chat history',
@@ -173,6 +176,8 @@ const i18nStrings = {
     statusScreenshotFailed: 'Zrzut ekranu nieudany',
     statusScreenshotSkipped: 'Zrzut ekranu pominięty',
     msgScreenshotSkippedModel: 'Model nie obsługuje obrazów. Przełącz na model z vision i zrób nowy zrzut.',
+    msgScreenshotSaved: 'Zrzut ekranu zapisany w notatce (model nie obsługuje obrazów).',
+    msgPasteImageError: 'Nie udało się wczytać wklejonego obrazu.',
     historyTitle: 'Historia rozmów',
     historyEmpty: 'Brak zapisanych rozmów',
     btnHistory: 'Historia rozmów',
@@ -251,6 +256,8 @@ const i18nStrings = {
     statusScreenshotFailed: 'Captura fallida',
     statusScreenshotSkipped: 'Captura omitida',
     msgScreenshotSkippedModel: 'El modelo no soporta imágenes. Cambia a un modelo vision y toma una nueva captura.',
+    msgScreenshotSaved: 'Captura guardada en la nota (el modelo no soporta imágenes).',
+    msgPasteImageError: 'Error al leer la imagen pegada.',
     historyTitle: 'Historial de chat',
     historyEmpty: 'Sin conversaciones guardadas',
     btnHistory: 'Historial de chat',
@@ -329,6 +336,8 @@ const i18nStrings = {
     statusScreenshotFailed: 'Capture échouée',
     statusScreenshotSkipped: 'Capture omise',
     msgScreenshotSkippedModel: 'Le modèle ne supporte pas les images. Passez à un modèle vision et prenez une nouvelle capture.',
+    msgScreenshotSaved: 'Capture enregistrée dans la note (le modèle ne supporte pas les images).',
+    msgPasteImageError: 'Échec de la lecture de l\'image collée.',
     historyTitle: 'Historique du chat',
     historyEmpty: 'Aucune conversation sauvegardée',
     btnHistory: 'Historique du chat',
@@ -406,6 +415,8 @@ const i18nStrings = {
     statusScreenshotFailed: 'Screenshot fehlgeschlagen',
     statusScreenshotSkipped: 'Screenshot übersprungen',
     msgScreenshotSkippedModel: 'Modell unterstützt keine Bilder. Wechsle zu einem Vision-Modell und mach einen neuen Screenshot.',
+    msgScreenshotSaved: 'Screenshot in der Notiz gespeichert (Modell unterstützt keine Bilder).',
+    msgPasteImageError: 'Fehler beim Lesen des eingefügten Bildes.',
     historyTitle: 'Chat-Verlauf',
     historyEmpty: 'Keine gespeicherten Gespräche',
     btnHistory: 'Chat-Verlauf',
@@ -484,6 +495,8 @@ const i18nStrings = {
     statusScreenshotFailed: 'Скриншот не удался',
     statusScreenshotSkipped: 'Скриншот пропущен',
     msgScreenshotSkippedModel: 'Модель не поддерживает изображения. Переключитесь на vision-модель и сделайте новый скриншот.',
+    msgScreenshotSaved: 'Скриншот сохранён в заметке (модель не поддерживает изображения).',
+    msgPasteImageError: 'Не удалось прочитать вставленное изображение.',
     historyTitle: 'История чата',
     historyEmpty: 'Нет сохранённых разговоров',
     btnHistory: 'История чата',
@@ -753,6 +766,46 @@ function bindEvents() {
   dom.input.addEventListener('input', () => {
     dom.input.style.height = 'auto';
     dom.input.style.height = Math.min(dom.input.scrollHeight, 100) + 'px';
+  });
+
+  // Paste handler for images (Cmd+V on Mac, Ctrl+V on Windows/Linux)
+  dom.input.addEventListener('paste', async (e) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        e.preventDefault();
+        const blob = item.getAsFile();
+        if (!blob) {
+          renderMessage('error', i18n('msgPasteImageError'));
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          const dataUrl = ev.target.result;
+          state.pastedImage = dataUrl;
+          const empty = dom.messages.querySelector('.empty-state');
+          if (empty) empty.remove();
+          const div = document.createElement('div');
+          div.className = 'message user';
+          div.innerHTML = `
+            <div class="message-label">${i18n('msgLabelYou')}</div>
+            <div class="message-content"><img class="screenshot-thumb" src="${dataUrl}" /></div>
+          `;
+          dom.messages.appendChild(div);
+          state.messages.push({ role: 'user', content: '[screenshot]', domain: state.currentDomain, imageData: dataUrl });
+          requestAnimationFrame(() => {
+            dom.messages.scrollTop = dom.messages.scrollHeight;
+          });
+          setStatus(i18n('statusScreenshotAttached'), 'success');
+        };
+        reader.onerror = () => {
+          renderMessage('error', i18n('msgPasteImageError'));
+        };
+        reader.readAsDataURL(blob);
+        return;
+      }
+    }
   });
 
   dom.settingsBtn.addEventListener('click', () => toggleModal(true));
@@ -1310,22 +1363,27 @@ async function handleSend() {
 
   try {
     const model = state.settings.model;
-    if (state.pageScreenshot && !model) {
+    const screenshotToSend = state.pageScreenshot || state.pastedImage || null;
+    if (screenshotToSend && !model) {
+      // No model selected — clear both
+      screenshotToSend = null;
       state.pageScreenshot = null;
-    } else if (state.pageScreenshot && !modelSupportsVision(model)) {
-      state.pageScreenshot = null;
+      state.pastedImage = null;
+    } else if (screenshotToSend && !modelSupportsVision(model)) {
+      // Show info message but still send screenshot (it will be saved to vault)
+      const infoMsg = i18n('msgScreenshotSaved');
       removeTyping();
-      renderMessage('error', i18n('msgScreenshotSkippedModel'));
+      renderMessage('error', infoMsg);
       state.isLoading = false;
       dom.sendBtn.disabled = false;
-      return;
+      // Don't return — still proceed so screenshot gets saved to vault and history
     }
 
     const response = await sendBgMessage({
       type: 'prompt.send',
       conversationHistory: state.messages,
       pageContext: state.pageContext,
-      pageScreenshot: state.pageScreenshot,
+      pageScreenshot: screenshotToSend,
       autoVault: state.autoVault,
       vaultConnected: state.vaultConnected,
       vaultApiUrl: state.settings.vaultApiUrl,
@@ -1333,14 +1391,21 @@ async function handleSend() {
       vaultFilename: state.currentVaultFilename,
       memoryContext: state.memoryContext,
       webSearch: state.webSearch,
+      vaultIntent: state.vaultIntent,
     });
 
     removeTyping();
 
     if (response.error) {
-      if (response.error.includes('image') || response.error.includes('vision') || response.error.includes('endpoint')) {
+      const isVisionError = response.error.includes('image') || response.error.includes('vision') || response.error.includes('endpoint');
+      if (isVisionError && screenshotToSend) {
+        // Already showed info message — clear screenshots but still save to vault
         state.pageScreenshot = null;
-        renderMessage('error', i18n('msgScreenshotSkippedModel'));
+        state.pastedImage = null;
+        if (state.autoVault && state.vaultConnected) {
+          saveAutoVaultNote().catch((err) => console.error('[SP] auto-vault error:', err));
+        }
+        saveConversation();
       } else {
         renderMessage('error', response.error);
       }
@@ -1362,6 +1427,10 @@ async function handleSend() {
       }
       state.messages.push({ role: 'assistant', content: finalContent, domain: state.currentDomain });
       renderMessage('assistant', finalContent);
+
+      // Clear screenshots after successful response
+      state.pageScreenshot = null;
+      state.pastedImage = null;
 
       if (state.autoVault && state.vaultConnected) {
         saveAutoVaultNote().catch((err) => console.error('[SP] auto-vault error:', err));
@@ -1478,8 +1547,9 @@ async function takeScreenshot() {
       <div class="message-content"><img class="screenshot-thumb" src="${data.dataUrl}" /></div>
     `;
     dom.messages.appendChild(div);
-    scrollToBottom();
-    requestAnimationFrame(() => div.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+    // Track screenshot as user message for history
+    state.messages.push({ role: 'user', content: '[screenshot]', domain: state.currentDomain, imageData: data.dataUrl });
+    dom.messages.scrollTop = dom.messages.scrollHeight;
   } catch (err) {
     setStatus(i18n('statusScreenshotFailed') + ': ' + err.message, 'error');
   }
@@ -1542,6 +1612,8 @@ function clearConversation() {
   state.vaultIntent = null;
   state.currentDomain = null;
   state.memoryContext = null;
+  state.pageScreenshot = null;
+  state.pastedImage = null;
   lastTabUrl = '';
   renderMessages();
   if (state.pageContext?.metadata) prependPageContext(state.pageContext.metadata);
@@ -1689,7 +1761,8 @@ function restoreConversation(id) {
   state.currentVaultFilename = conv.vaultFilename || null;
   state.vaultWritten = !!conv.vaultFilename;
   state.vaultIntent = null;
-  state.messages = [...conv.messages];
+  // Restore messages with screenshot imageData preserved
+  state.messages = conv.messages.map((m) => ({ ...m }));
   state.vaultSavedCount = conv.messages.length;
 
   state.historyOpen = false;
@@ -1713,7 +1786,8 @@ function renderMessages() {
     return;
   }
   for (const msg of state.messages) {
-    renderMessage(msg.role === 'user' ? 'user' : 'assistant', msg.content);
+    const imgData = msg.content === '[screenshot]' ? msg.imageData : null;
+    renderMessage(msg.role === 'user' ? 'user' : 'assistant', msg.content, imgData);
   }
   scrollToBottom();
 }
@@ -1735,7 +1809,7 @@ function renderEmptyState() {
   `;
 }
 
-function renderMessage(role, content) {
+function renderMessage(role, content, imageData) {
   const empty = dom.messages.querySelector('.empty-state');
   if (empty) empty.remove();
 
@@ -1749,12 +1823,16 @@ function renderMessage(role, content) {
        </button>`
     : '';
 
+  const contentHtml = imageData
+    ? `<img class="screenshot-thumb" src="${imageData}" />`
+    : formatted;
+
   const div = document.createElement('div');
   div.className = `message ${role}`;
   div.innerHTML = `
     <div class="message-label">${label}</div>
     ${copyBtnHtml}
-    <div class="message-content">${formatted}</div>
+    <div class="message-content">${contentHtml}</div>
   `;
 
   dom.messages.appendChild(div);
@@ -2091,6 +2169,11 @@ async function saveAutoVaultNote() {
     // Already written — just append new messages
     const lines = [];
     for (const msg of newMessages) {
+      if (msg.content === '[screenshot]' && msg.imageData) {
+        // Embed screenshot as base64 image in markdown
+        lines.push(`**You**:\n![screenshot](${msg.imageData})`);
+        continue;
+      }
       const role = msg.role === 'user' ? '**You**' : '**OpenAgent**';
       let text = (msg.content || '').replace(/<vault_write[^>]*>[\s\S]*?<\/vault_write>/gi, '').replace(/<vault_read[^>]*\/>/gi, '').replace(/\*\*From vault:\*\*[\s\S]*/gi, '').replace(/^✓ Saved:.*$/gm, '').trim();
       if (text) lines.push(`${role}:\n${text}`);
@@ -2106,6 +2189,10 @@ async function saveAutoVaultNote() {
     const timeStr = formatTime(date);
     const lines = [`# Session — ${dateStr} ${timeStr}`, pageUrl ? `**URL:** ${pageUrl}` : ''];
     for (const msg of newMessages) {
+      if (msg.content === '[screenshot]' && msg.imageData) {
+        lines.push(`\n**You**:\n![screenshot](${msg.imageData})`);
+        continue;
+      }
       const role = msg.role === 'user' ? '**You**' : '**OpenAgent**';
       let text = (msg.content || '').replace(/<vault_write[^>]*>[\s\S]*?<\/vault_write>/gi, '').replace(/<vault_read[^>]*\/>/gi, '').replace(/\*\*From vault:\*\*[\s\S]*/gi, '').replace(/^✓ Saved:.*$/gm, '').trim();
       if (text) lines.push(`\n${role}:\n${text}`);

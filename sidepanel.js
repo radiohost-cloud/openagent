@@ -621,6 +621,8 @@ function getOrCreateSessionFilename() {
   state.vaultSavedCount = 0;
   return state.currentVaultFilename;
 }
+
+async function vaultReadFiles(query = '', limit = 20) {
   if (!state.vaultConnected) {
     return { error: 'Obsidian vault not connected', notes: [] };
   }

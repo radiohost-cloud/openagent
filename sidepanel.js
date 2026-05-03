@@ -2121,7 +2121,7 @@ async function saveAutoVaultNote() {
     }
     lines.push('\n---\n*OpenAgent Chrome Extension*');
     content = lines.join('\n');
-    const result = await vaultWrite(filename, content, true);
+    const result = await vaultWrite(filename, content, false);
     if (result?.error) return;
     state.vaultWritten = true;
   }

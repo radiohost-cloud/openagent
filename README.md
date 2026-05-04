@@ -41,7 +41,12 @@
   - `/o query` — Obsidian vault (searches your vault notes)
 
 ### 🤖 Browser Automation
-- **Instruct the AI** to click, type, scroll, or navigate — the AI controls the browser for you
+- **Intelligent link clicking** — the AI receives a numbered list of all links on the page. Simply say "click link 3", "go to first link", or use any language: "pierwszy link", "clique sur le lien", "den ersten Link" — the AI understands and clicks the right link
+- **Action tags** — the AI responds with action tags that are automatically executed:
+  - `<action>click:N</action>` — click link or button number N
+  - `<action>scroll:up</action>` or `<action>scroll:down</action>` — scroll the page
+  - `<action>navigate:URL</action>` — go to a URL
+- **Multilingual** — works in any language (Polish, English, German, French, Spanish, Russian, etc.)
 
 ### 🌐 Web Search
 - **Real-time web search** — toggle Web Search in Settings to enable OpenRouter's server-side search tool
@@ -168,14 +173,13 @@ The extension analyzes the current webpage and sends the page content to the AI 
 ```
 openagent/
 ├── manifest.json      # Extension manifest
-├── background.js      # Service worker (API calls, routing)
-├── content.js        # Content script (FAB, page automation)
-├── sidepanel.*       # Side panel UI (chat, settings)
-├── db.js             # IndexedDB wrapper (conversations, memory)
-├── memory.js         # Memory extraction & matching
-├── icons/            # Extension icons
-├── docs/             # Screenshots
-└── _locales/         # i18n (EN, PL, ES, FR, DE, RU)
+├── background.js      # Service worker (API calls, routing, action execution)
+├── content.js         # Content script (page context, DOM automation, link collection)
+├── sidepanel.*        # Side panel UI (chat, settings, history)
+├── db.js              # IndexedDB wrapper (conversations, memory)
+├── memory.js          # Memory extraction & matching
+├── icons/             # Extension icons
+└── _locales/          # i18n translations
 ```
 
 ## License

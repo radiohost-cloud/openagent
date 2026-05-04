@@ -4,6 +4,7 @@ const state = {
   messages: [],
   settings: { apiKey: '', provider: 'openrouter', model: '', systemPrompt: '', theme: 'dark', preset: 'default', language: 'en', vaultName: '', vaultApiUrl: '', vaultApiToken: '', fontSize: 'medium' },
   pageContext: null,
+  pageLinks: [],
   pageScreenshot: null,
   visionModels: [],
   isLoading: false,
@@ -101,6 +102,9 @@ const i18nStrings = {
     msgScreenshotSkippedModel: 'Model does not support image input. Switch to a vision model and take a new screenshot.',
     msgScreenshotSaved: 'Screenshot saved to note (model does not support images).',
     msgPasteImageError: 'Failed to read pasted image.',
+    actionResultTitle: 'Action results:',
+    actionResultSuccess: 'Completed',
+    actionResultFailed: 'Failed',
     historyTitle: 'Chat History',
     historyEmpty: 'No saved conversations',
     btnHistory: 'Chat history',
@@ -178,6 +182,9 @@ const i18nStrings = {
     msgScreenshotSkippedModel: 'Model nie obsługuje obrazów. Przełącz na model z vision i zrób nowy zrzut.',
     msgScreenshotSaved: 'Zrzut ekranu zapisany w notatce (model nie obsługuje obrazów).',
     msgPasteImageError: 'Nie udało się wczytać wklejonego obrazu.',
+    actionResultTitle: 'Wyniki akcji:',
+    actionResultSuccess: 'Wykonano',
+    actionResultFailed: 'Niepowodzenie',
     historyTitle: 'Historia rozmów',
     historyEmpty: 'Brak zapisanych rozmów',
     btnHistory: 'Historia rozmów',
@@ -258,6 +265,9 @@ const i18nStrings = {
     msgScreenshotSkippedModel: 'El modelo no soporta imágenes. Cambia a un modelo vision y toma una nueva captura.',
     msgScreenshotSaved: 'Captura guardada en la nota (el modelo no soporta imágenes).',
     msgPasteImageError: 'Error al leer la imagen pegada.',
+    actionResultTitle: 'Resultados de acciones:',
+    actionResultSuccess: 'Completado',
+    actionResultFailed: 'Fallido',
     historyTitle: 'Historial de chat',
     historyEmpty: 'Sin conversaciones guardadas',
     btnHistory: 'Historial de chat',
@@ -337,7 +347,10 @@ const i18nStrings = {
     statusScreenshotSkipped: 'Capture omise',
     msgScreenshotSkippedModel: 'Le modèle ne supporte pas les images. Passez à un modèle vision et prenez une nouvelle capture.',
     msgScreenshotSaved: 'Capture enregistrée dans la note (le modèle ne supporte pas les images).',
-    msgPasteImageError: 'Échec de la lecture de l\'image collée.',
+    msgPasteImageError: "Échec de la lecture de l'image collée.",
+    actionResultTitle: 'Résultats des actions:',
+    actionResultSuccess: 'Terminé',
+    actionResultFailed: 'Échoué',
     historyTitle: 'Historique du chat',
     historyEmpty: 'Aucune conversation sauvegardée',
     btnHistory: 'Historique du chat',
@@ -417,6 +430,9 @@ const i18nStrings = {
     msgScreenshotSkippedModel: 'Modell unterstützt keine Bilder. Wechsle zu einem Vision-Modell und mach einen neuen Screenshot.',
     msgScreenshotSaved: 'Screenshot in der Notiz gespeichert (Modell unterstützt keine Bilder).',
     msgPasteImageError: 'Fehler beim Lesen des eingefügten Bildes.',
+    actionResultTitle: 'Aktionsergebnisse:',
+    actionResultSuccess: 'Abgeschlossen',
+    actionResultFailed: 'Fehlgeschlagen',
     historyTitle: 'Chat-Verlauf',
     historyEmpty: 'Keine gespeicherten Gespräche',
     btnHistory: 'Chat-Verlauf',
@@ -497,6 +513,9 @@ const i18nStrings = {
     msgScreenshotSkippedModel: 'Модель не поддерживает изображения. Переключитесь на vision-модель и сделайте новый скриншот.',
     msgScreenshotSaved: 'Скриншот сохранён в заметке (модель не поддерживает изображения).',
     msgPasteImageError: 'Не удалось прочитать вставленное изображение.',
+    actionResultTitle: 'Результаты действий:',
+    actionResultSuccess: 'Выполнено',
+    actionResultFailed: 'Не удалось',
     historyTitle: 'История чата',
     historyEmpty: 'Нет сохранённых разговоров',
     btnHistory: 'История чата',
@@ -1206,8 +1225,8 @@ async function handleNavigation(url, originalText) {
       return;
     }
 
-    loadingDiv.querySelector('.message-content').textContent = `Opened ${url}`;
-    state.messages.push({ role: 'assistant', content: `Opened ${url}`, domain: state.currentDomain });
+    loadingDiv.querySelector('.message-content').textContent = i18n('actionResultSuccess');
+    state.messages.push({ role: 'assistant', content: i18n('actionResultSuccess'), domain: state.currentDomain });
 
     setTimeout(async () => {
       try {
@@ -1219,18 +1238,17 @@ async function handleNavigation(url, originalText) {
       } catch {}
     }, 2000);
   } catch (err) {
-    loadingDiv.querySelector('.message-content').textContent = `Error: ${err.message}`;
+    loadingDiv.querySelector('.message-content').textContent = i18n('actionResultFailed') + ': ' + err.message;
     loadingDiv.querySelector('.message-content').style.color = '#f87171';
-    state.messages.push({ role: 'assistant', content: `Error: ${err.message}`, domain: state.currentDomain });
+    state.messages.push({ role: 'assistant', content: i18n('actionResultFailed') + ': ' + err.message, domain: state.currentDomain });
   }
 }
 
 // ─── Send ─────────────────────────────────────────────────────────────────────
 
 const NAV_PATTERNS = [
-  /^(?:otw[oó]?rz|we?jd?[ií]?z?\s*(?:na|do)|przejd[źz]?\s*(?:do|na)|nawiguj?\s*(?:do|na)|id?[źz]?\s*(?:na|do|pod)|wyszukaj|search|go\s*to|navigate\s*to|open|visit)\s+(?:stron[ęy]?\s+)?(.+)/i,
+  /^(?:go\s*to|open|visit|navigate|nav)\s+(.+)/i,
   /^((?:https?:\/\/)?(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z]{2,})+(?:\/\S*)?))$/i,
-  /^([a-z][a-z0-9-]+(?:\.[a-z]{2,})?)$/i,
 ];
 
 const SEARCH_PATTERNS = [
@@ -1250,18 +1268,22 @@ function extractNavigationIntent(text) {
   if (match) {
     let url = match[1].trim();
     if (!HTTPS_RE.test(url)) {
-      url = 'https://' + url;
+      if (url.includes('.') && !url.includes(' ')) {
+        url = 'https://' + url;
+      } else {
+        return null;
+      }
     }
-    return url;
+    return { type: 'url', url };
   }
 
   const bareMatch = trimmed.match(NAV_PATTERNS[1]);
   if (bareMatch) {
     const url = bareMatch[1];
     if (!HTTPS_RE.test(url)) {
-      return 'https://' + url;
+      return { type: 'url', url: 'https://' + url };
     }
-    return url;
+    return { type: 'url', url };
   }
 
   return null;
@@ -1342,9 +1364,9 @@ async function handleSend() {
     return;
   }
 
-  const navUrl = extractNavigationIntent(text);
-  if (navUrl) {
-    await handleNavigation(navUrl, text);
+  const navIntent = extractNavigationIntent(text);
+  if (navIntent) {
+    await handleNavigation(navIntent.url, text);
     return;
   }
 
@@ -1397,6 +1419,7 @@ async function handleSend() {
         conversationHistory: textOnlyMessages,
         pageContext: state.pageContext,
         pageScreenshot: null, // Don't send image
+        pageLinks: state.pageLinks,
         autoVault: state.autoVault,
         vaultConnected: state.vaultConnected,
         vaultApiUrl: state.settings.vaultApiUrl,
@@ -1424,6 +1447,14 @@ async function handleSend() {
         if (readResults.length > 0) {
           finalContent += '\n\n**From vault:**\n' + readResults.map((n) => `## ${n.filename}\n${n.content}`).join('\n\n---\n\n');
         }
+        if (response.actionResult) {
+          const actionMsgs = Array.isArray(response.actionResult)
+            ? response.actionResult.map(r => r.ok ? `✓ ${r.message || r.summary || i18n('actionResultSuccess')}` : `✗ ${r.error || r.message || i18n('actionResultFailed')}`)
+            : [];
+          if (actionMsgs.length > 0) {
+            finalContent += '\n\n**' + i18n('actionResultTitle') + '**\n' + actionMsgs.join('\n');
+          }
+        }
         state.messages.push({ role: 'assistant', content: finalContent, domain: state.currentDomain });
         renderMessage('assistant', finalContent);
         if (state.autoVault && state.vaultConnected) saveAutoVaultNote().catch((err) => console.error('[SP] auto-vault error:', err));
@@ -1440,6 +1471,7 @@ async function handleSend() {
       conversationHistory: state.messages,
       pageContext: state.pageContext,
       pageScreenshot: screenshotToSend,
+      pageLinks: state.pageLinks,
       autoVault: state.autoVault,
       vaultConnected: state.vaultConnected,
       vaultApiUrl: state.settings.vaultApiUrl,
@@ -1481,6 +1513,17 @@ async function handleSend() {
         const recalled = readResults.map((n) => `## ${n.filename}\n${n.content}`).join('\n\n---\n\n');
         finalContent += '\n\n**From vault:**\n' + recalled;
       }
+
+      // Handle action results (click, scroll, etc.)
+      if (response.actionResult) {
+        const actionMsgs = Array.isArray(response.actionResult)
+          ? response.actionResult.map(r => r.ok ? `✓ ${r.message || r.summary || i18n('actionResultSuccess')}` : `✗ ${r.error || r.message || i18n('actionResultFailed')}`)
+          : [];
+        if (actionMsgs.length > 0) {
+          finalContent += '\n\n**' + i18n('actionResultTitle') + '**\n' + actionMsgs.join('\n');
+        }
+      }
+
       state.messages.push({ role: 'assistant', content: finalContent, domain: state.currentDomain });
       renderMessage('assistant', finalContent);
 
@@ -1552,6 +1595,14 @@ async function collectPageContext() {
       state.currentDomain = domain;
     }
   }
+
+  // Collect links separately
+  try {
+    const linksData = await chrome.tabs.sendMessage(tab.id, { type: 'page.links.collect' });
+    if (linksData?.links) {
+      state.pageLinks = linksData.links;
+    }
+  } catch {}
 }
 
 async function loadCachedContext() {

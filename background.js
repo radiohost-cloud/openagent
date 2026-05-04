@@ -171,7 +171,7 @@ async function sendNavigateAction(url) {
   if (!tab?.id) return { error: 'No active tab found' };
   try {
     await chrome.tabs.update(tab.id, { url });
-    return { ok: true, message: `Navigated to ${url}` };
+    return { ok: true };
   } catch (err) {
     return { error: `Cannot navigate: ${err.message}` };
   }
@@ -238,8 +238,8 @@ async function handlePromptSend(message, sendResponse) {
     return;
   }
 
-  const { conversationHistory, pageContext, pageScreenshot, autoVault, vaultConnected, vaultName, vaultFilename, memoryContext, webSearch, vaultIntent } = message;
-  const msgs = await buildMessages(conversationHistory, pageContext, pageScreenshot, settings.systemPrompt, autoVault, vaultConnected, vaultName, vaultFilename, memoryContext);
+  const { conversationHistory, pageContext, pageScreenshot, autoVault, vaultConnected, vaultName, vaultFilename, memoryContext, webSearch, vaultIntent, pageLinks } = message;
+  const msgs = await buildMessages(conversationHistory, pageContext, pageScreenshot, settings.systemPrompt, autoVault, vaultConnected, vaultName, vaultFilename, memoryContext, webSearch, pageLinks);
 
   const tools = webSearch ? [
     {
@@ -329,13 +329,99 @@ async function handlePromptSend(message, sendResponse) {
     }
 
     const content = message?.content || '';
-    sendResponse({ content });
+    const actionResult = await parseAndExecuteAction(content, pageLinks);
+    sendResponse({ content, actionResult });
   } catch (err) {
     sendResponse({ error: `Request failed: ${err.message}` });
   }
 }
 
-async function buildMessages(history, pageContext, pageScreenshot, systemPrompt, autoVault, vaultConnected, vaultName, vaultFilename, memoryContext, webSearch) {
+// ─── Action Tag Parser ─────────────────────────────────────────────────────────
+
+const ACTION_TAG_RE = /<action>([^<]+)<\/action>/gi;
+
+async function parseAndExecuteAction(content, pageLinks) {
+  if (!content) return null;
+  const matches = [...content.matchAll(ACTION_TAG_RE)];
+  if (matches.length === 0) return null;
+
+  const results = [];
+  for (const match of matches) {
+    const tag = match[1].trim();
+    const colonIdx = tag.indexOf(':');
+    if (colonIdx === -1) continue;
+
+    const type = tag.slice(0, colonIdx).toLowerCase();
+    const args = tag.slice(colonIdx + 1);
+
+    const result = await executeAction(type, args, pageLinks);
+    results.push(result);
+  }
+
+  return results.length > 0 ? results : null;
+}
+
+async function executeAction(type, args, pageLinks) {
+  try {
+    const tab = await getWebTab();
+    if (!tab?.id) return { ok: false, error: 'No active tab' };
+
+    switch (type) {
+      case 'click': {
+        const index = parseInt(args, 10);
+        if (isNaN(index) || index < 1) return { ok: false, error: 'Invalid click index' };
+        const link = pageLinks?.find(l => l.index === index);
+        if (!link) return { ok: false, error: `Link ${index} not found` };
+
+        const result = await chrome.tabs.sendMessage(tab.id, {
+          type: 'page.dom.perform',
+          steps: [{ action: 'click', selector: `a[href="${link.href}"]` }],
+        });
+        return result || { ok: false, error: 'Click failed - page may have changed' };
+      }
+      case 'scroll': {
+        const direction = args.toLowerCase();
+        if (!['up', 'down'].includes(direction)) return { ok: false, error: 'Invalid scroll direction' };
+
+        const result = await chrome.tabs.sendMessage(tab.id, {
+          type: 'page.dom.perform',
+          steps: [{ action: 'scroll', direction }],
+        });
+        return { ok: true };
+      }
+      case 'navigate': {
+        const url = args.trim();
+        if (!url) return { ok: false, error: 'No URL provided' };
+        if (!HTTPS_RE.test(url)) return { ok: false, error: 'Only HTTP(S) URLs supported' };
+
+        await chrome.tabs.update(tab.id, { url });
+        return { ok: true };
+      }
+      case 'type': {
+        const parts = args.split(':');
+        if (parts.length < 2) return { ok: false, error: 'Invalid type format. Use: type:N:text' };
+        const index = parseInt(parts[0], 10);
+        const text = parts.slice(1).join(':');
+        if (isNaN(index) || index < 1) return { ok: false, error: 'Invalid input index' };
+
+        const input = pageLinks?.find(l => l.index === index && l.isInput);
+        const selector = input ? `input[index="${index}"]` : `input:nth-of-type(${index})`;
+
+        const result = await chrome.tabs.sendMessage(tab.id, {
+          type: 'page.dom.perform',
+          steps: [{ action: 'type', selector, value: text }],
+        });
+        return result || { ok: false, error: 'Type failed' };
+      }
+      default:
+        return { ok: false, error: `Unknown action: ${type}` };
+    }
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+}
+
+async function buildMessages(history, pageContext, pageScreenshot, systemPrompt, autoVault, vaultConnected, vaultName, vaultFilename, memoryContext, webSearch, pageLinks) {
   const msgs = [];
 
   const systemContent = systemPrompt || DEFAULT_SYSTEM_PROMPT;
@@ -343,6 +429,23 @@ async function buildMessages(history, pageContext, pageScreenshot, systemPrompt,
   if (systemContent) {
     msgs.push({ role: 'system', content: systemContent });
   }
+
+  // Action tags for browser automation - language independent
+  const actionTagsSystem = `## Browser Actions
+When you need to perform an action on the page, include an action tag at the END of your message:
+<action>TYPE:ARGS</action>
+
+Available actions:
+- <action>click:N</action> — click link/button number N (use the number from "Page Links" section)
+- <action>scroll:up</action> or <action>scroll:down</action>
+- <action>navigate:URL</action> — go to URL
+
+IMPORTANT: 
+- Use numbers 1-30 from the "Page Links" section to reference specific links
+- Keep text before action tag brief. Use "Done." or "OK." instead of sentences like "Navigated to..." 
+- Example: "Opening first link. <action>click:1</action>"`;
+
+  msgs.push({ role: 'system', content: actionTagsSystem });
 
   // Obsidian vault capabilities — always available when connected
   if (vaultConnected) {
@@ -390,6 +493,16 @@ ${autoVault ? '' : '- When auto-save is off, only write to vault if the user ask
       content: `Current page context:\nURL: ${url}\nTitle: ${title}\n\nContent:\n${bodyText}${selectedText ? `\n\nSelected text: ${selectedText}` : ''}`,
     });
   }
+
+  // Add links index if available
+  if (pageLinks && pageLinks.length > 0) {
+    const linkLines = pageLinks.map(l => `[${l.index}] ${l.text} → ${l.href}`).join('\n');
+    msgs.push({
+      role: 'system',
+      content: `## Page Links (use with <action>click:N</action>)\n${linkLines}`,
+    });
+  }
+
   if (pageScreenshot) {
     msgs.push({
       role: 'user',
@@ -415,8 +528,8 @@ async function startStream(message, sendResponse) {
     return;
   }
 
-  const { conversationHistory, pageContext, pageScreenshot, autoVault, vaultConnected, vaultName, vaultFilename, memoryContext } = message;
-  const msgs = await buildMessages(conversationHistory, pageContext, pageScreenshot, settings.systemPrompt, autoVault, vaultConnected, vaultName, vaultFilename, memoryContext);
+  const { conversationHistory, pageContext, pageScreenshot, autoVault, vaultConnected, vaultName, vaultFilename, memoryContext, pageLinks } = message;
+  const msgs = await buildMessages(conversationHistory, pageContext, pageScreenshot, settings.systemPrompt, autoVault, vaultConnected, vaultName, vaultFilename, memoryContext, false, pageLinks);
 
   try {
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {

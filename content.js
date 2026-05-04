@@ -93,6 +93,9 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       case 'page.navigate':
         sendResponse(handleNavigation(message.command));
         return true;
+      case 'page.links.collect':
+        sendResponse({ links: collectPageLinks() });
+        return true;
     }
   } catch (e) {}
   return false;
@@ -202,6 +205,29 @@ function collectPageImages() {
   return results;
 }
 
+// ─── Page Links ───────────────────────────────────────────────────────────────
+
+function collectPageLinks() {
+  const results = [];
+  const seen = new Set();
+  for (const el of document.querySelectorAll('a[href]')) {
+    const href = el.href;
+    if (!href || !href.startsWith('http') || seen.has(href)) continue;
+    const text = el.textContent.trim().slice(0, 80);
+    if (!text) continue;
+    seen.add(href);
+    const rect = el.getBoundingClientRect();
+    results.push({
+      index: results.length + 1,
+      text,
+      href,
+      visible: isVisible(el),
+      viewportRect: { left: Math.round(rect.left), top: Math.round(rect.top), width: Math.round(rect.width), height: Math.round(rect.height) },
+    });
+  }
+  return results.slice(0, 30);
+}
+
 // ─── DOM Snapshot ─────────────────────────────────────────────────────────────
 
 function collectDomSnapshot() {
@@ -300,7 +326,7 @@ async function performDomAction(step) {
         if (!step.url) return { ok: false, message: 'No URL provided' };
         if (!HTTPS_RE.test(step.url)) return { ok: false, message: 'Only HTTP(S) navigation supported' };
         window.location.href = step.url;
-        return { ok: true, message: `Navigated to: ${step.url}` };
+        return { ok: true };
       case 'select':
         if (!el || !(el instanceof HTMLSelectElement)) return { ok: false, message: 'Not a select element' };
         const option = Array.from(el.options).find((o) => o.value === step.value || o.label === step.label);

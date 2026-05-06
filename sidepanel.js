@@ -1613,40 +1613,28 @@ let lastTabUrl = '';
 let lastContextTime = 0;
 
 async function collectPageContext() {
-  console.log('[OpenAgent] collectPageContext start');
   const tab = await chrome.tabs.query({ active: true, lastFocusedWindow: true }).then(t => t[0]).catch(() => null);
   if (!tab?.id || !tab.url?.startsWith('http')) {
-    console.log('[OpenAgent] Invalid tab, returning');
     return;
   }
 
   const tabUrl = tab.url;
-  console.log('[OpenAgent] Tab URL:', tabUrl);
 
-  // Skip if tab URL hasn't changed
   if (tabUrl === lastTabUrl) {
-    console.log('[OpenAgent] Same URL, skipping');
     return;
   }
 
-  // Inject fresh content script
-  console.log('[OpenAgent] Injecting content script');
-  try { await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] }); } catch (e) { console.error('[OpenAgent] Script injection error:', e); }
+  try { await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] }); } catch (e) {}
+  try { await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['buildDomTree.js'] }); } catch (e) {}
 
-  // Also inject buildDomTree.js
-  console.log('[OpenAgent] Injecting buildDomTree.js');
-  try { await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['buildDomTree.js'] }); } catch (e) { console.error('[OpenAgent] buildDomTree injection error:', e); }
-
-  // Wait for page to settle
   await new Promise(r => setTimeout(r, 500));
 
   let data = null;
   try {
     data = await chrome.tabs.sendMessage(tab.id, { type: 'page.collect', overrideUrl: tabUrl }).catch(e => ({ rawCapture: null, error: e.message }));
-  } catch (e) { console.error('[OpenAgent] page.collect error:', e); }
+  } catch (e) {}
 
   if (data?.rawCapture && !data.error) {
-    // Only accept if content script URL matches current tab URL
     const respUrl = data.rawCapture.metadata?.url || '';
     if (respUrl === tabUrl) {
       lastTabUrl = tabUrl;
@@ -1663,27 +1651,20 @@ async function collectPageContext() {
       };
       prependPageContext(state.pageContext.metadata);
       state.currentDomain = domain;
-      console.log('[OpenAgent] Page context collected');
     }
   }
 
-  // Collect links separately
   try {
     const linksData = await chrome.tabs.sendMessage(tab.id, { type: 'page.links.collect' }).catch(e => ({ links: [] }));
     if (linksData?.links) {
       state.pageLinks = linksData.links;
-      console.log('[OpenAgent] Links collected:', linksData.links.length);
     }
-  } catch (e) { console.error('[OpenAgent] page.links.collect error:', e); }
+  } catch (e) {}
 
-  // Collect DOM tree for better element handling (DRAGON)
   try {
-    console.log('[OpenAgent] Requesting DOM tree');
     const domData = await chrome.tabs.sendMessage(tab.id, { type: 'page.dom.tree' }).catch(e => ({ error: e.message }));
-    console.log('[OpenAgent] DOM tree response:', domData ? 'received' : 'empty', domData?.error || '');
     if (domData && !domData.error && domData.elements) {
       state.domTree = domData;
-      console.log('[OpenAgent] DOM tree stored, elements:', domData.elements?.length);
 
       // Auto-highlight interactive elements
       const interactiveElements = domData.elements.filter(el => el && el.highlightIndex != null);

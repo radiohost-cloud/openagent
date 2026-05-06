@@ -341,7 +341,7 @@ async function performDomAction(step) {
           el.value = text;
           el.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: text }));
         } else if (el.getAttribute('contenteditable') === 'true') {
-          console.log('[OpenAgent] Typing into contenteditable:', el.className);
+          
           const selection = window.getSelection();
           if (selection.rangeCount > 0) {
             selection.deleteFromDocument();
@@ -379,7 +379,7 @@ async function performDomAction(step) {
 function resolveTarget(step) {
   if (step.ref && domElementRefs.has(step.ref)) return domElementRefs.get(step.ref);
   if (step.selector) {
-    console.log('[OpenAgent] resolveTarget selector:', step.selector);
+    
     if (step.selector.startsWith('/') || step.selector.includes('/*[')) {
       try {
         const result = document.evaluate(step.selector, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
@@ -401,7 +401,7 @@ function resolveTarget(step) {
 
         return null;
       } catch (e) {
-        console.warn('[OpenAgent] XPath error:', e);
+        
         return null;
       }
     }
@@ -477,7 +477,7 @@ async function collectDomTree() {
   const elements = [];
   const selectorMap = new Map();
 
-  console.log('[OpenAgent] buildDomTree result:', result.highlightCount, 'interactive elements');
+  
 
   for (const [id, node] of Object.entries(result.map)) {
     if (!node || node.type === 'TEXT_NODE') continue;
@@ -517,7 +517,7 @@ async function collectDomTree() {
     };
 
     if (node.highlightIndex != null) {
-      console.log('[OpenAgent] Element with highlightIndex:', node.highlightIndex, node.tagName, node.xpath);
+      
     }
 
     elements.push(element);
@@ -548,7 +548,7 @@ function highlightElements(elements) {
     return { ok: false, error: 'No elements to highlight' };
   }
 
-  console.log('[OpenAgent] Highlighting', elements.length, 'elements');
+  
 
   let highlightedCount = 0;
 
@@ -566,7 +566,7 @@ function highlightElements(elements) {
           domEl = result.singleNodeValue;
         }
       } catch (e) {
-        console.warn('[OpenAgent] XPath failed:', el.xpath);
+        
       }
     }
 
@@ -584,7 +584,7 @@ function highlightElements(elements) {
     }
 
     if (!domEl) {
-      console.warn('[OpenAgent] Could not find element for highlightIndex', el.highlightIndex);
+      
       continue;
     }
 
@@ -643,7 +643,7 @@ function highlightElements(elements) {
     highlightedCount++;
   }
 
-  console.log('[OpenAgent] Highlighted', highlightedCount, 'elements');
+  
   return { ok: true, highlightedCount };
 }
 

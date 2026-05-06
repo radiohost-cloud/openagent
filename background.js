@@ -402,14 +402,14 @@ async function attemptAction(tabId, action, selector, highlightIndex) {
       type: 'page.dom.perform',
       steps: [{ action, selector }],
     });
-    console.log('[OpenAgent] perform result:', result?.ok, result?.message || result?.error);
+    
     try {
       const state = result?.ok ? 'success' : 'error';
       await chrome.tabs.sendMessage(tabId, { type: 'page.highlight.setState', highlightIndex, state }).catch(() => {});
     } catch (e) {}
     return result;
   } catch (e) {
-    console.log('[OpenAgent] perform exception:', e.message);
+    
     try {
       await chrome.tabs.sendMessage(tabId, { type: 'page.highlight.setState', highlightIndex, state: 'error' }).catch(() => {});
     } catch (e) {}
@@ -437,7 +437,7 @@ async function parseAndExecuteAction(content, pageLinks, domTree) {
     const result = await executeAction(type, args, pageLinks, currentDomTree, tabId);
 
 if (result) {
-      console.log('[OpenAgent] executeAction result keys:', Object.keys(result), 'result:', result.result ? 'has result' : 'no result');
+      
       const innerResult = result.result;
       let isOk = false;
       let msg = '';
@@ -457,13 +457,13 @@ if (result) {
       }
 
       const actionMsg = { ok: isOk, message: msg, error: err };
-      console.log('[OpenAgent] actionMsg final:', JSON.stringify(actionMsg));
+      
 
       if (result.domTree) currentDomTree = result.domTree;
       if (result.tabId) tabId = result.tabId;
       results.push(actionMsg);
     } else {
-      console.log('[OpenAgent] executeAction returned null');
+      
       results.push(null);
     }
   }
@@ -492,13 +492,13 @@ async function executeAction(type, args, pageLinks, domTree, tabId) {
         if (currentDomTree?.elements) {
           targetElement = currentDomTree.elements.find(el => el.highlightIndex === index);
           if (targetElement) {
-            console.log('[OpenAgent] Click target element:', targetElement.tagName, targetElement.href || targetElement.xpath || '', targetElement.attributes);
+            
             const selectors = buildSelectors(targetElement);
-            console.log('[OpenAgent] Built selectors:', selectors.length, selectors);
+            
             for (const sel of selectors) {
-              console.log('[OpenAgent] Trying selector:', sel);
+              
               const result = await attemptAction(tabId, 'click', sel, index);
-              console.log('[OpenAgent] Selector result:', result?.ok, result?.message || result?.error);
+              
               if (result?.ok) {
                 await new Promise(r => setTimeout(r, 800));
                 const newDomTree = await chrome.tabs.sendMessage(tabId, { type: 'page.dom.tree' }).catch(() => null);
@@ -509,9 +509,9 @@ async function executeAction(type, args, pageLinks, domTree, tabId) {
               }
             }
           } else {
-            console.log('[OpenAgent] Element with highlightIndex', index, 'not found in domTree');
-            console.log('[OpenAgent] Available elements count:', currentDomTree.elements.length);
-            console.log('[OpenAgent] First 10 highlightIndex:', currentDomTree.elements.slice(0, 10).map(e => e.highlightIndex));
+            
+            
+            
           }
         }
 

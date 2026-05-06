@@ -1,5 +1,7 @@
 # OpenAgent - AI Browser Extension
 
+![Banner](docs/banner.png)
+
 AI-powered browser assistant that understands page structure and can perform actions autonomously.
 
 ## Features

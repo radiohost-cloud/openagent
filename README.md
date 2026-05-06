@@ -139,7 +139,3 @@ When using a model that does not support image input (vision):
 ## License
 
 MIT
-
----
-
-#️⃣ #ChromeExtension #BrowserExtension #BrowserAutomation #AIAgent #AIAssistant #OpenAI #OpenRouter #LLM #GPT #Claude #ChatGPT #Automation #Productivity #WebScraping #SPA #React #Vue #Angular

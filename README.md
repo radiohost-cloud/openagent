@@ -4,13 +4,90 @@
 
 AI-powered browser assistant that understands page structure and can perform actions autonomously.
 
+<p float="left">
+  <img src="docs/screenshot9.png" width="200"/>
+  <img src="docs/screenshot5.png" width="200"/>
+  <img src="docs/screenshot6.png" width="200"/>
+  <img src="docs/screenshot8.png" width="200"/>
+  <img src="docs/screenshot7.png" width="200"/>
+  <img src="docs/screenshot1.png" width="200"/>
+  <img src="docs/screenshot2.png" width="200"/>
+  <img src="docs/screenshot3.png" width="200"/>
+  <img src="docs/screenshot4.png" width="200"/>
+</p>
+
+---
+
 ## Features
 
-### 🤖 Intelligent DOM Understanding
-- Builds hierarchical DOM tree with `highlightIndex` for all interactive elements
-- Auto-highlights clickable elements (links, buttons, inputs) with numbered badges
-- Supports XPath-based element targeting for complex page structures
-- Fallback selectors for dynamic content (iframe, Shadow DOM)
+### 💬 Chat & Memory
+- **Chat about any page** — AI understands the content of the current webpage
+- **Persistent memory** — AI remembers context from previous conversations, even across different pages and sessions. Key facts and summaries are stored locally in IndexedDB
+- **Chat history** — save, resume, and delete conversations; continue them and append messages to the current thread
+- **Auto-refresh context** — page context updates automatically when you switch tabs or navigate; cached data shown instantly, refreshed in background
+
+### 📸 Screenshot
+- **Screenshot capture** — take a screenshot and send it to vision-capable models (Claude, GPT-4o, Gemini, etc.) for visual analysis
+- Vision support auto-detected from OpenRouter API
+
+### 🌐 Navigation & Search
+- **Universal address input** — type any URL or domain name directly in the chat field to navigate; works on blank/new tab pages and start pages
+- **Quick search shortcuts:**
+  - `/g query` — Google
+  - `/y query` — YouTube
+  - `/x query` — X.com
+  - `/w query` — Wikipedia
+  - `/r query` — Reddit
+  - `/gh query` — GitHub
+  - `/d query` — DuckDuckGo
+  - `/o query` — Obsidian vault (searches your vault notes)
+
+### 🤖 Browser Automation
+- **Intelligent link clicking** — the AI receives a numbered list of all links on the page. Simply say "click link 3", "go to first link", or use any language: "pierwszy link", "clique sur le lien", "den ersten Link" — the AI understands and clicks the right link
+- **Action tags** — the AI responds with action tags that are automatically executed:
+  - `<action>click:N</action>` — click link or button number N
+  - `<action>type:N:text</action>` — type text into input number N
+  - `<action>scroll:up</action>` or `<action>scroll:down</action>` — scroll the page
+  - `<action>navigate:URL</action>` — go to a URL
+- **Multilingual** — works in any language (Polish, English, German, French, Spanish, Russian, etc.)
+
+### 🌐 Web Search
+- **Real-time web search** — toggle Web Search in Settings to enable OpenRouter's server-side search tool
+- The AI decides when to search (news, weather, current events, live scores, stock prices, etc.)
+- Results come back with citations and are processed by the model in context
+- Visual indicator on the input field shows when Web Search is active (accent color glow)
+- Configurable via `tools: [{ type: "openrouter:web_search" }]` — no extra API keys needed
+
+### 📁 Obsidian Integration
+- **Auto-save conversations** — every message is automatically appended to a session note in your vault
+- **Session notes** — notes are named after the website domain and date (e.g. `github-com-2026-05-01.md`)
+- **Vault awareness** — the AI knows it's connected to Obsidian and can read/write notes on demand
+- **History resume** — restored conversations sync back to their vault notes automatically
+- **Remote access** — works over Local REST API, no need to have Obsidian open on the same machine
+- **Requires:** Obsidian desktop app + [Local REST API plugin](https://obsidian.md/plugins?id=obsidian-local-rest-api)
+
+#### Intent Field
+
+Each session note includes an `intent` field in the YAML frontmatter. This is a short summary of your conversation purpose — auto-generated from your first message but also manually settable.
+
+- **Auto-generated** — The first message you send is automatically extracted (up to 200 characters) and saved as `intent:` in the note's frontmatter. For example, sending *"How do I use git rebase?"* creates `intent: How do I use git rebase`
+- **Update with /i** — Type `/i your new intent` in the chat to overwrite the intent without sending a message. The note updates immediately and the AI sees the new intent in context
+- **Persists across appends** — Within a session, subsequent messages append to the note without changing intent. The `/i` command is the only way to change it during conversation
+- **Obsidian filters** — Since `intent` is a frontmatter field, you can filter and search your vault by it (e.g., Dataview queries: `TABLE intent FROM "obsidian" WHERE intent`) to find notes by topic across your vault
+
+Example frontmatter:
+```yaml
+---
+url: github.com
+model: anthropic/claude-3.5-sonnet
+provider: openrouter
+date: 2026-05-03
+intent: How do I use git rebase
+urls:
+  - https://github.com/git/git
+tags: [openagent, github-com, openrouter, claude-3-5-sonnet]
+---
+```
 
 ### 🧠 DRAGON System (DOM Recognition and Object Navigation)
 Inspired by NanoBrowser - builds intelligent DOM tree with:
@@ -20,21 +97,11 @@ Inspired by NanoBrowser - builds intelligent DOM tree with:
 - `tagName`, `attributes`, `text` content
 - Comprehensive element identification via role, aria-*, data-testid, data-cy, data-test
 
-### 🎯 Browser Actions
-Agents can perform actions using `<action>` tags:
-
-| Action | Format | Description |
-|--------|--------|-------------|
-| Click | `<action>click:N</action>` | Click element #N |
-| Type | `<action>type:N:text</action>` | Type text into input #N |
-| Scroll | `<action>scroll:up</action>` | Scroll up/down |
-| Navigate | `<action>navigate:URL</action>` | Go to URL |
-
-### 🔄 Auto-Refresh DOM After Actions
-After a click action, the DOM tree is automatically refreshed to handle:
-- Dynamic page changes (modals, popups)
-- SPA navigation (React, Vue, Angular apps)
-- Dynamic content loading (infinite scroll, lazy load)
+### 🤖 Intelligent DOM Understanding
+- Builds hierarchical DOM tree with `highlightIndex` for all interactive elements
+- Auto-highlights clickable elements (links, buttons, inputs) with numbered badges
+- Supports XPath-based element targeting for complex page structures
+- Fallback selectors for dynamic content (iframe, Shadow DOM)
 
 ### 👁️ Highlight Toggle
 - Click the eye icon (👁️) in the header to show/hide element highlights
@@ -57,11 +124,11 @@ After a click action, the DOM tree is automatically refreshed to handle:
 - **Action Verification**: `verifyAction()` confirms element state before/after actions
 - **Page State Hash**: `computePageStateHash()` detects DOM changes for verification
 
-### 📋 Supported Actions
-- **Click** - uses href selector first, then XPath with fallback to content
-- **Type** - supports `<textarea>`, `<input>`, `contenteditable` (execCommand insertText), and file inputs
-- **Scroll** - smooth scroll up/down in viewport
-- **Navigate** - HTTP(S) only, opens in same tab
+### 🔄 Auto-Refresh DOM After Actions
+After a click action, the DOM tree is automatically refreshed to handle:
+- Dynamic page changes (modals, popups)
+- SPA navigation (React, Vue, Angular apps)
+- Dynamic content loading (infinite scroll, lazy load)
 
 ### 🔍 Enhanced Interactive Element Detection
 Expanded selectors for comprehensive element coverage:
@@ -80,30 +147,42 @@ Tested on:
 - News sites with dynamic content
 - Complex SPAs with React/Vue/Angular
 
-### ⚙️ Architecture
-- `buildDomTree.js` - injected script for DOM tree building (bypasses CSP)
-- `content.js` - handles element resolution, actions, highlighting, SPA navigation detection
-- `background.js` - orchestrates agent communication, action parsing, buildSelectors(), attemptAction()
-- `sidepanel.js` - UI, state management, message handling, chat interface
-
-### 🔧 Configuration
-Settings (⚙️ button):
-- API Key (OpenRouter)
-- Model selection
-- System prompt customization
-- Theme (dark/light)
-- Language preference
-
-### 🌍 Multi-Language Support
-- Full i18n support with multiple language translations
-- Dynamic language switching without page reload
-- Localized status messages and error reports
-
 ### ⚠️ Model Limitations
 When using a model that does not support image input (vision):
 - Screenshots are saved to Obsidian vault as notes instead of being sent to the model
 - Error message displayed: "Cannot read 'generated-image.png' - this model does not support image input. Inform the user."
 - User is notified that vision-capable models can analyze page screenshots
+
+### 🎨 Customization
+- **14 color presets** — dark and light themes
+- **Adjustable font size** — small, medium, large
+- **Multi-language UI** — English, Polski, Español, Français, Deutsch, Русский
+
+### 🔌 OpenRouter
+- Use **any model** from OpenRouter's model catalog
+
+### 🔧 System Prompt (Customization)
+
+You can fully customize the AI's behavior by setting a custom system prompt in **Settings → System Prompt**.
+
+The AI already knows its role by default, but a custom prompt lets you:
+- Change its primary focus (e.g., Obsidian-focused note-taking assistant)
+- Add domain-specific instructions (e.g., "Always cite sources", "Format code blocks with language tags")
+- Define response style and structure
+
+**Vault tools** (available automatically when Obsidian is connected):
+
+| Tool | Usage | Description |
+|------|-------|-------------|
+| Read notes | `<vault_read query="search terms" />` | Search vault for `.md` files matching the query |
+| Write session | `<vault_write>content</vault_write>` | Append to the current session note |
+| Write note | `<vault_write filename="topic.md">content</vault_write>` | Create a new `.md` note |
+
+Session notes are automatically saved per conversation and named after the website domain + date (e.g. `github-com-2026-05-01.md`). The AI receives full vault instructions whenever the vault is connected, regardless of your custom prompt.
+
+Leave the system prompt empty to use the default built-in prompt. The AI will always receive page context, memory, and vault capabilities regardless of your custom prompt.
+
+---
 
 ## Installation
 
@@ -112,28 +191,63 @@ When using a model that does not support image input (vision):
 3. Enable "Developer mode"
 4. Click "Load unpacked"
 5. Select the extension directory
+6. (Optional) Set a keyboard shortcut in `chrome://extensions/shortcuts`
 
-## Usage
+## Setup
 
-1. Click the extension icon to open sidepanel
-2. Click "Read this page" to collect DOM tree and highlight elements
-3. Ask the agent to perform actions (e.g., "click on the second article link")
-4. Use the eye icon (👁️) to toggle highlight visibility
-5. Watch badge colors for action feedback (orange→green/red)
+1. Click the extension icon in the toolbar, or use the keyboard shortcut
+2. Click **Settings** (gear icon)
+3. Paste your [OpenRouter API key](https://openrouter.ai/keys)
+4. Pick a model from the dropdown and start chatting
 
-## Files Structure
+### Obsidian Setup
+
+1. Install the [Local REST API plugin](https://obsidian.md/plugins?id=obsidian-local-rest-api) in Obsidian
+2. Enable the plugin in Obsidian settings
+3. In OpenAgent settings, expand **Obsidian Vault**
+4. Enter:
+   - **Vault name** — subfolder path within your vault (e.g. `/obsidian`, no trailing slash — or leave empty for root)
+   - **API URL** — `http://127.0.0.1:27124` (default)
+   - **API Token** — from the Local REST API plugin settings
+5. Click **Test connection** — green "Connected" means it's working
+6. The vault button in the toolbar turns purple when connected
+
+---
+
+## How It Works
+
+The extension analyzes the current webpage and sends the page content to the AI along with your message. The AI can:
+
+- Read page content
+- Execute browser actions (click, type, scroll, navigate)
+- Write notes directly to your Obsidian vault
+- Remember context from previous conversations (stored locally in your browser)
+
+---
+
+## Keyboard Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `Open side panel` | Configurable in `chrome://extensions/shortcuts` |
+
+---
+
+## Project Structure
 
 ```
+openagent/
 ├── manifest.json          # Extension manifest
-├── sidepanel.html         # Sidepanel UI
-├── sidepanel.js           # Sidepanel logic
-├── content.js             # Content script (injected into pages)
-├── background.js          # Background script (service worker)
-├── buildDomTree.js        # DOM tree builder (injected via chrome.scripting)
-├── popup.html             # Browser action popup
-├── popup.js               # Popup logic
+├── background.js          # Service worker (API calls, routing, action execution)
+├── content.js             # Content script (page context, DOM automation, link collection)
+├── sidepanel.html         # Side panel UI
+├── sidepanel.js           # Side panel logic
+├── sidepanel.css          # Side panel styles
+├── buildDomTree.js        # DOM tree builder (injected via chrome.scripting, bypasses CSP)
+├── db.js                  # IndexedDB wrapper (conversations, memory)
+├── memory.js              # Memory extraction & matching
 ├── icons/                 # Extension icons
-└── _locales/              # Localization
+└── _locales/              # i18n translations
 ```
 
 ## License

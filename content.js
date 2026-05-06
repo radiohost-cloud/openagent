@@ -87,6 +87,9 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       case 'page.dom.snapshot':
         sendResponse(collectDomSnapshot());
         return true;
+      case 'page.dom.tree':
+        collectDomTree().then(sendResponse).catch((err) => sendResponse({ error: err.message }));
+        return true;
       case 'page.dom.perform':
         performDomActions(message.steps).then(sendResponse).catch((err) => sendResponse({ ok: false, summary: err.message, results: [] }));
         return true;
@@ -95,6 +98,24 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         return true;
       case 'page.links.collect':
         sendResponse({ links: collectPageLinks() });
+        return true;
+      case 'page.inject':
+        injectBuildDomTree().then((result) => sendResponse(result)).catch((err) => sendResponse({ injected: false, error: err.message }));
+        return true;
+      case 'page.highlight':
+        highlightElements(message.elements).then(sendResponse);
+        return true;
+      case 'page.highlight.remove':
+        removeHighlights();
+        sendResponse({ ok: true });
+        return true;
+      case 'page.highlight.toggle':
+        toggleHighlights(message.visible);
+        sendResponse({ ok: true });
+        return true;
+      case 'page.highlight.setState':
+        setBadgeState(message.highlightIndex, message.state);
+        sendResponse({ ok: true });
         return true;
     }
   } catch (e) {}
@@ -311,10 +332,25 @@ async function performDomAction(step) {
         return { ok: true, message: `Clicked: ${getElementLabel(el) || step.action}` };
       case 'type':
         if (!el) return { ok: false, message: 'No target element' };
-        if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
-          el.focus(); el.value = step.value || ''; el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true }));
+        el.focus();
+        const text = step.value || '';
+        if (el instanceof HTMLTextAreaElement || el instanceof HTMLInputElement) {
+          if (el.type === 'file' || el.type === 'hidden' || el.type === 'submit' || el.type === 'button' || el.type === 'image' || el.type === 'reset') {
+            return { ok: false, message: `Cannot type into ${el.type} input` };
+          }
+          el.value = text;
+          el.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: text }));
         } else if (el.getAttribute('contenteditable') === 'true') {
-          el.focus(); el.innerText = step.value || ''; el.dispatchEvent(new InputEvent('input', { bubbles: true }));
+          console.log('[OpenAgent] Typing into contenteditable:', el.className);
+          const selection = window.getSelection();
+          if (selection.rangeCount > 0) {
+            selection.deleteFromDocument();
+          }
+          document.execCommand('insertText', false, text);
+          el.dispatchEvent(new InputEvent('input', { bubbles: true }));
+        } else {
+          el.innerText = text;
+          el.dispatchEvent(new InputEvent('input', { bubbles: true }));
         }
         return { ok: true, message: `Typed: ${step.value}` };
       case 'scroll':
@@ -342,7 +378,46 @@ async function performDomAction(step) {
 
 function resolveTarget(step) {
   if (step.ref && domElementRefs.has(step.ref)) return domElementRefs.get(step.ref);
-  if (step.selector) return document.querySelector(step.selector);
+  if (step.selector) {
+    console.log('[OpenAgent] resolveTarget selector:', step.selector);
+    if (step.selector.startsWith('/') || step.selector.includes('/*[')) {
+      try {
+        const result = document.evaluate(step.selector, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
+        if (result.singleNodeValue) return result.singleNodeValue;
+
+        const simpleXPath = step.selector.includes('@id') 
+          ? `//*[@id="${step.selector.match(/@id="([^"]+)"/)?.[1]}"]`
+          : null;
+        if (simpleXPath) {
+          const simpleResult = document.evaluate(simpleXPath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
+          if (simpleResult.singleNodeValue) return simpleResult.singleNodeValue;
+        }
+
+        const draftResult = document.evaluate('//div[contains(@class,"DraftEditor-root")]', document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
+        if (draftResult.singleNodeValue) return draftResult.singleNodeValue;
+
+        const contenteditable = document.evaluate('//div[@contenteditable="true"][contains(@class,"notranslate")]', document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
+        if (contenteditable.singleNodeValue) return contenteditable.singleNodeValue;
+
+        return null;
+      } catch (e) {
+        console.warn('[OpenAgent] XPath error:', e);
+        return null;
+      }
+    }
+    const found = document.querySelector(step.selector);
+    if (found) return found;
+
+    if (step.selector.includes('nth-of-type')) {
+      const inputs = document.querySelectorAll('input:not([type="hidden"]):not([type="file"]):not([type="submit"]):not([type="button"]):not([type="image"]):not([type="reset"])');
+      if (inputs.length > 0) return inputs[0];
+      const textareas = document.querySelectorAll('textarea');
+      if (textareas.length > 0) return textareas[0];
+      const editable = document.querySelector('[contenteditable="true"]');
+      if (editable) return editable;
+    }
+    return null;
+  }
   if (step.label) {
     const normalized = step.label.toLowerCase();
     for (const [ref, el] of domElementRefs) {
@@ -366,6 +441,315 @@ function handleNavigation(command) {
   }
   return { ok: true };
 }
+
+// ─── DOM Tree Collection (DRAGON) ───────────────────────────────────────────
+
+async function injectBuildDomTree() {
+  if (window.buildDomTree) {
+    return { injected: true, alreadyExists: true };
+  }
+  try {
+    await chrome.scripting.executeScript({
+      target: { allFrames: true },
+      files: ['buildDomTree.js']
+    });
+    return { injected: true };
+  } catch (e) {
+    console.error('[OpenAgent] injectBuildDomTree error:', e);
+    return { injected: false, error: e.message };
+  }
+}
+
+async function collectDomTree() {
+  await new Promise(r => setTimeout(r, 100));
+
+  if (!window.buildDomTree) {
+    await injectBuildDomTree();
+  }
+
+  if (!window.buildDomTree) {
+    return { error: 'buildDomTree not available', elements: collectDomSnapshot().elements };
+  }
+
+  const startTime = Date.now();
+  const result = window.buildDomTree({ startId: 0, startHighlightIndex: 0 });
+
+  const elements = [];
+  const selectorMap = new Map();
+
+  console.log('[OpenAgent] buildDomTree result:', result.highlightCount, 'interactive elements');
+
+  for (const [id, node] of Object.entries(result.map)) {
+    if (!node || node.type === 'TEXT_NODE') continue;
+
+    const element = {
+      ref: `el-${node.highlightIndex || id}`,
+      tagName: node.tagName,
+      xpath: node.xpath,
+      attributes: node.attributes || {},
+      text: node.attributes?.text || '',
+      href: node.attributes?.href,
+      src: node.attributes?.src,
+      alt: node.attributes?.alt,
+      title: node.attributes?.title,
+      placeholder: node.attributes?.placeholder,
+      type: node.attributes?.type,
+      role: node.attributes?.role,
+      value: node.attributes?.value,
+      class: node.attributes?.class,
+      id: node.attributes?.id,
+      name: node.attributes?.name,
+      isInteractive: node.isInteractive,
+      isTopElement: node.isTopElement,
+      isInViewport: node.isInViewport,
+      isVisible: node.isVisible,
+      highlightIndex: node.highlightIndex,
+      'data-testid': node.attributes?.['data-testid'],
+      'data-cy': node.attributes?.['data-cy'],
+      'data-test': node.attributes?.['data-test'],
+      'aria-label': node.attributes?.['aria-label'],
+      viewportRect: {
+        left: node.attributes?.viewport?.left || 0,
+        top: node.attributes?.viewport?.top || 0,
+        width: node.attributes?.viewport?.width || 0,
+        height: node.attributes?.viewport?.height || 0
+      }
+    };
+
+    if (node.highlightIndex != null) {
+      console.log('[OpenAgent] Element with highlightIndex:', node.highlightIndex, node.tagName, node.xpath);
+    }
+
+    elements.push(element);
+
+    if (node.highlightIndex != null) {
+      selectorMap.set(node.highlightIndex, element);
+    }
+  }
+
+  return {
+    metadata: pageMetadata(),
+    elements,
+    selectorMap: Object.fromEntries(selectorMap),
+    stats: {
+      totalElements: Object.keys(result.map).length,
+      interactiveElements: result.highlightCount,
+      buildTimeMs: Date.now() - startTime
+    }
+  };
+}
+
+// ─── Element Highlighting ──────────────────────────────────────────────────────
+
+function highlightElements(elements) {
+  removeHighlights();
+
+  if (!elements || elements.length === 0) {
+    return { ok: false, error: 'No elements to highlight' };
+  }
+
+  console.log('[OpenAgent] Highlighting', elements.length, 'elements');
+
+  let highlightedCount = 0;
+
+  for (const el of elements) {
+    if (el.highlightIndex == null) continue;
+
+    let domEl = null;
+    const selectors = [];
+
+    if (el.href) selectors.push(`a[href="${el.href}"]`);
+    if (el.xpath) {
+      try {
+        const result = document.evaluate(el.xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
+        if (result.singleNodeValue) {
+          domEl = result.singleNodeValue;
+        }
+      } catch (e) {
+        console.warn('[OpenAgent] XPath failed:', el.xpath);
+      }
+    }
+
+    if (!domEl && el.tagName === 'input' && el.type) {
+      domEl = document.querySelector(`input[type="${el.type}"]`);
+    }
+    if (!domEl && el.tagName === 'button') {
+      domEl = document.querySelector('button');
+    }
+    if (!domEl && el.tagName === 'a' && el.href) {
+      domEl = document.querySelector(`a[href="${el.href}"]`);
+    }
+    if (!domEl && el.tagName) {
+      domEl = document.querySelector(el.tagName);
+    }
+
+    if (!domEl) {
+      console.warn('[OpenAgent] Could not find element for highlightIndex', el.highlightIndex);
+      continue;
+    }
+
+    const rect = domEl.getBoundingClientRect();
+    if (rect.width < 2 || rect.height < 2) {
+      continue;
+    }
+
+    const badge = document.createElement('div');
+    badge.textContent = el.highlightIndex;
+    badge.dataset.openagentBadge = el.highlightIndex;
+    badge.className = 'openagent-badge';
+    badge.style.cssText = [
+      'position:fixed',
+      `left:${rect.left + rect.width / 2}px`,
+      `top:${rect.top - 8}px`,
+      'transform:translateX(-50%)',
+      'background:#7c6af7',
+      'color:white',
+      'border-radius:10px',
+      'min-width:18px',
+      'height:18px',
+      'display:none',
+      'align-items:center',
+      'justify-content:center',
+      'font-weight:600',
+      'font-size:11px',
+      'pointer-events:none',
+      'z-index:2147483647',
+      'box-shadow:0 2px 8px rgba(0,0,0,0.4)',
+      'padding:0 5px',
+      'transition:background 0.2s, transform 0.2s',
+    ].join(';');
+
+    const highlight = document.createElement('div');
+    highlight.dataset.openagentHighlight = el.highlightIndex;
+    highlight.className = 'openagent-highlight';
+    highlight.style.cssText = [
+      'position:fixed',
+      `left:${rect.left}px`,
+      `top:${rect.top}px`,
+      `width:${rect.width}px`,
+      `height:${rect.height}px`,
+      'background:rgba(124,106,247,0.15)',
+      'border:2px solid #7c6af7',
+      'border-radius:3px',
+      'pointer-events:none',
+      'z-index:2147483646',
+      'box-sizing:border-box',
+      'display:none',
+      'transition:border-color 0.2s, background 0.2s',
+    ].join(';');
+
+    (document.body || document.documentElement).appendChild(highlight);
+    (document.body || document.documentElement).appendChild(badge);
+    highlightedCount++;
+  }
+
+  console.log('[OpenAgent] Highlighted', highlightedCount, 'elements');
+  return { ok: true, highlightedCount };
+}
+
+function removeHighlights() {
+  const existing = document.getElementById('openagent-highlight-container');
+  if (existing) existing.remove();
+
+  document.querySelectorAll('[data-openagent-highlight]').forEach(el => el.remove());
+  document.querySelectorAll('[data-openagent-badge]').forEach(el => el.remove());
+}
+
+function toggleHighlights(visible) {
+  const highlightDisplay = visible ? 'block' : 'none';
+  const badgeDisplay = visible ? 'flex' : 'none';
+
+  document.querySelectorAll('[data-openagent-highlight]').forEach(el => {
+    el.style.display = highlightDisplay;
+  });
+  document.querySelectorAll('[data-openagent-badge]').forEach(el => {
+    el.style.display = badgeDisplay;
+  });
+}
+
+function setBadgeState(highlightIndex, state) {
+  const badge = document.querySelector(`.openagent-badge[data-openagent-badge="${highlightIndex}"]`);
+  const highlight = document.querySelector(`.openagent-highlight[data-openagent-highlight="${highlightIndex}"]`);
+  if (!badge) return;
+
+  badge.classList.remove('openagent-badge-loading', 'openagent-badge-success', 'openagent-badge-error');
+  badge.classList.add(`openagent-badge-${state}`);
+
+  if (state === 'loading') {
+    badge.style.background = '#f59e0b';
+    badge.style.transform = 'translateX(-50%) scale(1.1)';
+  } else if (state === 'success') {
+    badge.style.background = '#10b981';
+    badge.style.transform = 'translateX(-50%) scale(1)';
+    if (highlight) highlight.style.borderColor = '#10b981';
+  } else if (state === 'error') {
+    badge.style.background = '#ef4444';
+    badge.style.transform = 'translateX(-50%) scale(1)';
+    if (highlight) highlight.style.borderColor = '#ef4444';
+  }
+
+  setTimeout(() => {
+    if (state === 'success' || state === 'error') {
+      badge.classList.remove(`openagent-badge-${state}`);
+      badge.style.background = '#7c6af7';
+      badge.style.transform = 'translateX(-50%)';
+      if (highlight) highlight.style.borderColor = '#7c6af7';
+    }
+  }, 2000);
+}
+
+function computePageStateHash() {
+  const elements = document.querySelectorAll('a[href], button, input, textarea, select, [role="button"], [role="link"]');
+  let hash = 0;
+  for (const el of elements) {
+    const rect = el.getBoundingClientRect();
+    if (rect.width > 0 && rect.height > 0) {
+      const text = el.textContent?.trim().slice(0, 20) || '';
+      const href = el.href || '';
+      hash = (hash * 31 + text.length + href.length) >>> 0;
+    }
+  }
+  return hash;
+}
+
+let lastPageStateHash = null;
+
+function verifyAction(action, selector) {
+  const currentHash = computePageStateHash();
+  const hashChanged = lastPageStateHash !== null && lastPageStateHash !== currentHash;
+  lastPageStateHash = currentHash;
+
+  if (action === 'click') {
+    let target = null;
+    if (selector.startsWith('/') || selector.includes('/*[')) {
+      try {
+        const result = document.evaluate(selector, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
+        target = result.singleNodeValue;
+      } catch (e) {}
+    } else {
+      target = document.querySelector(selector);
+    }
+
+    if (!target) {
+      return { ok: false, reason: 'element_not_found', recovered: false };
+    }
+
+    const urlChanged = window.location.href !== lastUrl;
+    lastUrl = window.location.href;
+
+    return {
+      ok: true,
+      urlChanged,
+      hashChanged,
+      elementExists: !!target,
+      elementText: target.textContent?.trim().slice(0, 50) || ''
+    };
+  }
+
+  return { ok: true };
+}
+
+let lastUrl = window.location.href;
 
 // End of content script IIFE
 })();

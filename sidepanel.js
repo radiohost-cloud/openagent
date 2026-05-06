@@ -6,6 +6,8 @@ const state = {
   pageContext: null,
   pageLinks: [],
   pageScreenshot: null,
+  domTree: null,
+  highlightsVisible: false,
   visionModels: [],
   isLoading: false,
   allModels: [],
@@ -537,6 +539,7 @@ const dom = {
   input: $('#input'),
   sendBtn: $('#sendBtn'),
   collectBtn: $('#collectBtn'),
+  highlightToggleBtn: $('#highlightToggleBtn'),
   screenshotBtn: $('#screenshotBtn'),
   historyBtn: $('#historyBtn'),
   vaultBtn: $('#vaultBtn'),
@@ -899,6 +902,26 @@ function bindEvents() {
   });
 
   dom.collectBtn.addEventListener('click', () => { lastTabUrl = ''; collectPageContext(); });
+
+  if (dom.highlightToggleBtn) {
+    dom.highlightToggleBtn.addEventListener('click', async () => {
+      state.highlightsVisible = !state.highlightsVisible;
+      const tab = await chrome.tabs.query({ active: true, currentWindow: true }).then(t => t[0]).catch(() => null);
+      if (!tab?.id) {
+        setStatus('No active tab', 'error');
+        return;
+      }
+
+      try {
+        await chrome.tabs.sendMessage(tab.id, {
+          type: 'page.highlight.toggle',
+          visible: state.highlightsVisible
+        });
+      } catch (e) {}
+      setStatus(state.highlightsVisible ? 'Highlights shown' : 'Highlights hidden', 'success');
+    });
+  }
+
   dom.screenshotBtn.addEventListener('click', takeScreenshot);
   dom.historyBtn.addEventListener('click', toggleHistory);
   dom.clearBtn.addEventListener('click', clearConversation);
@@ -1420,6 +1443,7 @@ async function handleSend() {
         pageContext: state.pageContext,
         pageScreenshot: null, // Don't send image
         pageLinks: state.pageLinks,
+        domTree: state.domTree,
         autoVault: state.autoVault,
         vaultConnected: state.vaultConnected,
         vaultApiUrl: state.settings.vaultApiUrl,
@@ -1448,9 +1472,25 @@ async function handleSend() {
           finalContent += '\n\n**From vault:**\n' + readResults.map((n) => `## ${n.filename}\n${n.content}`).join('\n\n---\n\n');
         }
         if (response.actionResult) {
-          const actionMsgs = Array.isArray(response.actionResult)
-            ? response.actionResult.map(r => r.ok ? `✓ ${r.message || r.summary || i18n('actionResultSuccess')}` : `✗ ${r.error || r.message || i18n('actionResultFailed')}`)
-            : [];
+          let actionMsgs = [];
+          if (Array.isArray(response.actionResult)) {
+            for (const r of response.actionResult) {
+              if (r && typeof r === 'object') {
+                const innerResult = r.result || r;
+                const ok = innerResult?.ok ?? r.ok ?? false;
+                const msg = innerResult?.message || innerResult?.summary || r.message || r.summary || i18n('actionResultSuccess');
+                const err = innerResult?.error || innerResult?.message || r.error || r.message || i18n('actionResultFailed');
+                actionMsgs.push(ok ? `✓ ${msg}` : `✗ ${err}`);
+              }
+            }
+          } else if (response.actionResult && typeof response.actionResult === 'object') {
+            const r = response.actionResult;
+            const innerResult = r.result || r;
+            const ok = innerResult?.ok ?? r.ok ?? false;
+            const msg = innerResult?.message || innerResult?.summary || r.message || r.summary || i18n('actionResultSuccess');
+            const err = innerResult?.error || innerResult?.message || r.error || r.message || i18n('actionResultFailed');
+            actionMsgs.push(ok ? `✓ ${msg}` : `✗ ${err}`);
+          }
           if (actionMsgs.length > 0) {
             finalContent += '\n\n**' + i18n('actionResultTitle') + '**\n' + actionMsgs.join('\n');
           }
@@ -1472,6 +1512,7 @@ async function handleSend() {
       pageContext: state.pageContext,
       pageScreenshot: screenshotToSend,
       pageLinks: state.pageLinks,
+      domTree: state.domTree,
       autoVault: state.autoVault,
       vaultConnected: state.vaultConnected,
       vaultApiUrl: state.settings.vaultApiUrl,
@@ -1516,9 +1557,25 @@ async function handleSend() {
 
       // Handle action results (click, scroll, etc.)
       if (response.actionResult) {
-        const actionMsgs = Array.isArray(response.actionResult)
-          ? response.actionResult.map(r => r.ok ? `✓ ${r.message || r.summary || i18n('actionResultSuccess')}` : `✗ ${r.error || r.message || i18n('actionResultFailed')}`)
-          : [];
+        let actionMsgs = [];
+        if (Array.isArray(response.actionResult)) {
+          for (const r of response.actionResult) {
+            if (r && typeof r === 'object') {
+              const innerResult = r.result || r;
+              const ok = innerResult?.ok ?? r.ok ?? false;
+              const msg = innerResult?.message || innerResult?.summary || r.message || r.summary || i18n('actionResultSuccess');
+              const err = innerResult?.error || innerResult?.message || r.error || r.message || i18n('actionResultFailed');
+              actionMsgs.push(ok ? `✓ ${msg}` : `✗ ${err}`);
+            }
+          }
+        } else if (response.actionResult && typeof response.actionResult === 'object') {
+          const r = response.actionResult;
+          const innerResult = r.result || r;
+          const ok = innerResult?.ok ?? r.ok ?? false;
+          const msg = innerResult?.message || innerResult?.summary || r.message || r.summary || i18n('actionResultSuccess');
+          const err = innerResult?.error || innerResult?.message || r.error || r.message || i18n('actionResultFailed');
+          actionMsgs.push(ok ? `✓ ${msg}` : `✗ ${err}`);
+        }
         if (actionMsgs.length > 0) {
           finalContent += '\n\n**' + i18n('actionResultTitle') + '**\n' + actionMsgs.join('\n');
         }
@@ -1556,26 +1613,39 @@ let lastTabUrl = '';
 let lastContextTime = 0;
 
 async function collectPageContext() {
+  console.log('[OpenAgent] collectPageContext start');
   const tab = await chrome.tabs.query({ active: true, lastFocusedWindow: true }).then(t => t[0]).catch(() => null);
-  if (!tab?.id || !tab.url?.startsWith('http')) return;
+  if (!tab?.id || !tab.url?.startsWith('http')) {
+    console.log('[OpenAgent] Invalid tab, returning');
+    return;
+  }
 
   const tabUrl = tab.url;
+  console.log('[OpenAgent] Tab URL:', tabUrl);
 
   // Skip if tab URL hasn't changed
-  if (tabUrl === lastTabUrl) return;
+  if (tabUrl === lastTabUrl) {
+    console.log('[OpenAgent] Same URL, skipping');
+    return;
+  }
 
   // Inject fresh content script
-  try { await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] }); } catch {}
+  console.log('[OpenAgent] Injecting content script');
+  try { await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] }); } catch (e) { console.error('[OpenAgent] Script injection error:', e); }
+
+  // Also inject buildDomTree.js
+  console.log('[OpenAgent] Injecting buildDomTree.js');
+  try { await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['buildDomTree.js'] }); } catch (e) { console.error('[OpenAgent] buildDomTree injection error:', e); }
 
   // Wait for page to settle
   await new Promise(r => setTimeout(r, 500));
 
   let data = null;
   try {
-    data = await chrome.tabs.sendMessage(tab.id, { type: 'page.collect', overrideUrl: tabUrl });
-  } catch {}
+    data = await chrome.tabs.sendMessage(tab.id, { type: 'page.collect', overrideUrl: tabUrl }).catch(e => ({ rawCapture: null, error: e.message }));
+  } catch (e) { console.error('[OpenAgent] page.collect error:', e); }
 
-  if (data?.rawCapture) {
+  if (data?.rawCapture && !data.error) {
     // Only accept if content script URL matches current tab URL
     const respUrl = data.rawCapture.metadata?.url || '';
     if (respUrl === tabUrl) {
@@ -1593,16 +1663,38 @@ async function collectPageContext() {
       };
       prependPageContext(state.pageContext.metadata);
       state.currentDomain = domain;
+      console.log('[OpenAgent] Page context collected');
     }
   }
 
   // Collect links separately
   try {
-    const linksData = await chrome.tabs.sendMessage(tab.id, { type: 'page.links.collect' });
+    const linksData = await chrome.tabs.sendMessage(tab.id, { type: 'page.links.collect' }).catch(e => ({ links: [] }));
     if (linksData?.links) {
       state.pageLinks = linksData.links;
+      console.log('[OpenAgent] Links collected:', linksData.links.length);
     }
-  } catch {}
+  } catch (e) { console.error('[OpenAgent] page.links.collect error:', e); }
+
+  // Collect DOM tree for better element handling (DRAGON)
+  try {
+    console.log('[OpenAgent] Requesting DOM tree');
+    const domData = await chrome.tabs.sendMessage(tab.id, { type: 'page.dom.tree' }).catch(e => ({ error: e.message }));
+    console.log('[OpenAgent] DOM tree response:', domData ? 'received' : 'empty', domData?.error || '');
+    if (domData && !domData.error && domData.elements) {
+      state.domTree = domData;
+      console.log('[OpenAgent] DOM tree stored, elements:', domData.elements?.length);
+
+      // Auto-highlight interactive elements
+      const interactiveElements = domData.elements.filter(el => el && el.highlightIndex != null);
+      if (interactiveElements.length > 0) {
+        await chrome.tabs.sendMessage(tab.id, {
+          type: 'page.highlight',
+          elements: interactiveElements
+        }).catch(e => console.error('[OpenAgent] highlight error:', e));
+      }
+    }
+  } catch (e) { console.error('[OpenAgent] DOM tree block error:', e); }
 }
 
 async function loadCachedContext() {

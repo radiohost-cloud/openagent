@@ -49,7 +49,7 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["icons/openagent-32.png", "icons/openagent-purple-16.png", "icons/openagent-purple-24.png", "icons/openagent-purple-32.png", "icons/openagent-purple-48.png", "icons/openagent-purple-128.png"],
+      "resources": ["icons/openagent-32.png", "icons/openagent-purple-16.png", "icons/openagent-purple-24.png", "icons/openagent-purple-32.png", "icons/openagent-purple-48.png", "icons/openagent-purple-128.png", "buildDomTree.js"],
       "matches": ["<all_urls>"]
     }
   ],

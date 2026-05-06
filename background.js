@@ -103,6 +103,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     'page.collect': () => sendToContentScript('page.collect'),
     'page.dom.snapshot': () => sendToContentScript('page.dom.snapshot'),
     'page.dom.perform': () => sendToContentScript('page.dom.perform', { steps: message.steps }),
+    'page.highlight': () => sendToContentScript('page.highlight', { elements: message.elements }),
+    'page.highlight.remove': () => sendToContentScript('page.highlight.remove'),
     'page.navigate': () => sendNavigateAction(message.url),
     'prompt.send': () => handlePromptSend(message, sendResponse),
     'conversation.clear': () => ({ ok: true }),
@@ -238,8 +240,8 @@ async function handlePromptSend(message, sendResponse) {
     return;
   }
 
-  const { conversationHistory, pageContext, pageScreenshot, autoVault, vaultConnected, vaultName, vaultFilename, memoryContext, webSearch, vaultIntent, pageLinks } = message;
-  const msgs = await buildMessages(conversationHistory, pageContext, pageScreenshot, settings.systemPrompt, autoVault, vaultConnected, vaultName, vaultFilename, memoryContext, webSearch, pageLinks);
+  const { conversationHistory, pageContext, pageScreenshot, autoVault, vaultConnected, vaultName, vaultFilename, memoryContext, webSearch, vaultIntent, pageLinks, domTree } = message;
+  const msgs = await buildMessages(conversationHistory, pageContext, pageScreenshot, settings.systemPrompt, autoVault, vaultConnected, vaultName, vaultFilename, memoryContext, webSearch, pageLinks, domTree);
 
   const tools = webSearch ? [
     {
@@ -329,7 +331,7 @@ async function handlePromptSend(message, sendResponse) {
     }
 
     const content = message?.content || '';
-    const actionResult = await parseAndExecuteAction(content, pageLinks);
+    const actionResult = await parseAndExecuteAction(content, pageLinks, domTree);
     sendResponse({ content, actionResult });
   } catch (err) {
     sendResponse({ error: `Request failed: ${err.message}` });
@@ -340,12 +342,90 @@ async function handlePromptSend(message, sendResponse) {
 
 const ACTION_TAG_RE = /<action>([^<]+)<\/action>/gi;
 
-async function parseAndExecuteAction(content, pageLinks) {
+function buildSelectors(element) {
+  const selectors = [];
+  if (element.href) {
+    selectors.push(`a[href="${element.href}"]`);
+    selectors.push(`a[href*="${element.href.split('/').pop()}"]`);
+  }
+  if (element.id) {
+    selectors.push(`#${element.id}`);
+    if (element.tagName) selectors.push(`#${element.id}${element.tagName.toLowerCase()}`);
+  }
+  if (element['data-testid']) selectors.push(`[data-testid="${element['data-testid']}"]`);
+  if (element['data-cy']) selectors.push(`[data-cy="${element['data-cy']}"]`);
+  if (element['data-test']) selectors.push(`[data-test="${element['data-test']}"]`);
+  if (element.type && element.tagName === 'input') selectors.push(`input[type="${element.type}"]`);
+  if (element.name) selectors.push(`[name="${element.name}"]`);
+  if (element.placeholder) selectors.push(`[placeholder="${element.placeholder}"]`);
+  if (element.role) selectors.push(`[role="${element.role}"]`);
+  if (element['aria-label']) selectors.push(`[aria-label="${element['aria-label']}"]`);
+  if (element.tagName) {
+    const tag = element.tagName.toLowerCase();
+    selectors.push(tag);
+    if (element.class) {
+      const classes = element.class.split(' ').filter(c => c.length > 0).slice(0, 2);
+      if (classes.length > 0) {
+        selectors.push(`${tag}.${classes.join('.')}`);
+        selectors.push(`${tag}[class*="${classes[0]}"]`);
+      }
+    }
+  }
+  if (element.xpath) {
+    selectors.push(element.xpath);
+    const simpleXPath = simplifyXPath(element.xpath);
+    if (simpleXPath !== element.xpath) selectors.push(simpleXPath);
+  }
+  if (element.href && element.text) {
+    selectors.push(`a[href="${element.href}"]:contains("${element.text.slice(0, 30)}")`);
+  }
+  return selectors;
+}
+
+function simplifyXPath(xpath) {
+  const parts = xpath.split('/').filter(p => p.length > 0);
+  if (parts.length <= 3) return xpath;
+  const idPart = parts.find(p => p.includes('@id'));
+  if (idPart) {
+    const idMatch = idPart.match(/@id="([^"]+)"/);
+    if (idMatch) return `//*[@id="${idMatch[1]}"]`;
+  }
+  return '/' + parts.slice(-3).join('/');
+}
+
+async function attemptAction(tabId, action, selector, highlightIndex) {
+  try {
+    await chrome.tabs.sendMessage(tabId, { type: 'page.highlight.setState', highlightIndex, state: 'loading' }).catch(() => {});
+  } catch (e) {}
+  try {
+    const result = await chrome.tabs.sendMessage(tabId, {
+      type: 'page.dom.perform',
+      steps: [{ action, selector }],
+    });
+    console.log('[OpenAgent] perform result:', result?.ok, result?.message || result?.error);
+    try {
+      const state = result?.ok ? 'success' : 'error';
+      await chrome.tabs.sendMessage(tabId, { type: 'page.highlight.setState', highlightIndex, state }).catch(() => {});
+    } catch (e) {}
+    return result;
+  } catch (e) {
+    console.log('[OpenAgent] perform exception:', e.message);
+    try {
+      await chrome.tabs.sendMessage(tabId, { type: 'page.highlight.setState', highlightIndex, state: 'error' }).catch(() => {});
+    } catch (e) {}
+    return { ok: false, error: e.message };
+  }
+}
+
+async function parseAndExecuteAction(content, pageLinks, domTree) {
   if (!content) return null;
   const matches = [...content.matchAll(ACTION_TAG_RE)];
   if (matches.length === 0) return null;
 
   const results = [];
+  let currentDomTree = domTree;
+  let tabId = null;
+
   for (const match of matches) {
     const tag = match[1].trim();
     const colonIdx = tag.indexOf(':');
@@ -354,36 +434,94 @@ async function parseAndExecuteAction(content, pageLinks) {
     const type = tag.slice(0, colonIdx).toLowerCase();
     const args = tag.slice(colonIdx + 1);
 
-    const result = await executeAction(type, args, pageLinks);
-    results.push(result);
+    const result = await executeAction(type, args, pageLinks, currentDomTree, tabId);
+
+if (result) {
+      console.log('[OpenAgent] executeAction result keys:', Object.keys(result), 'result:', result.result ? 'has result' : 'no result');
+      const innerResult = result.result;
+      let isOk = false;
+      let msg = '';
+      let err = '';
+
+      if (innerResult && typeof innerResult === 'object') {
+        isOk = innerResult.ok === true;
+        msg = innerResult.message || innerResult.summary || '';
+        err = innerResult.error || '';
+      }
+      if (!isOk && result.ok === true) {
+        isOk = true;
+        msg = result.message || result.summary || '';
+      }
+      if (!isOk) {
+        err = result.error || result.message || 'Unknown error';
+      }
+
+      const actionMsg = { ok: isOk, message: msg, error: err };
+      console.log('[OpenAgent] actionMsg final:', JSON.stringify(actionMsg));
+
+      if (result.domTree) currentDomTree = result.domTree;
+      if (result.tabId) tabId = result.tabId;
+      results.push(actionMsg);
+    } else {
+      console.log('[OpenAgent] executeAction returned null');
+      results.push(null);
+    }
   }
 
   return results.length > 0 ? results : null;
 }
 
-async function executeAction(type, args, pageLinks) {
+async function executeAction(type, args, pageLinks, domTree, tabId) {
   try {
-    const tab = await getWebTab();
-    if (!tab?.id) return { ok: false, error: 'No active tab' };
+    if (!tabId) {
+      const tab = await getWebTab();
+      tabId = tab?.id;
+    }
+    if (!tabId) return { ok: false, error: 'No active tab' };
+
+    let currentDomTree = domTree;
 
     switch (type) {
       case 'click': {
         const index = parseInt(args, 10);
         if (isNaN(index) || index < 1) return { ok: false, error: 'Invalid click index' };
-        const link = pageLinks?.find(l => l.index === index);
-        if (!link) return { ok: false, error: `Link ${index} not found` };
 
-        const result = await chrome.tabs.sendMessage(tab.id, {
-          type: 'page.dom.perform',
-          steps: [{ action: 'click', selector: `a[href="${link.href}"]` }],
-        });
-        return result || { ok: false, error: 'Click failed - page may have changed' };
+        let selector = null;
+        let targetElement = null;
+
+        if (currentDomTree?.elements) {
+          targetElement = currentDomTree.elements.find(el => el.highlightIndex === index);
+          if (targetElement) {
+            console.log('[OpenAgent] Click target element:', targetElement.tagName, targetElement.href || targetElement.xpath || '', targetElement.attributes);
+            const selectors = buildSelectors(targetElement);
+            console.log('[OpenAgent] Built selectors:', selectors.length, selectors);
+            for (const sel of selectors) {
+              console.log('[OpenAgent] Trying selector:', sel);
+              const result = await attemptAction(tabId, 'click', sel, index);
+              console.log('[OpenAgent] Selector result:', result?.ok, result?.message || result?.error);
+              if (result?.ok) {
+                await new Promise(r => setTimeout(r, 800));
+                const newDomTree = await chrome.tabs.sendMessage(tabId, { type: 'page.dom.tree' }).catch(() => null);
+                if (newDomTree && !newDomTree.error) {
+                  currentDomTree = newDomTree;
+                }
+                return { result, domTree: currentDomTree, tabId };
+              }
+            }
+          } else {
+            console.log('[OpenAgent] Element with highlightIndex', index, 'not found in domTree');
+            console.log('[OpenAgent] Available elements count:', currentDomTree.elements.length);
+            console.log('[OpenAgent] First 10 highlightIndex:', currentDomTree.elements.slice(0, 10).map(e => e.highlightIndex));
+          }
+        }
+
+        return { ok: false, error: `Click failed for element ${index}` };
       }
       case 'scroll': {
         const direction = args.toLowerCase();
         if (!['up', 'down'].includes(direction)) return { ok: false, error: 'Invalid scroll direction' };
 
-        const result = await chrome.tabs.sendMessage(tab.id, {
+        const result = await chrome.tabs.sendMessage(tabId, {
           type: 'page.dom.perform',
           steps: [{ action: 'scroll', direction }],
         });
@@ -394,7 +532,7 @@ async function executeAction(type, args, pageLinks) {
         if (!url) return { ok: false, error: 'No URL provided' };
         if (!HTTPS_RE.test(url)) return { ok: false, error: 'Only HTTP(S) URLs supported' };
 
-        await chrome.tabs.update(tab.id, { url });
+        await chrome.tabs.update(tabId, { url });
         return { ok: true };
       }
       case 'type': {
@@ -404,13 +542,54 @@ async function executeAction(type, args, pageLinks) {
         const text = parts.slice(1).join(':');
         if (isNaN(index) || index < 1) return { ok: false, error: 'Invalid input index' };
 
-        const input = pageLinks?.find(l => l.index === index && l.isInput);
-        const selector = input ? `input[index="${index}"]` : `input:nth-of-type(${index})`;
+        let selector = null;
 
-        const result = await chrome.tabs.sendMessage(tab.id, {
+        if (currentDomTree?.elements) {
+          const element = currentDomTree.elements.find(el => el.highlightIndex === index && (el.tagName === 'input' || el.tagName === 'textarea' || el.getAttribute('contenteditable') || el.attributes?.contenteditable));
+          if (element) {
+            if (element.xpath) {
+              selector = element.xpath;
+            } else {
+              const attrs = [];
+              if (element.type) attrs.push(`type="${element.type}"`);
+              if (element.name) attrs.push(`name="${element.name}"`);
+              if (element.placeholder) attrs.push(`placeholder="${element.placeholder}"`);
+              selector = `input[${attrs.join('][')}]`;
+            }
+          }
+        }
+
+        if (!selector) {
+          selector = `input:nth-of-type(${index})`;
+        }
+
+        const result = await chrome.tabs.sendMessage(tabId, {
           type: 'page.dom.perform',
           steps: [{ action: 'type', selector, value: text }],
         });
+
+        if (!result?.ok) {
+          const fallbackSelectors = [
+            '[role="textbox"]',
+            '[aria-label*="wiadomość"]',
+            '[aria-label*="message"]',
+            '[placeholder*="Odpowiedz"]',
+            '[placeholder*="Reply"]',
+            'textarea[name="message"]',
+            'div[contenteditable="true"]'
+          ];
+
+          for (const fallback of fallbackSelectors) {
+            const fallbackResult = await chrome.tabs.sendMessage(tabId, {
+              type: 'page.dom.perform',
+              steps: [{ action: 'type', selector: fallback, value: text }],
+            });
+            if (fallbackResult?.ok) {
+              return fallbackResult;
+            }
+          }
+        }
+
         return result || { ok: false, error: 'Type failed' };
       }
       default:
@@ -421,7 +600,7 @@ async function executeAction(type, args, pageLinks) {
   }
 }
 
-async function buildMessages(history, pageContext, pageScreenshot, systemPrompt, autoVault, vaultConnected, vaultName, vaultFilename, memoryContext, webSearch, pageLinks) {
+async function buildMessages(history, pageContext, pageScreenshot, systemPrompt, autoVault, vaultConnected, vaultName, vaultFilename, memoryContext, webSearch, pageLinks, domTree) {
   const msgs = [];
 
   const systemContent = systemPrompt || DEFAULT_SYSTEM_PROMPT;
@@ -436,13 +615,14 @@ When you need to perform an action on the page, include an action tag at the END
 <action>TYPE:ARGS</action>
 
 Available actions:
-- <action>click:N</action> — click link/button number N (use the number from "Page Links" section)
+- <action>click:N</action> — click link/button/element number N (use highlightIndex from Interactive Elements)
 - <action>scroll:up</action> or <action>scroll:down</action>
 - <action>navigate:URL</action> — go to URL
+- <action>type:N:text</action> — type text into input field number N
 
-IMPORTANT: 
-- Use numbers 1-30 from the "Page Links" section to reference specific links
-- Keep text before action tag brief. Use "Done." or "OK." instead of sentences like "Navigated to..." 
+IMPORTANT:
+- Use highlightIndex numbers from "Interactive Elements" section to reference clickable elements
+- Keep text before action tag brief. Use "Done." or "OK." instead of sentences
 - Example: "Opening first link. <action>click:1</action>"`;
 
   msgs.push({ role: 'system', content: actionTagsSystem });
@@ -503,6 +683,30 @@ ${autoVault ? '' : '- When auto-save is off, only write to vault if the user ask
     });
   }
 
+  // Add interactive elements from DOM tree (DRAGON)
+  if (domTree && domTree.elements && domTree.elements.length > 0) {
+    const interactiveElements = domTree.elements.filter(el => el.highlightIndex != null);
+    if (interactiveElements.length > 0) {
+      const elementLines = interactiveElements.map(el => {
+        const attrs = [];
+        if (el.href) attrs.push(`href="${el.href}"`);
+        if (el.type) attrs.push(`type="${el.type}"`);
+        if (el.placeholder) attrs.push(`placeholder="${el.placeholder}"`);
+        if (el.role) attrs.push(`role="${el.role}"`);
+        const attrStr = attrs.length > 0 ? ' ' + attrs.join(' ') : '';
+        const text = el.text ? `>${el.text}` : '';
+        return `[${el.highlightIndex}] <${el.tagName}${attrStr}${text} />`;
+      }).join('\n');
+
+      const statsInfo = domTree.stats ? ` (${domTree.stats.interactiveElements} interactive out of ${domTree.stats.totalElements} total elements)` : '';
+
+      msgs.push({
+        role: 'system',
+        content: `## Interactive Elements${statsInfo} (use with <action>click:N</action>)\n${elementLines}`,
+      });
+    }
+  }
+
   if (pageScreenshot) {
     msgs.push({
       role: 'user',
@@ -528,8 +732,8 @@ async function startStream(message, sendResponse) {
     return;
   }
 
-  const { conversationHistory, pageContext, pageScreenshot, autoVault, vaultConnected, vaultName, vaultFilename, memoryContext, pageLinks } = message;
-  const msgs = await buildMessages(conversationHistory, pageContext, pageScreenshot, settings.systemPrompt, autoVault, vaultConnected, vaultName, vaultFilename, memoryContext, false, pageLinks);
+  const { conversationHistory, pageContext, pageScreenshot, autoVault, vaultConnected, vaultName, vaultFilename, memoryContext, pageLinks, domTree } = message;
+  const msgs = await buildMessages(conversationHistory, pageContext, pageScreenshot, settings.systemPrompt, autoVault, vaultConnected, vaultName, vaultFilename, memoryContext, false, pageLinks, domTree);
 
   try {
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {

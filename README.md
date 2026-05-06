@@ -97,6 +97,12 @@ Settings (⚙️ button):
 - Dynamic language switching without page reload
 - Localized status messages and error reports
 
+### ⚠️ Model Limitations
+When using a model that does not support image input (vision):
+- Screenshots are saved to Obsidian vault as notes instead of being sent to the model
+- Error message displayed: "Cannot read 'generated-image.png' - this model does not support image input. Inform the user."
+- User is notified that vision-capable models can analyze page screenshots
+
 ## Installation
 
 1. Clone the repository

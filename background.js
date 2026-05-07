@@ -686,18 +686,24 @@ function simplifyXPath(xpath) {
 async function attemptAction(tabId, action, selector, highlightIndex) {
   const actionLabels = { click: 'Click', hover: 'Hover', type: 'Type' };
   const actionLabel = actionLabels[action] || action;
+  const safeSend = (tabId, msg) => {
+    return chrome.tabs.sendMessage(tabId, msg).catch(e => {
+      if (e?.message?.includes('No tab with given id')) return null;
+      throw e;
+    });
+  };
   try {
-    await chrome.tabs.sendMessage(tabId, { type: 'page.highlight.setState', highlightIndex, state: 'loading' }).catch(() => {});
+    await safeSend(tabId, { type: 'page.highlight.setState', highlightIndex, state: 'loading' });
   } catch (e) {}
   try {
-    const result = await chrome.tabs.sendMessage(tabId, {
+    const result = await safeSend(tabId, {
       type: 'page.dom.perform',
       steps: [{ action, selector }],
     });
 
     try {
       const state = result?.ok ? 'success' : 'error';
-      await chrome.tabs.sendMessage(tabId, { type: 'page.highlight.setState', highlightIndex, state }).catch(() => {});
+      await safeSend(tabId, { type: 'page.highlight.setState', highlightIndex, state });
     } catch (e) {}
 
     if (result?.ok) {
@@ -712,7 +718,7 @@ async function attemptAction(tabId, action, selector, highlightIndex) {
     }
   } catch (e) {
     try {
-      await chrome.tabs.sendMessage(tabId, { type: 'page.highlight.setState', highlightIndex, state: 'error' }).catch(() => {});
+      await safeSend(tabId, { type: 'page.highlight.setState', highlightIndex, state: 'error' });
     } catch (e) {}
     return {
       ok: false,

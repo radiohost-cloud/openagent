@@ -69,7 +69,19 @@ const domElementRefs = new Map();
     if (!document.getElementById('openagent-fab-style')) {
       const s = document.createElement('style');
       s.id = 'openagent-fab-style';
-      s.textContent = '#openagent-fab{position:fixed;bottom:24px;right:24px;z-index:2147483647;display:flex;align-items:center;gap:8px;background:#7c6af7;color:white;border:none;border-radius:28px;padding:12px 18px;cursor:pointer;font-family:-apple-system,BlinkMacSystemFont,sans-serif;font-size:14px;font-weight:600;box-shadow:0 4px 20px rgba(60,60,60,.4);transition:transform .15s}#openagent-fab:hover{transform:translateY(-2px);box-shadow:0 6px 24px rgba(60,60,60,.5)}#openagent-fab:active{transform:scale(.97)}#openagent-fab svg{width:20px;height:20px;flex-shrink:0}';
+      s.textContent = `
+#openagent-fab{position:fixed;bottom:24px;right:24px;z-index:2147483647;display:flex;align-items:center;gap:8px;background:#7c6af7;color:white;border:none;border-radius:28px;padding:12px 18px;cursor:pointer;font-family:-apple-system,BlinkMacSystemFont,sans-serif;font-size:14px;font-weight:600;box-shadow:0 4px 20px rgba(60,60,60,.4);transition:transform .15s}
+#openagent-fab:hover{transform:translateY(-2px);box-shadow:0 6px 24px rgba(60,60,60,.5)}
+#openagent-fab:active{transform:scale(.97)}
+#openagent-fab svg{width:20px;height:20px;flex-shrink:0}
+.openagent-badge{position:fixed;transform:translateX(-50%);background:#7c6af7;color:white;border-radius:10px;min-width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:11px;pointer-events:none;z-index:2147483647;box-shadow:0 2px 8px rgba(0,0,0,0.4);padding:0 5px;transition:background 0.2s,transform 0.2s}
+.openagent-badge-loading{background:#f59e0b;transform:translateX(-50%) scale(1.1)}
+.openagent-badge-success{background:#10b981;transform:translateX(-50%)}
+.openagent-badge-error{background:#ef4444;transform:translateX(-50%)}
+.openagent-highlight{position:fixed;background:rgba(124,106,247,0.15);border:2px solid #7c6af7;border-radius:3px;pointer-events:none;z-index:2147483646;box-sizing:border-box;transition:border-color 0.2s,background 0.2s}
+.openagent-highlight-success{border-color:#10b981;background:rgba(16,185,129,0.15)}
+.openagent-highlight-error{border-color:#ef4444;background:rgba(239,68,68,0.15)}
+`;
       (document.head || document.documentElement).appendChild(s);
     }
     (document.head || document.documentElement).appendChild(fab);
@@ -716,27 +728,25 @@ function setBadgeState(highlightIndex, state) {
   if (!badge) return;
 
   badge.classList.remove('openagent-badge-loading', 'openagent-badge-success', 'openagent-badge-error');
-  badge.classList.add(`openagent-badge-${state}`);
 
   if (state === 'loading') {
-    badge.style.background = '#f59e0b';
-    badge.style.transform = 'translateX(-50%) scale(1.1)';
+    badge.classList.add('openagent-badge-loading');
   } else if (state === 'success') {
-    badge.style.background = '#10b981';
-    badge.style.transform = 'translateX(-50%) scale(1)';
-    if (highlight) highlight.style.borderColor = '#10b981';
+    badge.classList.add('openagent-badge-success');
+    if (highlight) highlight.classList.add('openagent-highlight-success');
   } else if (state === 'error') {
-    badge.style.background = '#ef4444';
-    badge.style.transform = 'translateX(-50%) scale(1)';
-    if (highlight) highlight.style.borderColor = '#ef4444';
+    badge.classList.add('openagent-badge-error');
+    if (highlight) highlight.classList.add('openagent-highlight-error');
   }
 
   setTimeout(() => {
     if (state === 'success' || state === 'error') {
-      badge.classList.remove(`openagent-badge-${state}`);
-      badge.style.background = '#7c6af7';
-      badge.style.transform = 'translateX(-50%)';
-      if (highlight) highlight.style.borderColor = '#7c6af7';
+      badge.classList.remove('openagent-badge-loading', 'openagent-badge-success', 'openagent-badge-error');
+      badge.classList.add('openagent-badge');
+      if (highlight) {
+        highlight.classList.remove('openagent-highlight-success', 'openagent-highlight-error');
+        highlight.classList.add('openagent-highlight');
+      }
     }
   }, 2000);
 }

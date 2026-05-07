@@ -368,6 +368,44 @@ async function performDomAction(step) {
         const option = Array.from(el.options).find((o) => o.value === step.value || o.label === step.label);
         if (option) { el.value = option.value; el.dispatchEvent(new Event('change', { bubbles: true })); }
         return { ok: !!option, message: option ? `Selected: ${option.label}` : 'Option not found' };
+      case 'hover':
+        if (!el) return { ok: false, message: 'No target element' };
+        el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        el.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true, cancelable: true, view: window }));
+        return { ok: true, message: `Hovered: ${getElementLabel(el) || step.action}` };
+      case 'scroll_to':
+        if (!el) return { ok: false, message: 'No target element' };
+        el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        return { ok: true, message: `Scrolled to: ${getElementLabel(el) || step.action}` };
+      case 'drag':
+        if (!el) return { ok: false, message: 'No target element for drag source' };
+        const targetSelector = step.target;
+        let targetEl = null;
+        if (targetSelector) {
+          if (targetSelector.startsWith('/')) {
+            try {
+              const result = document.evaluate(targetSelector, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
+              targetEl = result.singleNodeValue;
+            } catch (e) {}
+          } else {
+            targetEl = document.querySelector(targetSelector);
+          }
+        }
+        const dragStart = el.getBoundingClientRect();
+        const dragEnd = targetEl ? targetEl.getBoundingClientRect() : { left: dragStart.left + 100, top: dragStart.top + 100 };
+        const dragStartEvent = new DragEvent('dragstart', { bubbles: true, cancelable: true, dataTransfer: new DataTransfer() });
+        el.dispatchEvent(dragStartEvent);
+        const dropEvent = new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: new DataTransfer(), clientX: dragEnd.left + dragEnd.width / 2, clientY: dragEnd.top + dragEnd.height / 2 });
+        if (targetEl) targetEl.dispatchEvent(dropEvent);
+        const dragEndEvent = new DragEvent('dragend', { bubbles: true, cancelable: true });
+        el.dispatchEvent(dragEndEvent);
+        return { ok: true, message: `Dragged ${getElementLabel(el)} to ${targetSelector || 'offset'}` };
+      case 'go_back':
+        if (window.history.length > 1) { window.history.back(); return { ok: true, message: 'Navigated back' }; }
+        return { ok: false, message: 'No back history available' };
+      case 'refresh':
+        window.location.reload();
+        return { ok: true, message: 'Page refreshed' };
       default:
         return { ok: false, message: `Unsupported action: ${step.action}` };
     }

@@ -684,6 +684,8 @@ function simplifyXPath(xpath) {
 }
 
 async function attemptAction(tabId, action, selector, highlightIndex) {
+  const actionLabels = { click: 'Click', hover: 'Hover', type: 'Type' };
+  const actionLabel = actionLabels[action] || action;
   try {
     await chrome.tabs.sendMessage(tabId, { type: 'page.highlight.setState', highlightIndex, state: 'loading' }).catch(() => {});
   } catch (e) {}
@@ -692,18 +694,32 @@ async function attemptAction(tabId, action, selector, highlightIndex) {
       type: 'page.dom.perform',
       steps: [{ action, selector }],
     });
-    
+
     try {
       const state = result?.ok ? 'success' : 'error';
       await chrome.tabs.sendMessage(tabId, { type: 'page.highlight.setState', highlightIndex, state }).catch(() => {});
     } catch (e) {}
-    return result;
+
+    if (result?.ok) {
+      return { ok: true, message: `${actionLabel} successful on element ${highlightIndex}` };
+    } else {
+      return {
+        ok: false,
+        error: `${actionLabel} failed on element ${highlightIndex}: ${result?.message || 'Unknown error'}. Selector used: ${selector?.slice(0, 100)}`,
+        selector,
+        elementIndex: highlightIndex
+      };
+    }
   } catch (e) {
-    
     try {
       await chrome.tabs.sendMessage(tabId, { type: 'page.highlight.setState', highlightIndex, state: 'error' }).catch(() => {});
     } catch (e) {}
-    return { ok: false, error: e.message };
+    return {
+      ok: false,
+      error: `${actionLabel} failed on element ${highlightIndex}: ${e.message}. The page may have changed or the element is no longer available. Try scrolling or refreshing the page context.`,
+      selector,
+      elementIndex: highlightIndex
+    };
   }
 }
 
@@ -888,6 +904,109 @@ async function executeAction(type, args, pageLinks, domTree, tabId) {
 
         return result || { ok: false, error: 'Type failed' };
       }
+      case 'hover': {
+        const index = parseInt(args, 10);
+        if (isNaN(index) || index < 1) return { ok: false, error: 'Invalid hover index. Use: hover:N' };
+
+        if (currentDomTree?.elements) {
+          const targetElement = currentDomTree.elements.find(el => el.highlightIndex === index);
+          if (targetElement) {
+            const selectors = buildSelectors(targetElement);
+            for (const sel of selectors) {
+              const result = await attemptAction(tabId, 'hover', sel, index);
+              if (result?.ok) return { result, domTree: currentDomTree, tabId };
+            }
+          }
+          return { ok: false, error: `Hover failed for element ${index} - element not found or not hoverable` };
+        }
+        return { ok: false, error: 'No DOM tree available for element lookup' };
+      }
+      case 'scroll_to': {
+        const index = parseInt(args, 10);
+        if (isNaN(index) || index < 1) return { ok: false, error: 'Invalid scroll_to index. Use: scroll_to:N' };
+
+        if (currentDomTree?.elements) {
+          const targetElement = currentDomTree.elements.find(el => el.highlightIndex === index);
+          if (targetElement) {
+            const selectors = buildSelectors(targetElement);
+            for (const sel of selectors) {
+              const result = await chrome.tabs.sendMessage(tabId, {
+                type: 'page.dom.perform',
+                steps: [{ action: 'scroll_to', selector: sel }],
+              });
+              if (result?.ok) return { result, domTree: currentDomTree, tabId };
+            }
+          }
+          return { ok: false, error: `Scroll to element ${index} failed - element not found` };
+        }
+        return { ok: false, error: 'No DOM tree available for element lookup' };
+      }
+      case 'drag': {
+        const parts = args.split(':');
+        if (parts.length < 2) return { ok: false, error: 'Invalid drag format. Use: drag:SOURCE:TARGET' };
+        const sourceIndex = parseInt(parts[0], 10);
+        const targetIndex = parseInt(parts[1], 10);
+        if (isNaN(sourceIndex) || sourceIndex < 1) return { ok: false, error: 'Invalid drag source index' };
+
+        if (currentDomTree?.elements) {
+          const sourceElement = currentDomTree.elements.find(el => el.highlightIndex === sourceIndex);
+          const targetElement = targetIndex ? currentDomTree.elements.find(el => el.highlightIndex === targetIndex) : null;
+          if (sourceElement) {
+            const sourceSelectors = buildSelectors(sourceElement);
+            let targetSelector = null;
+            if (targetElement) {
+              const targetSelectors = buildSelectors(targetElement);
+              targetSelector = targetSelectors[0];
+            }
+            for (const sel of sourceSelectors) {
+              const result = await chrome.tabs.sendMessage(tabId, {
+                type: 'page.dom.perform',
+                steps: [{ action: 'drag', selector: sel, target: targetSelector || `offset:100:100` }],
+              });
+              if (result?.ok) return { result, domTree: currentDomTree, tabId };
+            }
+          }
+          return { ok: false, error: `Drag failed for element ${sourceIndex} - source element not found` };
+        }
+        return { ok: false, error: 'No DOM tree available for element lookup' };
+      }
+      case 'go_back': {
+        const result = await chrome.tabs.sendMessage(tabId, {
+          type: 'page.dom.perform',
+          steps: [{ action: 'go_back' }],
+        });
+        return result || { ok: true, message: 'Navigated back' };
+      }
+      case 'refresh': {
+        const result = await chrome.tabs.sendMessage(tabId, {
+          type: 'page.dom.perform',
+          steps: [{ action: 'refresh' }],
+        });
+        return result || { ok: true, message: 'Page refreshed' };
+      }
+      case 'select': {
+        const parts = args.split(':');
+        if (parts.length < 2) return { ok: false, error: 'Invalid select format. Use: select:N:value or select:N:label:labelText' };
+        const index = parseInt(parts[0], 10);
+        const value = parts.slice(1).join(':');
+        if (isNaN(index) || index < 1) return { ok: false, error: 'Invalid select index' };
+
+        if (currentDomTree?.elements) {
+          const targetElement = currentDomTree.elements.find(el => el.highlightIndex === index && el.tagName === 'select');
+          if (targetElement) {
+            const selectors = buildSelectors(targetElement);
+            for (const sel of selectors) {
+              const result = await chrome.tabs.sendMessage(tabId, {
+                type: 'page.dom.perform',
+                steps: [{ action: 'select', selector: sel, value }],
+              });
+              if (result?.ok) return { result, domTree: currentDomTree, tabId };
+            }
+          }
+          return { ok: false, error: `Select failed for element ${index} - element not found or not a select` };
+        }
+        return { ok: false, error: 'No DOM tree available for element lookup' };
+      }
       default:
         return { ok: false, error: `Unknown action: ${type}` };
     }
@@ -912,14 +1031,22 @@ When you need to perform an action on the page, include an action tag at the END
 
 Available actions:
 - <action>click:N</action> — click link/button/element number N (use highlightIndex from Interactive Elements)
-- <action>scroll:up</action> or <action>scroll:down</action>
-- <action>navigate:URL</action> — go to URL
+- <action>hover:N</action> — hover over element number N to reveal dropdown menus, tooltips, or hidden content
+- <action>scroll:up</action> or <action>scroll:down</action> — scroll the viewport
+- <action>scroll_to:N</action> — scroll element N into view (center it)
+- <action>navigate:URL</action> — go to URL (HTTP/S only)
 - <action>type:N:text</action> — type text into input field number N
+- <action>select:N:value</action> — select option by value in dropdown (select element N)
+- <action>select:N:label:labelText</action> — select option by label text in dropdown
+- <action>drag:SOURCE:TARGET</action> — drag element SOURCE to element TARGET (both are highlightIndex numbers)
+- <action>go_back</action> — navigate back in browser history
+- <action>refresh</action> — reload the current page
 
 IMPORTANT:
 - Use highlightIndex numbers from "Interactive Elements" section to reference clickable elements
 - Elements may have additional properties: axRole (accessibility role), axName (computed name), axFocusable, axChecked, axExpanded, axPressed, axDisabled, axReadonly, axSelected — use these to distinguish similar elements
 - Some elements are outside the viewport — look for [scroll Nx to see] hints to scroll before clicking
+- For dropdowns: first hover to reveal options, then click the specific option
 - Keep text before action tag brief. Use "Done." or "OK." instead of sentences
 - Example: "Opening first link. <action>click:1</action>"`;
 

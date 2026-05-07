@@ -527,6 +527,11 @@ async function collectDomTree() {
     }
   }
 
+  // Request CDP accessibility tree enrichment (non-blocking)
+  chrome.runtime.sendMessage({ type: 'cdp.enrich', elements }, () => {
+    // swallow errors — enrichment is best-effort
+  });
+
   return {
     metadata: pageMetadata(),
     elements,

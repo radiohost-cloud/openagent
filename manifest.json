@@ -31,7 +31,8 @@
     "storage",
     "contextMenus",
     "tabs",
-    "webNavigation"
+    "webNavigation",
+    "debugger"
   ],
   "optional_permissions": [
     "history"

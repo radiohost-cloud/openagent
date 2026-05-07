@@ -1,5 +1,6 @@
 // background.js - Chrome Extension Service Worker
 // Direct OpenRouter API calls + File System Access API for vault
+// CDP integration for accessibility tree enrichment
 
 const STORAGE_KEYS = {
   API_KEY: 'claude_api_key',
@@ -21,8 +22,290 @@ const STORAGE_KEYS = {
 const HTTPS_RE = /^https?:\/\//;
 const injectedTabs = new Set();
 
+// ─── CDP Service (inline) ───────────────────────────────────────────────────────
+
+const _cdpAttachedTabs = new Map();
+const _cachedAxTree = new Map();
+
+function _cdpSend(tabId, method, params) {
+  return new Promise((resolve) => {
+    try {
+      chrome.debugger.sendCommand({ tabId }, method, params || {}, (result) => {
+        resolve(chrome.runtime.lastError ? { error: chrome.runtime.lastError.message } : { result });
+      });
+    } catch (err) {
+      resolve({ error: err.message });
+    }
+  });
+}
+
+async function cdpAttach(tabId) {
+  if (_cdpAttachedTabs.get(tabId)) return { ok: true };
+  try {
+    await new Promise((res, rej) => {
+      chrome.debugger.attach({ tabId }, '1.3', () => {
+        if (chrome.runtime.lastError) rej(new Error(chrome.runtime.lastError.message)); else res();
+      });
+    });
+    _cdpAttachedTabs.set(tabId, true);
+    _cachedAxTree.delete(tabId);
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+}
+
+function cdpDetach(tabId) {
+  if (!_cdpAttachedTabs.get(tabId)) return;
+  try {
+    chrome.debugger.detach({ tabId }, () => {});
+  } catch {}
+  _cdpAttachedTabs.set(tabId, false);
+  _cachedAxTree.delete(tabId);
+}
+
+async function cdpGetAxTree(tabId) {
+  if (_cachedAxTree.has(tabId)) return _cachedAxTree.get(tabId);
+  const { result } = await _cdpSend(tabId, 'Accessibility.getFullAXTree');
+  const nodes = result?.nodes || [];
+  _cachedAxTree.set(tabId, nodes);
+  return nodes;
+}
+
+async function cdpGetDomSnapshot(tabId) {
+  const { result } = await _cdpSend(tabId, 'DOMSnapshot.captureSnapshot', {
+    computeDEXT: true,
+    includeDOMRects: true,
+    includePaintOrder: true,
+  });
+  return result || null;
+}
+
+function _parseAxProps(axNode) {
+  if (!axNode) return null;
+  const p = {};
+  if (axNode.role?.value) p.role = axNode.role.value;
+  if (axNode.name?.value) p.name = axNode.name.value;
+  if (axNode.properties) {
+    for (const prop of axNode.properties) {
+      const v = prop.value?.value ?? prop.value ?? null;
+      if (v === null) continue;
+      switch (prop.name) {
+        case 'focusable': p.focusable = v; break;
+        case 'focused': p.focused = v; break;
+        case 'checked': p.checked = v; break;
+        case 'expanded': p.expanded = v; break;
+        case 'pressed': p.pressed = v; break;
+        case 'disabled': p.disabled = v; break;
+        case 'readonly': p.readonly = v; break;
+        case 'selected': p.selected = v; break;
+        case 'valuemin': p.valueMin = v; break;
+        case 'valuemax': p.valueMax = v; break;
+        case 'valuenow': p.valueNow = v; break;
+        case 'valuetext': p.valueText = v; break;
+        case 'autocomplete': p.autocomplete = v; break;
+        case 'haspopup': p.hasPopup = v; break;
+        case 'level': p.level = v; break;
+        case 'setsize': p.setSize = v; break;
+        case 'posinset': p.posInSet = v; break;
+        case 'invalid': p.invalid = v; break;
+      }
+    }
+  }
+  if (axNode.state) {
+    for (const s of axNode.state) {
+      if (s === 'disabled') p.disabled = true;
+      if (s === 'hidden') p.hidden = true;
+      if (s === 'invisible') p.invisible = true;
+      if (s === 'focused') p.focused = true;
+      if (s === 'checked') p.checked = true;
+      if (s === 'expanded') p.expanded = true;
+      if (s === 'pressed') p.pressed = true;
+      if (s === 'selected') p.selected = true;
+    }
+  }
+  return p;
+}
+
+function _findAxNode(axNodes, role, name, text) {
+  if (!axNodes?.length) return null;
+  const rL = (role || '').toLowerCase();
+  const nL = (name || '').toLowerCase();
+  const tL = (text || '').toLowerCase();
+  let best = null, bestScore = 0;
+  for (const n of axNodes) {
+    const nrL = (n.role?.value || '').toLowerCase();
+    const nnL = (n.name?.value || '').toLowerCase();
+    if (rL && nrL !== rL) continue;
+    let score = 0;
+    if (rL && nrL === rL) score += 10;
+    if (nL && nnL.includes(nL)) score += 5;
+    if (nL && nnL === nL) score += 3;
+    if (tL && nnL.includes(tL)) score += 2;
+    if (score > bestScore) { bestScore = score; best = n; }
+  }
+  return bestScore >= 2 ? best : null;
+}
+
+async function cdpEnrichElements(tabId, elements) {
+  if (!_cdpAttachedTabs.get(tabId)) {
+    const r = await cdpAttach(tabId);
+    if (!r.ok) return { elements, enriched: false, reason: r.error };
+  }
+
+  const axNodes = await cdpGetAxTree(tabId);
+  if (!axNodes?.length) return { elements, enriched: false, reason: 'empty AX tree' };
+
+  const snap = await cdpGetDomSnapshot(tabId);
+  const domRects = new Map();
+  if (snap?.domNodes) {
+    for (const n of snap.domNodes) {
+      if (n.backendNodeId && n.layout?.boundingBox) {
+        const b = n.layout.boundingBox;
+        domRects.set(n.backendNodeId, { left: b.left, top: b.top, width: b.width, height: b.height });
+      }
+    }
+  }
+
+  const enriched = elements.map(el => {
+    const e = { ...el };
+    const axNode = _findAxNode(axNodes, el.role, el['aria-label'], el.text);
+    if (axNode) {
+      const ax = _parseAxProps(axNode);
+      if (ax) {
+        if (ax.role) e.axRole = ax.role;
+        if (ax.name) e.axName = ax.name;
+        if (ax.focusable !== undefined) e.axFocusable = ax.focusable;
+        if (ax.focused !== undefined) e.axFocused = ax.focused;
+        if (ax.checked !== undefined) e.axChecked = ax.checked;
+        if (ax.expanded !== undefined) e.axExpanded = ax.expanded;
+        if (ax.pressed !== undefined) e.axPressed = ax.pressed;
+        if (ax.disabled !== undefined) e.axDisabled = ax.disabled;
+        if (ax.readonly !== undefined) e.axReadonly = ax.readonly;
+        if (ax.selected !== undefined) e.axSelected = ax.selected;
+        if (ax.valueMin !== undefined) e.axValueMin = ax.valueMin;
+        if (ax.valueMax !== undefined) e.axValueMax = ax.valueMax;
+        if (ax.valueNow !== undefined) e.axValueNow = ax.valueNow;
+        if (ax.valueText) e.axValueText = ax.valueText;
+        if (ax.autocomplete) e.axAutocomplete = ax.autocomplete;
+        if (ax.hasPopup) e.axHasPopup = ax.hasPopup;
+        if (ax.level !== undefined) e.axLevel = ax.level;
+        if (ax.setSize !== undefined) e.axSetSize = ax.setSize;
+        if (ax.posInSet !== undefined) e.axPosInSet = ax.posInSet;
+        if (ax.invalid !== undefined) e.axInvalid = ax.invalid;
+        if (ax.hidden) e.axHidden = true;
+        if (ax.invisible) e.axInvisible = true;
+      }
+    }
+    if (el._backendNodeId && domRects.has(el._backendNodeId)) {
+      e._domRect = domRects.get(el._backendNodeId);
+    }
+    return e;
+  });
+
+  return { elements: enriched, enriched: true };
+}
+
+// ─── Loop Detection ───────────────────────────────────────────────────────────
+
+const LOOP_WINDOW = 10;
+const LOOP_FINGERPRINT_AGE_MS = 30000;
+let _actionHistory = [];
+let _pageFingerprints = [];
+
+function _hashStr(str) {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) {
+    h = ((h << 5) - h) + str.charCodeAt(i);
+    h = h & h;
+  }
+  return String(h >>> 0);
+}
+
+function _computeFingerprint(domTree, pageContext) {
+  if (!domTree?.elements) return null;
+  const sigs = domTree.elements
+    .filter(el => el.highlightIndex != null)
+    .slice(0, 20)
+    .map(el => `${el.highlightIndex}:${el.tagName}:${(el.text || '').slice(0, 20)}`)
+    .join('|');
+  return _hashStr(sigs + (pageContext?.metadata?.url || ''));
+}
+
+function _computeActionHash(tag) {
+  const m = tag.match(/^(\w+:\d*):?/);
+  return _hashStr(m ? m[1] : tag);
+}
+
+function _checkLoop(tag, domTree, pageContext) {
+  const now = Date.now();
+  const actHash = _computeActionHash(tag);
+  const fp = _computeFingerprint(domTree, pageContext);
+  _pageFingerprints = _pageFingerprints.filter(p => now - p.t < LOOP_FINGERPRINT_AGE_MS);
+  const recent = _actionHistory.filter(a => now - a.t < LOOP_FINGERPRINT_AGE_MS);
+  const sameCount = recent.filter(a => a.h === actHash).length;
+  const pageSame = fp && _pageFingerprints.some(p => p.f === fp && p.u === (pageContext?.metadata?.url || ''));
+  if ((sameCount >= 3 && pageSame) || sameCount >= 5) {
+    return {
+      isLoop: true,
+      reason: sameCount >= 5
+        ? `Same action "${tag}" repeated ${sameCount}x. Consider a different approach.`
+        : `Same action "${tag}" repeated ${sameCount}x with no page change. Try scrolling or a different element.`
+    };
+  }
+  _actionHistory.push({ h: actHash, t: now });
+  _actionHistory = _actionHistory.slice(-LOOP_WINDOW);
+  if (fp) {
+    _pageFingerprints.push({ f: fp, u: pageContext?.metadata?.url || '', t: now });
+    _pageFingerprints = _pageFingerprints.slice(-LOOP_WINDOW);
+  }
+  return { isLoop: false };
+}
+
+function _resetLoopState() {
+  _actionHistory = [];
+}
+
+// ─── Message Compaction ───────────────────────────────────────────────────────
+
+const COMPACTION_THRESHOLD = 25;
+const COMPACTION_BLOCK = 10;
+
+async function _compactHistory(history, apiKey) {
+  if (!history || history.length < COMPACTION_THRESHOLD) return history;
+  const sys = history.filter(m => m.role === 'system');
+  const conv = history.filter(m => m.role === 'user' || m.role === 'assistant');
+  if (conv.length < COMPACTION_THRESHOLD) return history;
+  const compact = [...sys];
+  const toCompact = conv.slice(0, -COMPACTION_BLOCK);
+  const kept = conv.slice(-COMPACTION_BLOCK);
+  for (let i = 0; i < toCompact.length; i += COMPACTION_BLOCK) {
+    const block = toCompact.slice(i, i + COMPACTION_BLOCK);
+    const text = block.map(m => `${m.role}: ${typeof m.content === 'string' ? m.content.slice(0, 500) : '[content]'}`).join('\n');
+    try {
+      const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'openai/gpt-4o-mini',
+          messages: [{ role: 'user', content: `Summarize this in 2-3 sentences. Return ONLY the summary text:\n\n${text}` }],
+          max_tokens: 150,
+        }),
+      });
+      const data = await resp.json();
+      const summary = data.choices?.[0]?.message?.content?.trim() || '[earlier conversation]';
+      compact.push({ role: 'system', content: `[Earlier: ${summary}]` });
+    } catch {
+      compact.push(...block);
+    }
+  }
+  compact.push(...kept);
+  return compact;
+}
+
 chrome.tabs.onRemoved.addListener((tabId) => {
   injectedTabs.delete(tabId);
+  cdpDetach(tabId);
 });
 
 const DEFAULT_SYSTEM_PROMPT = "You are OpenAgent, an AI browser assistant. Your primary purpose is to help users with the currently open webpage. When a user asks a question, use the page context provided. You can read page content, execute browser actions, and help with web-related tasks. If no page context is provided, explain that you work best when viewing a webpage. NEVER offer to save information, NEVER ask if something should be saved, and NEVER list \"save options\" at the end of responses. The conversation is saved automatically when Obsidian is connected. Focus entirely on answering the user's question.";
@@ -123,6 +406,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     'vault.api.read': () => vaultApiRead(message),
     'vault.api.write': () => vaultApiWrite(message),
     'context.refresh': () => ({ ok: true }),
+    'cdp.enrich': async () => {
+      const tab = await getWebTab();
+      if (!tab?.id) return { elements: message.elements, enriched: false, reason: 'no active tab' };
+      return await cdpEnrichElements(tab.id, message.elements || []);
+    },
   };
 
   const handler = handlers[message.type];
@@ -234,6 +522,7 @@ async function saveSettings(data) {
 // ─── Prompt / Chat ─────────────────────────────────────────────────────────────
 
 async function handlePromptSend(message, sendResponse) {
+  _resetLoopState();
   const settings = await loadSettings();
   if (!settings.apiKey) {
     sendResponse({ error: 'API key not configured. Please set it in Settings.' });
@@ -241,7 +530,8 @@ async function handlePromptSend(message, sendResponse) {
   }
 
   const { conversationHistory, pageContext, pageScreenshot, autoVault, vaultConnected, vaultName, vaultFilename, memoryContext, webSearch, vaultIntent, pageLinks, domTree } = message;
-  const msgs = await buildMessages(conversationHistory, pageContext, pageScreenshot, settings.systemPrompt, autoVault, vaultConnected, vaultName, vaultFilename, memoryContext, webSearch, pageLinks, domTree);
+  const compactHistory = await _compactHistory(conversationHistory, settings.apiKey);
+  const msgs = await buildMessages(compactHistory, pageContext, pageScreenshot, settings.systemPrompt, autoVault, vaultConnected, vaultName, vaultFilename, memoryContext, webSearch, pageLinks, domTree);
 
   const tools = webSearch ? [
     {
@@ -331,7 +621,7 @@ async function handlePromptSend(message, sendResponse) {
     }
 
     const content = message?.content || '';
-    const actionResult = await parseAndExecuteAction(content, pageLinks, domTree);
+    const actionResult = await parseAndExecuteAction(content, pageLinks, domTree, pageContext);
     sendResponse({ content, actionResult });
   } catch (err) {
     sendResponse({ error: `Request failed: ${err.message}` });
@@ -417,7 +707,7 @@ async function attemptAction(tabId, action, selector, highlightIndex) {
   }
 }
 
-async function parseAndExecuteAction(content, pageLinks, domTree) {
+async function parseAndExecuteAction(content, pageLinks, domTree, pageContext) {
   if (!content) return null;
   const matches = [...content.matchAll(ACTION_TAG_RE)];
   if (matches.length === 0) return null;
@@ -430,6 +720,12 @@ async function parseAndExecuteAction(content, pageLinks, domTree) {
     const tag = match[1].trim();
     const colonIdx = tag.indexOf(':');
     if (colonIdx === -1) continue;
+
+    const loop = _checkLoop(tag, currentDomTree, pageContext);
+    if (loop.isLoop) {
+      results.push({ ok: false, loopWarning: loop.reason });
+      continue;
+    }
 
     const type = tag.slice(0, colonIdx).toLowerCase();
     const args = tag.slice(colonIdx + 1);
@@ -622,6 +918,8 @@ Available actions:
 
 IMPORTANT:
 - Use highlightIndex numbers from "Interactive Elements" section to reference clickable elements
+- Elements may have additional properties: axRole (accessibility role), axName (computed name), axFocusable, axChecked, axExpanded, axPressed, axDisabled, axReadonly, axSelected — use these to distinguish similar elements
+- Some elements are outside the viewport — look for [scroll Nx to see] hints to scroll before clicking
 - Keep text before action tag brief. Use "Done." or "OK." instead of sentences
 - Example: "Opening first link. <action>click:1</action>"`;
 
@@ -683,18 +981,44 @@ ${autoVault ? '' : '- When auto-save is off, only write to vault if the user ask
     });
   }
 
-  // Add interactive elements from DOM tree (DRAGON)
+  // Add interactive elements from DOM tree (DRAGON) with AX enrichment
   if (domTree && domTree.elements && domTree.elements.length > 0) {
     const interactiveElements = domTree.elements.filter(el => el.highlightIndex != null);
     if (interactiveElements.length > 0) {
+      const viewportHeight = 800; // approximate viewport height, overridden by _domRect if available
       const elementLines = interactiveElements.map(el => {
         const attrs = [];
         if (el.href) attrs.push(`href="${el.href}"`);
         if (el.type) attrs.push(`type="${el.type}"`);
         if (el.placeholder) attrs.push(`placeholder="${el.placeholder}"`);
         if (el.role) attrs.push(`role="${el.role}"`);
+        // AX enrichment from CDP accessibility tree
+        if (el.axRole) attrs.push(`axRole="${el.axRole}"`);
+        if (el.axName && el.axName !== el.text) attrs.push(`axName="${String(el.axName).slice(0, 50)}"`);
+        if (el.axFocusable) attrs.push('focusable');
+        if (el.axChecked) attrs.push('checked');
+        if (el.axExpanded) attrs.push('expanded');
+        if (el.axPressed) attrs.push('pressed');
+        if (el.axDisabled) attrs.push('disabled');
+        if (el.axReadonly) attrs.push('readonly');
+        if (el.axSelected) attrs.push('selected');
+        if (el.axHasPopup) attrs.push(`haspopup="${el.axHasPopup}"`);
+        if (el.axInvalid) attrs.push('invalid');
+        // Scroll hint for out-of-viewport elements
+        let scrollHint = '';
+        const rect = el._domRect || el.viewportRect;
+        if (rect) {
+          const vTop = rect.top, vBottom = rect.top + (rect.height || 0);
+          if (vBottom < 0) {
+            const scrolls = Math.max(1, Math.ceil(Math.abs(vBottom) / (viewportHeight * 0.8)));
+            scrollHint = ` [scroll down ${scrolls}x to see]`;
+          } else if (vTop > viewportHeight) {
+            const scrolls = Math.max(1, Math.ceil((vTop - viewportHeight * 0.2) / (viewportHeight * 0.8)));
+            scrollHint = ` [scroll down ${scrolls}x to see]`;
+          }
+        }
         const attrStr = attrs.length > 0 ? ' ' + attrs.join(' ') : '';
-        const text = el.text ? `>${el.text}` : '';
+        const text = el.text ? `>${el.text}${scrollHint}` : (scrollHint ? `${scrollHint}` : '');
         return `[${el.highlightIndex}] <${el.tagName}${attrStr}${text} />`;
       }).join('\n');
 

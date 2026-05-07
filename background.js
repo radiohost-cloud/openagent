@@ -1,6 +1,5 @@
 // background.js - Chrome Extension Service Worker
 // Direct OpenRouter API calls + File System Access API for vault
-// CDP integration for accessibility tree enrichment
 
 const STORAGE_KEYS = {
   API_KEY: 'claude_api_key',
@@ -21,190 +20,6 @@ const STORAGE_KEYS = {
 
 const HTTPS_RE = /^https?:\/\//;
 const injectedTabs = new Set();
-
-// ─── CDP Service (inline) ───────────────────────────────────────────────────────
-
-const _cdpAttachedTabs = new Map();
-const _cachedAxTree = new Map();
-
-function _cdpSend(tabId, method, params) {
-  return new Promise((resolve) => {
-    try {
-      chrome.debugger.sendCommand({ tabId }, method, params || {}, (result) => {
-        resolve(chrome.runtime.lastError ? { error: chrome.runtime.lastError.message } : { result });
-      });
-    } catch (err) {
-      resolve({ error: err.message });
-    }
-  });
-}
-
-async function cdpAttach(tabId) {
-  if (_cdpAttachedTabs.get(tabId)) return { ok: true };
-  try {
-    await new Promise((res, rej) => {
-      chrome.debugger.attach({ tabId }, '1.3', () => {
-        if (chrome.runtime.lastError) rej(new Error(chrome.runtime.lastError.message)); else res();
-      });
-    });
-    _cdpAttachedTabs.set(tabId, true);
-    _cachedAxTree.delete(tabId);
-    return { ok: true };
-  } catch (err) {
-    return { ok: false, error: err.message };
-  }
-}
-
-function cdpDetach(tabId) {
-  if (!_cdpAttachedTabs.get(tabId)) return;
-  try {
-    chrome.debugger.detach({ tabId }, () => {});
-  } catch {}
-  _cdpAttachedTabs.set(tabId, false);
-  _cachedAxTree.delete(tabId);
-}
-
-async function cdpGetAxTree(tabId) {
-  if (_cachedAxTree.has(tabId)) return _cachedAxTree.get(tabId);
-  const { result } = await _cdpSend(tabId, 'Accessibility.getFullAXTree');
-  const nodes = result?.nodes || [];
-  _cachedAxTree.set(tabId, nodes);
-  return nodes;
-}
-
-async function cdpGetDomSnapshot(tabId) {
-  const { result } = await _cdpSend(tabId, 'DOMSnapshot.captureSnapshot', {
-    computeDEXT: true,
-    includeDOMRects: true,
-    includePaintOrder: true,
-  });
-  return result || null;
-}
-
-function _parseAxProps(axNode) {
-  if (!axNode) return null;
-  const p = {};
-  if (axNode.role?.value) p.role = axNode.role.value;
-  if (axNode.name?.value) p.name = axNode.name.value;
-  if (axNode.properties) {
-    for (const prop of axNode.properties) {
-      const v = prop.value?.value ?? prop.value ?? null;
-      if (v === null) continue;
-      switch (prop.name) {
-        case 'focusable': p.focusable = v; break;
-        case 'focused': p.focused = v; break;
-        case 'checked': p.checked = v; break;
-        case 'expanded': p.expanded = v; break;
-        case 'pressed': p.pressed = v; break;
-        case 'disabled': p.disabled = v; break;
-        case 'readonly': p.readonly = v; break;
-        case 'selected': p.selected = v; break;
-        case 'valuemin': p.valueMin = v; break;
-        case 'valuemax': p.valueMax = v; break;
-        case 'valuenow': p.valueNow = v; break;
-        case 'valuetext': p.valueText = v; break;
-        case 'autocomplete': p.autocomplete = v; break;
-        case 'haspopup': p.hasPopup = v; break;
-        case 'level': p.level = v; break;
-        case 'setsize': p.setSize = v; break;
-        case 'posinset': p.posInSet = v; break;
-        case 'invalid': p.invalid = v; break;
-      }
-    }
-  }
-  if (axNode.state) {
-    for (const s of axNode.state) {
-      if (s === 'disabled') p.disabled = true;
-      if (s === 'hidden') p.hidden = true;
-      if (s === 'invisible') p.invisible = true;
-      if (s === 'focused') p.focused = true;
-      if (s === 'checked') p.checked = true;
-      if (s === 'expanded') p.expanded = true;
-      if (s === 'pressed') p.pressed = true;
-      if (s === 'selected') p.selected = true;
-    }
-  }
-  return p;
-}
-
-function _findAxNode(axNodes, role, name, text) {
-  if (!axNodes?.length) return null;
-  const rL = (role || '').toLowerCase();
-  const nL = (name || '').toLowerCase();
-  const tL = (text || '').toLowerCase();
-  let best = null, bestScore = 0;
-  for (const n of axNodes) {
-    const nrL = (n.role?.value || '').toLowerCase();
-    const nnL = (n.name?.value || '').toLowerCase();
-    if (rL && nrL !== rL) continue;
-    let score = 0;
-    if (rL && nrL === rL) score += 10;
-    if (nL && nnL.includes(nL)) score += 5;
-    if (nL && nnL === nL) score += 3;
-    if (tL && nnL.includes(tL)) score += 2;
-    if (score > bestScore) { bestScore = score; best = n; }
-  }
-  return bestScore >= 2 ? best : null;
-}
-
-async function cdpEnrichElements(tabId, elements) {
-  if (!_cdpAttachedTabs.get(tabId)) {
-    const r = await cdpAttach(tabId);
-    if (!r.ok) return { elements, enriched: false, reason: r.error };
-  }
-
-  const axNodes = await cdpGetAxTree(tabId);
-  if (!axNodes?.length) return { elements, enriched: false, reason: 'empty AX tree' };
-
-  const snap = await cdpGetDomSnapshot(tabId);
-  const domRects = new Map();
-  if (snap?.domNodes) {
-    for (const n of snap.domNodes) {
-      if (n.backendNodeId && n.layout?.boundingBox) {
-        const b = n.layout.boundingBox;
-        domRects.set(n.backendNodeId, { left: b.left, top: b.top, width: b.width, height: b.height });
-      }
-    }
-  }
-
-  const enriched = elements.map(el => {
-    const e = { ...el };
-    const axNode = _findAxNode(axNodes, el.role, el['aria-label'], el.text);
-    if (axNode) {
-      const ax = _parseAxProps(axNode);
-      if (ax) {
-        if (ax.role) e.axRole = ax.role;
-        if (ax.name) e.axName = ax.name;
-        if (ax.focusable !== undefined) e.axFocusable = ax.focusable;
-        if (ax.focused !== undefined) e.axFocused = ax.focused;
-        if (ax.checked !== undefined) e.axChecked = ax.checked;
-        if (ax.expanded !== undefined) e.axExpanded = ax.expanded;
-        if (ax.pressed !== undefined) e.axPressed = ax.pressed;
-        if (ax.disabled !== undefined) e.axDisabled = ax.disabled;
-        if (ax.readonly !== undefined) e.axReadonly = ax.readonly;
-        if (ax.selected !== undefined) e.axSelected = ax.selected;
-        if (ax.valueMin !== undefined) e.axValueMin = ax.valueMin;
-        if (ax.valueMax !== undefined) e.axValueMax = ax.valueMax;
-        if (ax.valueNow !== undefined) e.axValueNow = ax.valueNow;
-        if (ax.valueText) e.axValueText = ax.valueText;
-        if (ax.autocomplete) e.axAutocomplete = ax.autocomplete;
-        if (ax.hasPopup) e.axHasPopup = ax.hasPopup;
-        if (ax.level !== undefined) e.axLevel = ax.level;
-        if (ax.setSize !== undefined) e.axSetSize = ax.setSize;
-        if (ax.posInSet !== undefined) e.axPosInSet = ax.posInSet;
-        if (ax.invalid !== undefined) e.axInvalid = ax.invalid;
-        if (ax.hidden) e.axHidden = true;
-        if (ax.invisible) e.axInvisible = true;
-      }
-    }
-    if (el._backendNodeId && domRects.has(el._backendNodeId)) {
-      e._domRect = domRects.get(el._backendNodeId);
-    }
-    return e;
-  });
-
-  return { elements: enriched, enriched: true };
-}
 
 // ─── Loop Detection ───────────────────────────────────────────────────────────
 
@@ -305,7 +120,6 @@ async function _compactHistory(history, apiKey) {
 
 chrome.tabs.onRemoved.addListener((tabId) => {
   injectedTabs.delete(tabId);
-  cdpDetach(tabId);
 });
 
 const DEFAULT_SYSTEM_PROMPT = "You are OpenAgent, an AI browser assistant. Your primary purpose is to help users with the currently open webpage. When a user asks a question, use the page context provided. You can read page content, execute browser actions, and help with web-related tasks. If no page context is provided, explain that you work best when viewing a webpage. NEVER offer to save information, NEVER ask if something should be saved, and NEVER list \"save options\" at the end of responses. The conversation is saved automatically when Obsidian is connected. Focus entirely on answering the user's question.";
@@ -364,7 +178,7 @@ async function injectIntoTab(tabId) {
     });
   } catch (err) {
     if (err.message && !err.message.includes('Cannot access contents') && !err.message.includes('gallery')) {
-      console.warn('[OpenAgent] injectIntoTab: failed', tabId, err.message);
+      // Silent fail for cross-origin tabs
     }
   }
 }
@@ -406,11 +220,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     'vault.api.read': () => vaultApiRead(message),
     'vault.api.write': () => vaultApiWrite(message),
     'context.refresh': () => ({ ok: true }),
-    'cdp.enrich': async () => {
-      const tab = await getWebTab();
-      if (!tab?.id) return { elements: message.elements, enriched: false, reason: 'no active tab' };
-      return await cdpEnrichElements(tab.id, message.elements || []);
-    },
   };
 
   const handler = handlers[message.type];
@@ -1050,7 +859,7 @@ Available actions:
 
 IMPORTANT:
 - Use highlightIndex numbers from "Interactive Elements" section to reference clickable elements
-- Elements may have additional properties: axRole (accessibility role), axName (computed name), axFocusable, axChecked, axExpanded, axPressed, axDisabled, axReadonly, axSelected — use these to distinguish similar elements
+- Elements may have additional properties from the accessibility tree: role, name, checked, expanded, disabled, readonly, selected, haspopup — use these to distinguish similar elements
 - Some elements are outside the viewport — look for [scroll Nx to see] hints to scroll before clicking
 - For dropdowns: first hover to reveal options, then click the specific option
 - Keep text before action tag brief. Use "Done." or "OK." instead of sentences
@@ -1125,18 +934,6 @@ ${autoVault ? '' : '- When auto-save is off, only write to vault if the user ask
         if (el.type) attrs.push(`type="${el.type}"`);
         if (el.placeholder) attrs.push(`placeholder="${el.placeholder}"`);
         if (el.role) attrs.push(`role="${el.role}"`);
-        // AX enrichment from CDP accessibility tree
-        if (el.axRole) attrs.push(`axRole="${el.axRole}"`);
-        if (el.axName && el.axName !== el.text) attrs.push(`axName="${String(el.axName).slice(0, 50)}"`);
-        if (el.axFocusable) attrs.push('focusable');
-        if (el.axChecked) attrs.push('checked');
-        if (el.axExpanded) attrs.push('expanded');
-        if (el.axPressed) attrs.push('pressed');
-        if (el.axDisabled) attrs.push('disabled');
-        if (el.axReadonly) attrs.push('readonly');
-        if (el.axSelected) attrs.push('selected');
-        if (el.axHasPopup) attrs.push(`haspopup="${el.axHasPopup}"`);
-        if (el.axInvalid) attrs.push('invalid');
         // Scroll hint for out-of-viewport elements
         let scrollHint = '';
         const rect = el._domRect || el.viewportRect;

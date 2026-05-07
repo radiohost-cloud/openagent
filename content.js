@@ -51,43 +51,6 @@ const domElementRefs = new Map();
     }, 10000);
   })();
 
-// ─── Floating Button ─────────────────────────────────────────────────────────
-
-(function () {
-  if (document.getElementById('openagent-fab')) return;
-  try {
-    const fab = document.createElement('div');
-    fab.id = 'openagent-fab';
-    fab.innerHTML = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2z" fill="#3C3C3C"/><path d="M8 10.5c0-.276.224-.5.5-.5h7c.276 0 .5.224.5.5v1c0 .276-.224.5-.5.5h-7a.5.5 0 0 1-.5-.5v-1z" fill="white"/><path d="M8 13.5c0-.276.224-.5.5-.5h7c.276 0 .5.224.5.5v1c0 .276-.224.5-.5.5h-7a.5.5 0 0 1-.5-.5v-1z" fill="white"/></svg><span>OpenAgent</span>`;
-    fab.addEventListener('click', function () {
-      try {
-        if (chrome.sidePanel && typeof chrome.sidePanel.open === 'function') {
-          try { chrome.sidePanel.open({ path: 'sidepanel.html' }); } catch (e) {}
-        }
-      } catch (e) {}
-    });
-    if (!document.getElementById('openagent-fab-style')) {
-      const s = document.createElement('style');
-      s.id = 'openagent-fab-style';
-      s.textContent = `
-#openagent-fab{position:fixed;bottom:24px;right:24px;z-index:2147483647;display:flex;align-items:center;gap:8px;background:#7c6af7;color:white;border:none;border-radius:28px;padding:12px 18px;cursor:pointer;font-family:-apple-system,BlinkMacSystemFont,sans-serif;font-size:14px;font-weight:600;box-shadow:0 4px 20px rgba(60,60,60,.4);transition:transform .15s}
-#openagent-fab:hover{transform:translateY(-2px);box-shadow:0 6px 24px rgba(60,60,60,.5)}
-#openagent-fab:active{transform:scale(.97)}
-#openagent-fab svg{width:20px;height:20px;flex-shrink:0}
-.openagent-badge{position:fixed;transform:translateX(-50%);background:#7c6af7;color:white;border-radius:10px;min-width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:11px;pointer-events:none;z-index:2147483647;box-shadow:0 2px 8px rgba(0,0,0,0.4);padding:0 5px;transition:background 0.2s,transform 0.2s}
-.openagent-badge-loading{background:#f59e0b;transform:translateX(-50%) scale(1.1)}
-.openagent-badge-success{background:#10b981;transform:translateX(-50%)}
-.openagent-badge-error{background:#ef4444;transform:translateX(-50%)}
-.openagent-highlight{position:fixed;background:rgba(124,106,247,0.15);border:2px solid #7c6af7;border-radius:3px;pointer-events:none;z-index:2147483646;box-sizing:border-box;transition:border-color 0.2s,background 0.2s}
-.openagent-highlight-success{border-color:#10b981;background:rgba(16,185,129,0.15)}
-.openagent-highlight-error{border-color:#ef4444;background:rgba(239,68,68,0.15)}
-`;
-      (document.head || document.documentElement).appendChild(s);
-    }
-    (document.head || document.documentElement).appendChild(fab);
-  } catch (e) {}
-})();
-
 // ─── Message Listener ───────────────────────────────────────────────────────────
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
@@ -505,7 +468,6 @@ async function injectBuildDomTree() {
     });
     return { injected: true };
   } catch (e) {
-    console.error('[OpenAgent] injectBuildDomTree error:', e);
     return { injected: false, error: e.message };
   }
 }
@@ -576,11 +538,6 @@ async function collectDomTree() {
       selectorMap.set(node.highlightIndex, element);
     }
   }
-
-  // Request CDP accessibility tree enrichment (non-blocking)
-  chrome.runtime.sendMessage({ type: 'cdp.enrich', elements }, () => {
-    // swallow errors — enrichment is best-effort
-  });
 
   return {
     metadata: pageMetadata(),

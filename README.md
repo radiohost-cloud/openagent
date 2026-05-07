@@ -41,6 +41,7 @@ AI-powered browser assistant that understands page structure and can perform act
   - `/gh query` — GitHub
   - `/d query` — DuckDuckGo
   - `/o query` — Obsidian vault (searches your vault notes)
+  - `/i intent text` — update session intent without sending a message (useful for refining the AI's focus mid-conversation)
 
 ### 🤖 Browser Automation
 - **Intelligent link clicking** — the AI receives a numbered list of all links on the page. Simply say "click link 3", "go to first link", or use any language: "pierwszy link", "clique sur le lien", "den ersten Link" — the AI understands and clicks the right link

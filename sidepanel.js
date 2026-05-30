@@ -2,7 +2,7 @@
 
 const state = {
   messages: [],
-  settings: { apiKey: '', provider: 'openrouter', model: '', systemPrompt: '', theme: 'dark', preset: 'default', language: 'en', vaultName: '', vaultApiUrl: '', vaultApiToken: '', fontSize: 'medium' },
+  settings: { apiKey: '', provider: 'openrouter', baseUrl: 'https://openrouter.ai/api/v1', model: '', systemPrompt: '', theme: 'dark', preset: 'default', language: 'en', vaultName: '', vaultApiUrl: '', vaultApiToken: '', fontSize: 'medium' },
   pageContext: null,
   pageLinks: [],
   pageScreenshot: null,
@@ -22,6 +22,8 @@ const state = {
   vaultSavedCount: 0,
   vaultWritten: false,
   webSearch: false,
+  webSearchProvider: 'openrouter',
+  webSearchApiKey: '',
   vaultIntent: null,
   pastedImage: null,
 };
@@ -49,6 +51,9 @@ const i18nStrings = {
     settingsTitle: 'Settings',
     settingsApiKey: 'API Key',
     settingsApiKeyPlaceholder: 'sk-or-...',
+    settingsBaseUrl: 'API Base URL',
+    settingsBaseUrlPlaceholder: 'https://openrouter.ai/api/v1',
+    settingsBaseUrlHint: 'OpenAI-compatible API endpoint (e.g. OpenRouter, local LLM, OpenAI, etc.)',
     settingsModelSearch: 'Model Search',
     settingsModelSearchPlaceholder: 'Filter models...',
     settingsModel: 'Model',
@@ -94,7 +99,12 @@ const i18nStrings = {
     settingsFontSize: 'Font size',
     settingsCurrentModel: 'Current Model',
     settingsWebSearch: 'Web Search',
-    settingsWebSearchHint: 'Uses OpenRouter web search to find current information online.',
+    settingsWebSearchHint: 'Agent will search the web when needed. OpenRouter uses built-in search; other providers use the API key below.',
+    settingsWebSearchProvider: 'Search Provider',
+    settingsWebSearchProviderHint: 'Choose which search engine to use. OpenRouter uses the main API key. Brave and SerpAPI require a separate API key below.',
+    settingsWebSearchApiKey: 'Search API Key',
+    settingsWebSearchApiKeyPlaceholder: 'API key...',
+    settingsWebSearchApiKeyHint: 'API key for the selected search provider. Not needed for OpenRouter.',
     settingsOff: 'Off',
     settingsOn: 'On',
     emptyStateSearch: '/g Google · /y YouTube · /x X.com · /w Wiki · /r Reddit · /gh GitHub · /d DuckDuckGo · /o Obsidian · /i Intent',
@@ -131,6 +141,9 @@ const i18nStrings = {
     settingsTitle: 'Ustawienia',
     settingsApiKey: 'Klucz API',
     settingsApiKeyPlaceholder: 'sk-or-...',
+    settingsBaseUrl: 'Bazowy URL API',
+    settingsBaseUrlPlaceholder: 'https://openrouter.ai/api/v1',
+    settingsBaseUrlHint: 'Endpoint API kompatybilny z OpenAI (np. OpenRouter, lokalny LLM, OpenAI itp.)',
     settingsModelSearch: 'Szukaj modelu',
     settingsModelSearchPlaceholder: 'Filtruj modele...',
     settingsModel: 'Model',
@@ -174,7 +187,12 @@ const i18nStrings = {
     settingsFontSize: 'Wielkość czcionki',
     settingsCurrentModel: 'Aktualny model',
     settingsWebSearch: 'Wyszukiwanie w sieci',
-    settingsWebSearchHint: 'Używa wyszukiwania OpenRouter do znajdowania aktualnych informacji online.',
+    settingsWebSearchHint: 'Agent sam wyszuka w sieci gdy trzeba. OpenRouter używa wbudowanego wyszukiwania; inne dostawcy używają klucza API poniżej.',
+    settingsWebSearchProvider: 'Dostawca wyszukiwania',
+    settingsWebSearchProviderHint: 'Wybierz wyszukiwarkę. OpenRouter używa głównego klucza API. Brave i SerpAPI wymagają osobnego klucza API poniżej.',
+    settingsWebSearchApiKey: 'Klucz API wyszukiwania',
+    settingsWebSearchApiKeyPlaceholder: 'Klucz API...',
+    settingsWebSearchApiKeyHint: 'Klucz API dla wybranego dostawcy wyszukiwania. Niepotrzebny dla OpenRouter.',
     settingsOff: 'Wył',
     settingsOn: 'Wł',
     emptyStateSearch: '/g Google · /y YouTube · /x X.com · /w Wiki · /r Reddit · /gh GitHub · /d DuckDuckGo · /o Obsidian · /i Intent',
@@ -210,6 +228,9 @@ const i18nStrings = {
     settingsTitle: 'Ajustes',
     settingsApiKey: 'Clave API',
     settingsApiKeyPlaceholder: 'sk-or-...',
+    settingsBaseUrl: 'URL Base API',
+    settingsBaseUrlPlaceholder: 'https://openrouter.ai/api/v1',
+    settingsBaseUrlHint: 'Endpoint API compatible con OpenAI (ej. OpenRouter, LLM local, OpenAI, etc.)',
     settingsModelSearch: 'Buscar modelo',
     settingsModelSearchPlaceholder: 'Filtrar modelos...',
     settingsModel: 'Modelo',
@@ -257,7 +278,12 @@ const i18nStrings = {
     settingsFontSize: 'Tamaño de fuente',
     settingsCurrentModel: 'Modelo actual',
     settingsWebSearch: 'Búsqueda web',
-    settingsWebSearchHint: 'Usa la búsqueda web de OpenRouter para encontrar información actual en línea.',
+    settingsWebSearchHint: 'El agente buscará en la web cuando sea necesario. OpenRouter usa búsqueda integrada; otros proveedores usan la clave API abajo.',
+    settingsWebSearchProvider: 'Proveedor de búsqueda',
+    settingsWebSearchProviderHint: 'Elige el motor de búsqueda. OpenRouter usa la clave API principal. Brave y SerpAPI requieren una clave API separada.',
+    settingsWebSearchApiKey: 'Clave API de búsqueda',
+    settingsWebSearchApiKeyPlaceholder: 'Clave API...',
+    settingsWebSearchApiKeyHint: 'Clave API del proveedor de búsqueda seleccionado. No necesaria para OpenRouter.',
     settingsOff: 'Off',
     settingsOn: 'On',
     emptyStateSearch: '/g Google · /y YouTube · /x X.com · /w Wiki · /r Reddit · /gh GitHub · /d DuckDuckGo · /o Obsidian · /i Intent',
@@ -293,6 +319,9 @@ const i18nStrings = {
     settingsTitle: 'Paramètres',
     settingsApiKey: 'Clé API',
     settingsApiKeyPlaceholder: 'sk-or-...',
+    settingsBaseUrl: 'URL de base API',
+    settingsBaseUrlPlaceholder: 'https://openrouter.ai/api/v1',
+    settingsBaseUrlHint: 'Point de terminaison API compatible OpenAI (ex. OpenRouter, LLM local, OpenAI, etc.)',
     settingsModelSearch: 'Recherche de modèle',
     settingsModelSearchPlaceholder: 'Filtrer les modèles...',
     settingsModel: 'Modèle',
@@ -340,7 +369,12 @@ const i18nStrings = {
     settingsFontSize: 'Taille de police',
     settingsCurrentModel: 'Modèle actuel',
     settingsWebSearch: 'Recherche web',
-    settingsWebSearchHint: 'Utilise la recherche web OpenRouter pour trouver des informations actuelles en ligne.',
+    settingsWebSearchHint: "L'agent recherchera sur le web si nécessaire. OpenRouter utilise la recherche intégrée ; les autres fournisseurs utilisent la clé API ci-dessous.",
+    settingsWebSearchProvider: 'Fournisseur de recherche',
+    settingsWebSearchProviderHint: "Choisissez le moteur de recherche. OpenRouter utilise la clé API principale. Brave et SerpAPI nécessitent une clé API distincte.",
+    settingsWebSearchApiKey: 'Clé API de recherche',
+    settingsWebSearchApiKeyPlaceholder: 'Clé API...',
+    settingsWebSearchApiKeyHint: "Clé API du fournisseur de recherche sélectionné. Pas nécessaire pour OpenRouter.",
     settingsOff: 'Off',
     settingsOn: 'On',
     emptyStateSearch: '/g Google · /y YouTube · /x X.com · /w Wiki · /r Reddit · /gh GitHub · /d DuckDuckGo · /o Obsidian · /i Intent',
@@ -375,6 +409,9 @@ const i18nStrings = {
     settingsTitle: 'Einstellungen',
     settingsApiKey: 'API-Schlüssel',
     settingsApiKeyPlaceholder: 'sk-or-...',
+    settingsBaseUrl: 'API-Basis-URL',
+    settingsBaseUrlPlaceholder: 'https://openrouter.ai/api/v1',
+    settingsBaseUrlHint: 'OpenAI-kompatibler API-Endpunkt (z.B. OpenRouter, lokales LLM, OpenAI usw.)',
     settingsModelSearch: 'Modellsuche',
     settingsModelSearchPlaceholder: 'Modelle filtern...',
     settingsModel: 'Modell',
@@ -422,7 +459,12 @@ const i18nStrings = {
     settingsFontSize: 'Schriftgröße',
     settingsCurrentModel: 'Aktuelles Modell',
     settingsWebSearch: 'Websuche',
-    settingsWebSearchHint: 'Nutzt die OpenRouter-Websuche um aktuelle Informationen online zu finden.',
+    settingsWebSearchHint: 'Der Agent sucht bei Bedarf im Web. OpenRouter nutzt integrierte Suche; andere Anbieter verwenden den API-Schlüssel unten.',
+    settingsWebSearchProvider: 'Suchanbieter',
+    settingsWebSearchProviderHint: 'Wählen Sie die Suchmaschine. OpenRouter verwendet den Haupt-API-Schlüssel. Brave und SerpAPI benötigen einen separaten API-Schlüssel.',
+    settingsWebSearchApiKey: 'Such-API-Schlüssel',
+    settingsWebSearchApiKeyPlaceholder: 'API-Schlüssel...',
+    settingsWebSearchApiKeyHint: 'API-Schlüssel für den ausgewählten Suchanbieter. Nicht erforderlich für OpenRouter.',
     settingsOff: 'Aus',
     settingsOn: 'An',
     emptyStateSearch: '/g Google · /y YouTube · /x X.com · /w Wiki · /r Reddit · /gh GitHub · /d DuckDuckGo · /o Obsidian · /i Intent',
@@ -458,6 +500,9 @@ const i18nStrings = {
     settingsTitle: 'Настройки',
     settingsApiKey: 'API-ключ',
     settingsApiKeyPlaceholder: 'sk-or-...',
+    settingsBaseUrl: 'Базовый URL API',
+    settingsBaseUrlPlaceholder: 'https://openrouter.ai/api/v1',
+    settingsBaseUrlHint: 'API-эндпоинт, совместимый с OpenAI (напр. OpenRouter, локальный LLM, OpenAI и т.д.)',
     settingsModelSearch: 'Поиск модели',
     settingsModelSearchPlaceholder: 'Фильтровать модели...',
     settingsModel: 'Модель',
@@ -505,7 +550,12 @@ const i18nStrings = {
     settingsFontSize: 'Размер шрифта',
     settingsCurrentModel: 'Текущая модель',
     settingsWebSearch: 'Веб-поиск',
-    settingsWebSearchHint: 'Использует веб-поиск OpenRouter для поиска актуальной информации онлайн.',
+    settingsWebSearchHint: 'Агент выполнит поиск в интернете при необходимости. OpenRouter использует встроенный поиск; другие провайдеры используют ключ API ниже.',
+    settingsWebSearchProvider: 'Поисковый провайдер',
+    settingsWebSearchProviderHint: 'Выберите поисковую систему. OpenRouter использует основной ключ API. Brave и SerpAPI требуют отдельный ключ API.',
+    settingsWebSearchApiKey: 'Ключ API поиска',
+    settingsWebSearchApiKeyPlaceholder: 'Ключ API...',
+    settingsWebSearchApiKeyHint: 'Ключ API для выбранного поискового провайдера. Не требуется для OpenRouter.',
     settingsOff: 'Выкл',
     settingsOn: 'Вкл',
     emptyStateSearch: '/g Google · /y YouTube · /x X.com · /w Wiki · /r Reddit · /gh GitHub · /d DuckDuckGo · /o Obsidian · /i Intent',
@@ -549,11 +599,16 @@ const dom = {
   closeSettings: $('#closeSettings'),
   saveSettings: $('#saveSettings'),
   apiKeyInput: $('#apiKeyInput'),
+  baseUrlInput: $('#baseUrlInput'),
   currentModelDisplay: $('#currentModelDisplay'),
   modelList: $('#modelList'),
   modelSearch: $('#modelSearch'),
   webSearchOff: $('#webSearchOff'),
   webSearchOn: $('#webSearchOn'),
+  webSearchProvider: $('#webSearchProvider'),
+  webSearchApiKeyInput: $('#webSearchApiKeyInput'),
+  webSearchProviderGroup: $('#webSearchProviderGroup'),
+  webSearchApiKeyGroup: $('#webSearchApiKeyGroup'),
   modelHint: $('#modelHint'),
   headerCtx: $('#headerCtx'),
   historyDrawerList: $('#historyDrawerList'),
@@ -851,6 +906,13 @@ function bindEvents() {
     loadModels();
   });
 
+  if (dom.baseUrlInput) {
+    dom.baseUrlInput.addEventListener('change', () => {
+      state.settings.baseUrl = dom.baseUrlInput.value.trim() || 'https://openrouter.ai/api/v1';
+      loadModels();
+    });
+  }
+
   dom.themeDark.addEventListener('click', () => {
     state.settings.theme = 'dark';
     applyTheme('dark', state.settings.preset);
@@ -877,7 +939,9 @@ function bindEvents() {
     dom.webSearchOn.classList.add('active');
     dom.webSearchOff.classList.remove('active');
     dom.inputWrapper.classList.add('web-search-active');
-    sendBgMessage({ type: 'settings.save', data: { ...state.settings, webSearch: true } }).catch(() => {});
+    dom.webSearchProviderGroup.classList.remove('hidden');
+    updateWebSearchApiKeyVisibility();
+    sendBgMessage({ type: 'settings.save', data: { ...state.settings, webSearch: true, webSearchProvider: state.webSearchProvider, webSearchApiKey: state.webSearchApiKey } }).catch(() => {});
   });
 
   dom.webSearchOff.addEventListener('click', () => {
@@ -885,8 +949,25 @@ function bindEvents() {
     dom.webSearchOff.classList.add('active');
     dom.webSearchOn.classList.remove('active');
     dom.inputWrapper.classList.remove('web-search-active');
-    sendBgMessage({ type: 'settings.save', data: { ...state.settings, webSearch: false } }).catch(() => {});
+    dom.webSearchProviderGroup.classList.add('hidden');
+    dom.webSearchApiKeyGroup.classList.add('hidden');
+    sendBgMessage({ type: 'settings.save', data: { ...state.settings, webSearch: false, webSearchProvider: state.webSearchProvider, webSearchApiKey: state.webSearchApiKey } }).catch(() => {});
   });
+
+  if (dom.webSearchProvider) {
+    dom.webSearchProvider.addEventListener('change', () => {
+      state.webSearchProvider = dom.webSearchProvider.value;
+      updateWebSearchApiKeyVisibility();
+      sendBgMessage({ type: 'settings.save', data: { ...state.settings, webSearchProvider: state.webSearchProvider, webSearchApiKey: state.webSearchApiKey } }).catch(() => {});
+    });
+  }
+
+  if (dom.webSearchApiKeyInput) {
+    dom.webSearchApiKeyInput.addEventListener('change', () => {
+      state.webSearchApiKey = dom.webSearchApiKeyInput.value.trim();
+      sendBgMessage({ type: 'settings.save', data: { ...state.settings, webSearchProvider: state.webSearchProvider, webSearchApiKey: state.webSearchApiKey } }).catch(() => {});
+    });
+  }
 
   dom.langSelect.addEventListener('change', () => {
     state.settings.language = dom.langSelect.value;
@@ -1025,6 +1106,7 @@ async function loadSettings() {
     const data = await sendBgMessage({ type: 'settings.load' });
     state.settings = { ...state.settings, ...data };
     dom.apiKeyInput.value = state.settings.apiKey || '';
+    if (dom.baseUrlInput) dom.baseUrlInput.value = state.settings.baseUrl || 'https://openrouter.ai/api/v1';
     updateCurrentModelDisplay();
     dom.systemPromptInput.value = state.settings.systemPrompt || '';
 
@@ -1045,16 +1127,24 @@ async function loadSettings() {
     const autoData = await sendBgMessage({ type: 'autovault.load' });
     state.autoVault = autoData?.autoVault || false;
     state.webSearch = data.webSearch || false;
+    state.webSearchProvider = data.webSearchProvider || 'openrouter';
+    state.webSearchApiKey = data.webSearchApiKey || '';
 
     // Apply web search toggle UI
     if (state.webSearch) {
       dom.webSearchOn.classList.add('active');
       dom.webSearchOff.classList.remove('active');
       if (dom.inputWrapper) dom.inputWrapper.classList.add('web-search-active');
+      if (dom.webSearchProviderGroup) dom.webSearchProviderGroup.classList.remove('hidden');
+      if (dom.webSearchProvider) dom.webSearchProvider.value = state.webSearchProvider;
+      if (dom.webSearchApiKeyInput) dom.webSearchApiKeyInput.value = state.webSearchApiKey;
+      updateWebSearchApiKeyVisibility();
     } else {
       dom.webSearchOff.classList.add('active');
       dom.webSearchOn.classList.remove('active');
       if (dom.inputWrapper) dom.inputWrapper.classList.remove('web-search-active');
+      if (dom.webSearchProviderGroup) dom.webSearchProviderGroup.classList.add('hidden');
+      if (dom.webSearchApiKeyGroup) dom.webSearchApiKeyGroup.classList.add('hidden');
     }
 
     // Auto-connect vault if URL+token are configured
@@ -1090,6 +1180,7 @@ async function loadSettings() {
 
 async function handleSaveSettings() {
   const apiKey = dom.apiKeyInput.value.trim();
+  const baseUrl = dom.baseUrlInput ? dom.baseUrlInput.value.trim() || 'https://openrouter.ai/api/v1' : state.settings.baseUrl;
   const model = state.settings.model;
   const systemPrompt = dom.systemPromptInput.value.trim();
   const theme = state.settings.theme;
@@ -1103,9 +1194,9 @@ async function handleSaveSettings() {
   try {
     await sendBgMessage({
       type: 'settings.save',
-      data: { apiKey, provider: 'openrouter', model, systemPrompt, theme, preset, language, vaultApiUrl, vaultApiToken, vaultName, fontSize, webSearch: state.webSearch },
+      data: { apiKey, provider: 'openrouter', baseUrl, model, systemPrompt, theme, preset, language, vaultApiUrl, vaultApiToken, vaultName, fontSize, webSearch: state.webSearch, webSearchProvider: state.webSearchProvider, webSearchApiKey: state.webSearchApiKey },
     });
-    state.settings = { ...state.settings, apiKey, provider: 'openrouter', model, systemPrompt, theme, preset, language, vaultApiUrl, vaultApiToken, vaultName, fontSize };
+    state.settings = { ...state.settings, apiKey, provider: 'openrouter', baseUrl, model, systemPrompt, theme, preset, language, vaultApiUrl, vaultApiToken, vaultName, fontSize, webSearch: state.webSearch, webSearchProvider: state.webSearchProvider, webSearchApiKey: state.webSearchApiKey };
     dom.settingsStatus.textContent = i18n('settingsSaved');
     dom.settingsStatus.className = 'settings-status';
     toggleModal(false);
@@ -1125,6 +1216,8 @@ async function handleSaveSettings() {
 
 async function loadModels() {
   const apiKey = dom.apiKeyInput.value.trim() || state.settings.apiKey;
+  const baseUrl = (dom.baseUrlInput ? dom.baseUrlInput.value.trim() : '') || state.settings.baseUrl || 'https://openrouter.ai/api/v1';
+  const normalizedUrl = baseUrl.replace(/\/+$/, '');
 
   dom.modelList.innerHTML = `<div class="model-loading">${i18n('settingsLoading')}</div>`;
 
@@ -1135,7 +1228,7 @@ async function loadModels() {
   }
 
   try {
-    const resp = await fetch('https://openrouter.ai/api/v1/models', {
+    const resp = await fetch(normalizedUrl + '/models', {
       headers: { 'Authorization': `Bearer ${apiKey}` },
     });
     const data = await resp.json();
@@ -1451,6 +1544,8 @@ async function handleSend() {
         vaultFilename: state.currentVaultFilename,
         memoryContext: state.memoryContext,
         webSearch: state.webSearch,
+        webSearchProvider: state.webSearchProvider,
+        webSearchApiKey: state.webSearchApiKey,
         vaultIntent: state.vaultIntent,
       });
       removeTyping();
@@ -1520,6 +1615,8 @@ async function handleSend() {
       vaultFilename: state.currentVaultFilename,
       memoryContext: state.memoryContext,
       webSearch: state.webSearch,
+      webSearchProvider: state.webSearchProvider,
+      webSearchApiKey: state.webSearchApiKey,
       vaultIntent: state.vaultIntent,
     });
 
@@ -2206,6 +2303,15 @@ function updateCurrentModelDisplay() {
   }
 }
 
+function updateWebSearchApiKeyVisibility() {
+  if (!dom.webSearchApiKeyGroup) return;
+  if (state.webSearchProvider === 'openrouter') {
+    dom.webSearchApiKeyGroup.classList.add('hidden');
+  } else {
+    dom.webSearchApiKeyGroup.classList.remove('hidden');
+  }
+}
+
 function updateBadge() {
   const hasApiUrl = !!(state.settings.vaultApiUrl && state.settings.vaultApiToken);
   const isVaultActive = hasApiUrl && state.autoVault && state.vaultConnected;
@@ -2275,7 +2381,8 @@ async function processConversationEnd() {
     pageUrl,
     domain,
     state.settings.apiKey,
-    state.settings.model
+    state.settings.model,
+    state.settings.baseUrl
   );
 
   if (!result) { conversationProcessing = false; return; }

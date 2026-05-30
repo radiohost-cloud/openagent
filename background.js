@@ -1,10 +1,11 @@
 // background.js - Chrome Extension Service Worker
-// Direct OpenRouter API calls + File System Access API for vault
+// OpenAI-compatible API calls + File System Access API for vault
 
 const STORAGE_KEYS = {
   API_KEY: 'claude_api_key',
   MODEL: 'claude_model',
   PROVIDER: 'claude_provider',
+  BASE_URL: 'openagent_base_url',
   SYSTEM_PROMPT: 'claude_system_prompt',
   THEME: 'claude_theme',
   PRESET: 'claude_preset',
@@ -16,7 +17,20 @@ const STORAGE_KEYS = {
   AUTO_VAULT: 'openagent_auto_vault',
   FONT_SIZE: 'openagent_font_size',
   WEB_SEARCH: 'openagent_web_search',
+  WEB_SEARCH_PROVIDER: 'openagent_web_search_provider',
+  WEB_SEARCH_API_KEY: 'openagent_web_search_api_key',
 };
+
+const DEFAULT_BASE_URL = 'https://openrouter.ai/api/v1';
+
+function normalizeBaseUrl(url) {
+  if (!url) return DEFAULT_BASE_URL;
+  return url.replace(/\/+$/, '');
+}
+
+function isOpenRouter(baseUrl) {
+  return normalizeBaseUrl(baseUrl) === DEFAULT_BASE_URL || normalizeBaseUrl(baseUrl).includes('openrouter.ai');
+}
 
 const HTTPS_RE = /^https?:\/\//;
 const injectedTabs = new Set();
@@ -86,7 +100,7 @@ function _resetLoopState() {
 const COMPACTION_THRESHOLD = 25;
 const COMPACTION_BLOCK = 10;
 
-async function _compactHistory(history, apiKey) {
+async function _compactHistory(history, apiKey, baseUrl) {
   if (!history || history.length < COMPACTION_THRESHOLD) return history;
   const sys = history.filter(m => m.role === 'system');
   const conv = history.filter(m => m.role === 'user' || m.role === 'assistant');
@@ -98,7 +112,7 @@ async function _compactHistory(history, apiKey) {
     const block = toCompact.slice(i, i + COMPACTION_BLOCK);
     const text = block.map(m => `${m.role}: ${typeof m.content === 'string' ? m.content.slice(0, 500) : '[content]'}`).join('\n');
     try {
-      const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      const resp = await fetch(baseUrl + '/chat/completions', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -297,6 +311,7 @@ async function loadSettings() {
     apiKey: result[STORAGE_KEYS.API_KEY] || '',
     model: result[STORAGE_KEYS.MODEL] || '',
     provider: result[STORAGE_KEYS.PROVIDER] || 'openrouter',
+    baseUrl: normalizeBaseUrl(result[STORAGE_KEYS.BASE_URL] || DEFAULT_BASE_URL),
     systemPrompt: result[STORAGE_KEYS.SYSTEM_PROMPT] || '',
     theme: result[STORAGE_KEYS.THEME] || 'dark',
     preset: result[STORAGE_KEYS.PRESET] || 'default',
@@ -307,6 +322,8 @@ async function loadSettings() {
     autoVault: result[STORAGE_KEYS.AUTO_VAULT] || false,
     fontSize: result[STORAGE_KEYS.FONT_SIZE] || 'medium',
     webSearch: result[STORAGE_KEYS.WEB_SEARCH] || false,
+    webSearchProvider: result[STORAGE_KEYS.WEB_SEARCH_PROVIDER] || 'openrouter',
+    webSearchApiKey: result[STORAGE_KEYS.WEB_SEARCH_API_KEY] || '',
   };
 }
 
@@ -315,6 +332,7 @@ async function saveSettings(data) {
     [STORAGE_KEYS.API_KEY]: data.apiKey || '',
     [STORAGE_KEYS.MODEL]: data.model || '',
     [STORAGE_KEYS.PROVIDER]: data.provider || 'openrouter',
+    [STORAGE_KEYS.BASE_URL]: normalizeBaseUrl(data.baseUrl || DEFAULT_BASE_URL),
     [STORAGE_KEYS.SYSTEM_PROMPT]: data.systemPrompt || '',
     [STORAGE_KEYS.THEME]: data.theme || 'dark',
     [STORAGE_KEYS.PRESET]: data.preset || 'default',
@@ -324,8 +342,82 @@ async function saveSettings(data) {
     [STORAGE_KEYS.VAULT_API_TOKEN]: data.vaultApiToken || '',
     [STORAGE_KEYS.FONT_SIZE]: data.fontSize || 'medium',
     [STORAGE_KEYS.WEB_SEARCH]: data.webSearch || false,
+    [STORAGE_KEYS.WEB_SEARCH_PROVIDER]: data.webSearchProvider || 'openrouter',
+    [STORAGE_KEYS.WEB_SEARCH_API_KEY]: data.webSearchApiKey || '',
   });
   return { ok: true };
+}
+
+// ─── Web Search ──────────────────────────────────────────────────────────────
+
+async function bravesearch(query, apiKey) {
+  try {
+    const resp = await fetch('https://api.search.brave.com/res/v1/web/search?q=' + encodeURIComponent(query) + '&count=5', {
+      headers: {
+        'Accept': 'application/json',
+        'Accept-Encoding': 'gzip',
+        'X-Subscription-Token': apiKey,
+      },
+    });
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    const results = (data.web?.results || []).slice(0, 5);
+    if (results.length === 0) return null;
+    return '## Web Search Results (Brave)\n\n' + results.map((r, i) =>
+      `${i + 1}. **${r.title || 'Untitled'}**\n   ${r.description || ''}\n   URL: ${r.url || ''}`
+    ).join('\n\n');
+  } catch {
+    return null;
+  }
+}
+
+async function serpapiSearch(query, apiKey) {
+  try {
+    const resp = await fetch('https://serpapi.com/search?q=' + encodeURIComponent(query) + '&api_key=' + encodeURIComponent(apiKey) + '&num=5');
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    const results = (data.organic_results || []).slice(0, 5);
+    if (results.length === 0) return null;
+    return '## Web Search Results (SerpAPI)\n\n' + results.map((r, i) =>
+      `${i + 1}. **${r.title || 'Untitled'}**\n   ${r.snippet || ''}\n   URL: ${r.link || ''}`
+    ).join('\n\n');
+  } catch {
+    return null;
+  }
+}
+
+async function tavilySearch(query, apiKey) {
+  try {
+    const resp = await fetch('https://api.tavily.com/search', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({ query, max_results: 5, include_answer: true, include_raw_content: false }),
+    });
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    const results = (data.results || []).slice(0, 5);
+    if (results.length === 0 && !data.answer) return null;
+    let output = '## Web Search Results (Tavily)\n\n';
+    if (data.answer) output += `**AI Answer:** ${data.answer}\n\n`;
+    output += results.map((r, i) =>
+      `${i + 1}. **${r.title || 'Untitled'}**\n   ${r.content || ''}\n   URL: ${r.url || ''}`
+    ).join('\n\n');
+    return output;
+  } catch {
+    return null;
+  }
+}
+
+async function performWebSearch(provider, query, apiKey) {
+  switch (provider) {
+    case 'brave': return await bravesearch(query, apiKey);
+    case 'serpapi': return await serpapiSearch(query, apiKey);
+    case 'tavily': return await tavilySearch(query, apiKey);
+    default: return null;
+  }
 }
 
 // ─── Prompt / Chat ─────────────────────────────────────────────────────────────
@@ -339,35 +431,67 @@ async function handlePromptSend(message, sendResponse) {
   }
 
   const { conversationHistory, pageContext, pageScreenshot, autoVault, vaultConnected, vaultName, vaultFilename, memoryContext, webSearch, vaultIntent, pageLinks, domTree } = message;
-  const compactHistory = await _compactHistory(conversationHistory, settings.apiKey);
+  const compactHistory = await _compactHistory(conversationHistory, settings.apiKey, settings.baseUrl);
   const msgs = await buildMessages(compactHistory, pageContext, pageScreenshot, settings.systemPrompt, autoVault, vaultConnected, vaultName, vaultFilename, memoryContext, webSearch, pageLinks, domTree);
 
-  const tools = webSearch ? [
-    {
+  const useOpenRouter = isOpenRouter(settings.baseUrl);
+  const webSearchProvider = settings.webSearchProvider || 'openrouter';
+
+  let tools = [];
+
+  if (webSearch && webSearchProvider === 'openrouter' && useOpenRouter) {
+    tools = [{
       type: 'openrouter:web_search',
       parameters: {
         max_results: 5,
         max_total_results: 15,
         search_context_size: 'medium',
       },
-    },
-  ] : [];
+    }];
+  } else if (webSearch) {
+    const apiKey = settings.webSearchApiKey || '';
+    if (apiKey) {
+      tools = [{
+        type: 'function',
+        function: {
+          name: 'web_search',
+          description: 'Search the web for current information. Use this when you need up-to-date facts, recent events, real-time data, or information beyond your training knowledge. Only call when the user asks about current or factual topics.',
+          parameters: {
+            type: 'object',
+            properties: {
+              query: {
+                type: 'string',
+                description: 'The search query. Be specific and concise for best results.'
+              }
+            },
+            required: ['query']
+          }
+        }
+      }];
+    }
+  }
+
+  const hasTools = tools.length > 0;
+
+  const headers = {
+    'Authorization': `Bearer ${settings.apiKey}`,
+    'Content-Type': 'application/json',
+  };
+  if (useOpenRouter) {
+    headers['HTTP-Referer'] = chrome.runtime.getURL('/');
+    headers['X-Title'] = 'OpenAgent Chrome Extension';
+  }
 
   try {
     // First API call
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    const response = await fetch(settings.baseUrl + '/chat/completions', {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${settings.apiKey}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': chrome.runtime.getURL('/'),
-        'X-Title': 'OpenAgent Chrome Extension',
-      },
+      headers,
       body: JSON.stringify({
         model: settings.model || 'openai/gpt-4o',
         messages: msgs,
-        tools: tools.length > 0 ? tools : undefined,
-        tool_choice: webSearch ? 'auto' : undefined,
+        tools: hasTools ? tools : undefined,
+        tool_choice: hasTools ? 'auto' : undefined,
       }),
     });
 
@@ -382,15 +506,16 @@ async function handlePromptSend(message, sendResponse) {
     let message = data.choices?.[0]?.message;
 
     // Handle tool calls — OpenRouter server tools (e.g. web_search) execute server-side
-    let maxIterations = 10;
+    let maxIterations = 5;
     while (message?.tool_calls && message.tool_calls.length > 0 && maxIterations > 0) {
       maxIterations--;
+
+      let hasClientTool = false;
 
       for (const toolCall of message.tool_calls) {
         const toolName = toolCall.function?.name || toolCall.name || '';
         const toolType = toolCall.type || '';
 
-        // For openrouter:web_search (server tool), acknowledge and let model process results
         if (toolType === 'openrouter:web_search' || toolName === 'openrouter:web_search') {
           const args = (() => { try { return JSON.parse(toolCall.function?.arguments || '{}'); } catch { return {}; } })();
           msgs.push(message);
@@ -399,22 +524,64 @@ async function handlePromptSend(message, sendResponse) {
             tool_call_id: toolCall.id,
             content: `Search executed for query: "${args.query || 'unknown'}". Results returned via OpenRouter server tool.`,
           });
+        } else if (toolName === 'web_search') {
+          hasClientTool = true;
+          const args = (() => { try { return JSON.parse(toolCall.function?.arguments || '{}'); } catch { return {}; } })();
+          const apiKey = settings.webSearchApiKey || '';
+          const query = args.query || '';
+
+          let result = null;
+          if (apiKey && query) {
+            result = await performWebSearch(webSearchProvider, query, apiKey);
+          }
+
+          msgs.push(message);
+          msgs.push({
+            role: 'tool',
+            tool_call_id: toolCall.id,
+            content: result || `No results found for query: "${query}".`,
+          });
         }
       }
 
-      // Follow-up call with tool results
-      const followUp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      // Skip follow-up if all tool calls were OpenRouter server tools (handled server-side)
+      const allServerTools = message.tool_calls.every(tc => {
+        const n = tc.function?.name || tc.name || '';
+        const tp = tc.type || '';
+        return tp === 'openrouter:web_search' || n === 'openrouter:web_search';
+      });
+
+      if (!hasClientTool && allServerTools) {
+        // Server tool: follow-up to get the final response
+        const followUp = await fetch(settings.baseUrl + '/chat/completions', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            model: settings.model || 'openai/gpt-4o',
+            messages: msgs,
+            tools: tools.length > 0 ? tools : undefined,
+          }),
+        });
+
+        if (!followUp.ok) {
+          const text = await followUp.text();
+          const errJson = (() => { try { return JSON.parse(text); } catch { return null; } })();
+          sendResponse({ error: `API error (${followUp.status}): ${errJson?.error?.message || text}` });
+          return;
+        }
+
+        data = await followUp.json();
+        message = data.choices?.[0]?.message;
+        continue;
+      }
+
+      // Client tool: follow-up with tool results
+      const followUp = await fetch(settings.baseUrl + '/chat/completions', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${settings.apiKey}`,
-          'Content-Type': 'application/json',
-          'HTTP-Referer': chrome.runtime.getURL('/'),
-          'X-Title': 'OpenAgent Chrome Extension',
-        },
+        headers,
         body: JSON.stringify({
           model: settings.model || 'openai/gpt-4o',
           messages: msgs,
-          tools: tools.length > 0 ? tools : undefined,
         }),
       });
 
@@ -990,20 +1157,29 @@ async function startStream(message, sendResponse) {
   const msgs = await buildMessages(conversationHistory, pageContext, pageScreenshot, settings.systemPrompt, autoVault, vaultConnected, vaultName, vaultFilename, memoryContext, false, pageLinks, domTree);
 
   try {
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    const useOpenRouter = isOpenRouter(settings.baseUrl);
+    const headers = {
+      'Authorization': `Bearer ${settings.apiKey}`,
+      'Content-Type': 'application/json',
+    };
+    if (useOpenRouter) {
+      headers['HTTP-Referer'] = chrome.runtime.getURL('/');
+      headers['X-Title'] = 'OpenAgent Chrome Extension';
+    }
+
+    const body = {
+      model: settings.model || 'openai/gpt-4o',
+      messages: msgs,
+      stream: true,
+    };
+    if (useOpenRouter) {
+      body.provider = { preset: settings.provider || 'openrouter' };
+    }
+
+    const response = await fetch(settings.baseUrl + '/chat/completions', {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${settings.apiKey}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': chrome.runtime.getURL('/'),
-        'X-Title': 'OpenAgent Chrome Extension',
-      },
-      body: JSON.stringify({
-        model: settings.model || 'openai/gpt-4o',
-        messages: msgs,
-        stream: true,
-        provider: { preset: settings.provider || 'openrouter' },
-      }),
+      headers,
+      body: JSON.stringify(body),
     });
 
     if (!response.ok) {

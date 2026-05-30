@@ -162,6 +162,12 @@
           </div>
 
           <div class="form-group">
+            <label data-i18n="settingsBaseUrl">API Base URL</label>
+            <input type="text" id="baseUrlInput" data-i18n-placeholder="settingsBaseUrlPlaceholder" placeholder="https://openrouter.ai/api/v1" />
+            <div class="form-hint" data-i18n="settingsBaseUrlHint">OpenAI-compatible API endpoint (e.g. OpenRouter, local LLM, OpenAI, etc.)</div>
+          </div>
+
+          <div class="form-group">
             <label data-i18n="settingsCurrentModel">Current Model</label>
             <div id="currentModelDisplay" class="model-display">—</div>
           </div>
@@ -185,7 +191,24 @@
               <button id="webSearchOff" class="toggle-btn active" data-i18n="settingsOff">Off</button>
               <button id="webSearchOn" class="toggle-btn" data-i18n="settingsOn">On</button>
             </div>
-            <div class="form-hint" data-i18n="settingsWebSearchHint">Uses OpenRouter web search to find current information online.</div>
+            <div class="form-hint" data-i18n="settingsWebSearchHint">Agent will search the web when needed. OpenRouter uses built-in search; other providers use the API key below.</div>
+          </div>
+
+          <div id="webSearchProviderGroup" class="form-group hidden">
+            <label data-i18n="settingsWebSearchProvider">Search Provider</label>
+            <select id="webSearchProvider" class="settings-select">
+              <option value="openrouter">OpenRouter</option>
+              <option value="brave">Brave Search</option>
+              <option value="serpapi">SerpAPI</option>
+              <option value="tavily">Tavily</option>
+            </select>
+            <div class="form-hint" data-i18n="settingsWebSearchProviderHint">Choose which search engine to use. OpenRouter uses the main API key. Brave and SerpAPI require a separate API key below.</div>
+          </div>
+
+          <div id="webSearchApiKeyGroup" class="form-group hidden">
+            <label data-i18n="settingsWebSearchApiKey">Search API Key</label>
+            <input type="password" id="webSearchApiKeyInput" data-i18n-placeholder="settingsWebSearchApiKeyPlaceholder" placeholder="API key..." />
+            <div class="form-hint" data-i18n="settingsWebSearchApiKeyHint">API key for Brave Search or SerpAPI. Not needed for OpenRouter.</div>
           </div>
 
           <div class="form-group">

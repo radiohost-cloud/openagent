@@ -96,7 +96,7 @@ function extractTopicsFromMessages(messages) {
 
 // ─── Summary Generation ───────────────────────────────────────────────────────
 
-async function generateConversationSummary(messages, pageUrl, apiKey, model) {
+async function generateConversationSummary(messages, pageUrl, apiKey, model, baseUrl) {
   if (!apiKey || messages.length === 0) return null;
 
   const conversationText = messages
@@ -118,14 +118,18 @@ Conversation:
 ${conversationText}`;
 
   try {
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    const endpoint = (baseUrl || 'https://openrouter.ai/api/v1').replace(/\/+$/, '') + '/chat/completions';
+    const headers = {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    };
+    if (baseUrl && baseUrl.includes('openrouter.ai')) {
+      headers['HTTP-Referer'] = chrome.runtime.getURL('/');
+      headers['X-Title'] = 'OpenAgent Chrome Extension';
+    }
+    const response = await fetch(endpoint, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': chrome.runtime.getURL('/'),
-        'X-Title': 'OpenAgent Chrome Extension',
-      },
+      headers,
       body: JSON.stringify({
         model: model || 'openai/gpt-4o',
         messages: [{ role: 'user', content: prompt }],
@@ -182,11 +186,11 @@ function buildMemoryContext(summaries, memories) {
 
 // ─── Post-Conversation Processing ─────────────────────────────────────────────
 
-async function processConversationEnd(messages, pageUrl, domain, apiKey, model) {
+async function processConversationEnd(messages, pageUrl, domain, apiKey, model, baseUrl) {
   if (messages.length < 2) return null;
 
   // Generate AI summary
-  const summaryData = await generateConversationSummary(messages, pageUrl, apiKey, model);
+  const summaryData = await generateConversationSummary(messages, pageUrl, apiKey, model, baseUrl);
 
   // Extract basic facts even without AI summary
   const basicFacts = extractFactsFromMessages(messages);

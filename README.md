@@ -59,11 +59,15 @@ AI-powered browser assistant that understands page structure and can perform act
 - **Multilingual** — works in any language (Polish, English, German, French, Spanish, Russian, etc.)
 
 ### 🌐 Web Search
-- **Real-time web search** — toggle Web Search in Settings to enable OpenRouter's server-side search tool
-- The AI decides when to search (news, weather, current events, live scores, stock prices, etc.)
-- Results come back with citations and are processed by the model in context
+- **Intelligent web search** — toggle Web Search in Settings to give the agent access to real-time information
+- The AI autonomously decides when to search (news, weather, current events, live scores, stock prices, etc.) via tool calling
+- **Multiple search providers** supported:
+  - **OpenRouter** — uses built-in server-side search, no extra API key needed (requires OpenRouter endpoint)
+  - **Brave Search** — privacy-focused search, requires [Brave Search API key](https://brave.com/search/api/)
+  - **SerpAPI** — Google search results, requires [SerpAPI key](https://serpapi.com/)
+  - **Tavily** — AI-optimized search with answer summaries, requires [Tavily API key](https://tavily.com/)
+- Results include citations and are processed by the model in context
 - Visual indicator on the input field shows when Web Search is active (accent color glow)
-- Configurable via `tools: [{ type: "openrouter:web_search" }]` — no extra API keys needed
 
 ### 📁 Obsidian Integration
 - **Auto-save conversations** — every message is automatically appended to a session note in your vault
@@ -165,8 +169,12 @@ When using a model that does not support image input (vision):
 - **Adjustable font size** — small, medium, large
 - **Multi-language UI** — English, Polski, Español, Français, Deutsch, Русский
 
-### 🔌 OpenRouter
-- Use **any model** from OpenRouter's model catalog
+### 🔌 API Endpoint
+- **Customizable API endpoint** — use any OpenAI-compatible API provider
+- Set your **API Base URL** in Settings (default: `https://openrouter.ai/api/v1`)
+- Works with OpenRouter, local LLMs (Ollama, LM Studio, vLLM), OpenAI, and any provider supporting the `/v1/chat/completions` format
+- Model list auto-fetches from the configured endpoint `/models`
+- OpenRouter-specific features (built-in web search, provider routing) enabled automatically when using the OpenRouter endpoint
 
 ### 🔧 System Prompt (Customization)
 
@@ -204,7 +212,7 @@ Leave the system prompt empty to use the default built-in prompt. The AI will al
 
 1. Click the extension icon in the toolbar, or use the keyboard shortcut
 2. Click **Settings** (gear icon)
-3. Paste your [OpenRouter API key](https://openrouter.ai/keys)
+3. Enter your API key (e.g., [OpenRouter API key](https://openrouter.ai/keys)) — or configure a custom endpoint for other providers
 4. Pick a model from the dropdown and start chatting
 
 ### Obsidian Setup
